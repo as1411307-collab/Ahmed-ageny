@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>Ahmed Agent</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          Inter, "Segoe UI", Tahoma, Arial, sans-serif;
+        background: #0b1020;
+        color: #f8fafc;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(circle at top, #1e3a5f 0, transparent 35rem),
+          #0b1020;
+      }
+
+      main {
+        width: min(100% - 2rem, 52rem);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 2rem 0;
+        display: grid;
+        place-items: center;
+      }
+
+      .chat {
+        width: 100%;
+        min-height: min(44rem, calc(100vh - 4rem));
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        overflow: hidden;
+        border: 1px solid #334155;
+        border-radius: 1.5rem;
+        background: rgb(15 23 42 / 92%);
+        box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 30%);
+      }
+
+      header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #334155;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.25rem, 4vw, 1.75rem);
+      }
+
+      header p {
+        margin: 0.35rem 0 0;
+        color: #cbd5e1;
+      }
+
+      #messages {
+        margin: 0;
+        padding: 1.5rem;
+        overflow-y: auto;
+        list-style: none;
+      }
+
+      .message {
+        width: fit-content;
+        max-width: min(85%, 38rem);
+        margin-bottom: 0.8rem;
+        padding: 0.75rem 1rem;
+        border-radius: 1rem;
+        line-height: 1.65;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+      }
+
+      .message.user {
+        margin-right: auto;
+        background: #2563eb;
+      }
+
+      .message.agent {
+        margin-left: auto;
+        background: #1e293b;
+        border: 1px solid #475569;
+      }
+
+      .empty {
+        height: 100%;
+        display: grid;
+        place-items: center;
+        color: #94a3b8;
+        text-align: center;
+      }
+
+      form {
+        padding: 1rem;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.75rem;
+        border-top: 1px solid #334155;
+      }
+
+      label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      input,
+      button {
+        min-height: 3rem;
+        border-radius: 0.85rem;
+        font: inherit;
+      }
+
+      input {
+        width: 100%;
+        padding: 0 1rem;
+        border: 1px solid #475569;
+        background: #0f172a;
+        color: #f8fafc;
+      }
+
+      input::placeholder {
+        color: #94a3b8;
+      }
+
+      button {
+        padding: 0 1.35rem;
+        border: 0;
+        background: #3b82f6;
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #60a5fa;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+      }
+
+      input:focus-visible,
+      button:focus-visible {
+        outline: 3px solid #93c5fd;
+        outline-offset: 3px;
+      }
+
+      #error {
+        min-height: 1.4rem;
+        margin: 0;
+        padding: 0 1rem 0.75rem;
+        color: #fca5a5;
+      }
+
+      @media (max-width: 36rem) {
+        main {
+          width: 100%;
+          padding: 0;
+        }
+
+        .chat {
+          min-height: 100vh;
+          border: 0;
+          border-radius: 0;
+        }
+
+        form {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="chat" aria-labelledby="page-title">
+        <header>
+          <h1 id="page-title">Ahmed Agent</h1>
+          <p>وكيل ذكي مدعوم من OpenAI</p>
+        </header>
+
+        <ol id="messages" aria-live="polite">
+          <li class="empty" id="empty-state">أرسل رسالة لبدء المحادثة.</li>
+        </ol>
+
+        <div>
+          <form id="chat-form">
+            <label for="message">الرسالة</label>
+            <input
+              id="message"
+              name="message"
+              type="text"
+              maxlength="2000"
+              autocomplete="off"
+              placeholder="اكتب رسالتك..."
+              required
+            />
+            <button id="send" type="submit">إرسال</button>
+          </form>
+          <p id="error" role="alert"></p>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const form = document.querySelector("#chat-form");
+      const input = document.querySelector("#message");
+      const sendButton = document.querySelector("#send");
+      const messages = document.querySelector("#messages");
+      const error = document.querySelector("#error");
+
+      function addMessage(text, sender) {
+        document.querySelector("#empty-state")?.remove();
+        const item = document.createElement("li");
+        item.className = `message ${sender}`;
+        item.textContent = text;
+        messages.append(item);
+        messages.scrollTop = messages.scrollHeight;
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const message = input.value.trim();
+        if (!message) return;
+
+        error.textContent = "";
+        sendButton.disabled = true;
+        addMessage(message, "user");
+        input.value = "";
+
+        try {
+          const response = await fetch("/chat/message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message }),
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || "تعذر إرسال الرسالة.");
+          addMessage(data.reply, "agent");
+        } catch (requestError) {
+          error.textContent = requestError.message;
+        } finally {
+          sendButton.disabled = false;
+          input.focus();
+        }
+      });
+    </script>
+  </body>
+</html>

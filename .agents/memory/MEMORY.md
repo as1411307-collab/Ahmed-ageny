@@ -1,1 +1,2 @@
 - [Non-artifact server routing](non-artifact-server-routing.md) — root Python servers need an explicit 8000→80 port mapping for Replit HTTPS routing.
+- [Artifact workflow working directory](artifact-workflow-cwd.md) — artifact development commands start inside the artifact folder, not the workspace root.
