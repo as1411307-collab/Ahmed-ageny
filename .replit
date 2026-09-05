@@ -3,6 +3,7 @@ modules = ["nodejs-24", "python-base-3.13"]
 [deployment]
 router = "application"
 deploymentTarget = "autoscale"
+run = ["uv", "run", "server.py"]
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
@@ -10,6 +11,27 @@ env = { "CI" = "true" }
 
 [workflows]
 runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "MCP Server"
+
+[[workflows.workflow]]
+name = "MCP Server"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "uv run server.py"
+waitForPort = 8000
 
 [agent]
 stack = "PNPM_WORKSPACE"
