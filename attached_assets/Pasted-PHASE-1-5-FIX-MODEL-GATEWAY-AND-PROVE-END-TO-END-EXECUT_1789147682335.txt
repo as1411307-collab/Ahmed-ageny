@@ -1,0 +1,302 @@
+PHASE 1.5 — FIX MODEL GATEWAY AND PROVE END-TO-END EXECUTION
+
+The Tavily web_search implementation and its FAST/DEEP tests are accepted.
+Do not modify the working Tavily implementation except where required for integration testing.
+
+Do NOT deploy.
+Do NOT add SearXNG, Brave, Exa, Google Search, Bing, Yahoo, or any new search provider yet.
+Do NOT rebuild the application.
+Do NOT purchase anything.
+
+CURRENT BLOCKER
+
+The report shows:
+
+401 ApiKeyNotApproved
+
+on the model/chat path through the Replit-managed OpenAI integration.
+
+The goal of this phase is to identify the exact authentication path actually used at runtime, fix it using an already-authorized configuration, and prove the full chat -> model -> tool -> model -> response flow works.
+
+==================================================
+1. TRACE THE REAL MODEL PATH
+==================================================
+
+Inspect the actual runtime code.
+
+Report:
+
+- model provider used by server.py
+- SDK/client class instantiated
+- base_url actually used
+- model name actually requested
+- which environment variable names are referenced
+- whether the request uses:
+  REPLIT-MANAGED AI INTEGRATION
+  or
+  DIRECT PROVIDER API
+  or
+  OPENROUTER
+  or
+  another proxy/provider
+
+Do not print any secret values.
+
+For environment credentials report only:
+
+PRESENT
+MISSING
+NOT_USED
+
+Never display the value.
+
+==================================================
+2. CAPTURE THE 401 SAFELY
+==================================================
+
+Run one minimal model request and capture:
+
+- HTTP status
+- provider error code
+- provider error type
+- sanitized error message
+- request provider
+- requested model
+
+Do not log:
+- API keys
+- Authorization headers
+- full environment
+- cookies
+- tokens
+
+Determine whether ApiKeyNotApproved comes from:
+
+A. Replit managed integration authorization
+B. provider key rejection
+C. wrong base_url/provider combination
+D. unsupported model
+E. workspace/integration permission
+F. another identifiable cause
+
+Do not guess.
+Show evidence from runtime configuration/error response.
+
+==================================================
+3. DO NOT MIX AUTH METHODS
+==================================================
+
+Inspect for a configuration such as:
+
+Replit managed base URL + personal OpenAI key
+
+or:
+
+OpenAI public base URL + Replit proxy credential
+
+or any other mixed provider credentials.
+
+If found, correct it so each provider adapter owns:
+
+provider
+base_url
+credential source
+model list
+
+Do not share credentials across adapters.
+
+==================================================
+4. MODEL PROVIDER ABSTRACTION
+==================================================
+
+If the project currently hard-codes OpenAI directly into server.py,
+make the smallest safe refactor necessary to introduce:
+
+ModelProvider
+or equivalent existing abstraction.
+
+Required interface:
+
+generate(messages, tools=None)
+healthcheck()
+provider_name
+model_name
+status
+
+Do not build a large router yet.
+
+Initially register only providers that are ALREADY authorized and usable.
+
+Possible status values:
+
+READY
+NOT_CONFIGURED
+UNAUTHORIZED
+ERROR
+
+==================================================
+5. REPLIT MANAGED INTEGRATION
+==================================================
+
+If the current application is intended to use Replit-managed OpenAI:
+
+verify that the integration is actually authorized for this app/workspace.
+
+Do not invent or manually construct a Replit proxy token.
+
+Use the integration mechanism actually supported by the current Replit environment.
+
+If authorization cannot be repaired from code and requires a Replit UI approval:
+
+STOP.
+
+Report the exact UI action required.
+
+Do not replace it silently with a paid API key.
+
+==================================================
+6. EXISTING PERSONAL PROVIDERS
+==================================================
+
+Do not request new subscriptions.
+
+Inspect only environment variable NAMES to detect whether the project
+already has configured credentials for providers such as:
+
+OPENAI_API_KEY
+GOOGLE_API_KEY
+GEMINI_API_KEY
+XAI_API_KEY
+GROQ_API_KEY
+OPENROUTER_API_KEY
+
+Do not reveal values.
+
+Return status only.
+
+Do not activate or consume another provider automatically.
+
+If an already-configured provider can be used as a zero/new-cost test
+path, report it as an OPTION but wait before switching unless the
+current Replit managed integration cannot be repaired in code.
+
+==================================================
+7. MINIMAL MODEL TEST
+==================================================
+
+After fixing authentication, run:
+
+MODEL TEST A
+
+Prompt:
+"Reply with exactly: MODEL_OK"
+
+Expected:
+MODEL_OK
+
+Record:
+provider
+model
+latency
+PASS/FAIL
+
+==================================================
+8. TOOL-CALL TEST
+==================================================
+
+Then test the actual chat model with the existing MCP web_search tool.
+
+User request:
+
+"Use web_search FAST to find the current official Python MCP SDK documentation and answer with the best official URL."
+
+The model must:
+
+1. receive the user request
+2. choose/call web_search
+3. web_search executes successfully
+4. tool output returns to the model
+5. model produces final answer
+6. final answer contains an actual source URL from tool results
+
+Do not manually call web_search outside the model to fake this test.
+
+Record the complete sanitized tool lifecycle.
+
+==================================================
+9. DEEP TOOL TEST
+==================================================
+
+User request:
+
+"Do a deep search for the current official MCP Streamable HTTP specification and briefly explain which protocol revision is current."
+
+Expected:
+
+- model invokes web_search with mode=DEEP
+- official/primary source is retrieved
+- source content is returned to the model
+- final answer uses the retrieved evidence
+- no fabricated citation or URL
+
+==================================================
+10. FAILURE HANDLING
+==================================================
+
+Temporarily test a model/provider failure at the adapter boundary.
+
+Expected user-facing result:
+
+MODEL_PROVIDER_UNAVAILABLE
+
+The process must not crash.
+
+Do not silently claim the research succeeded if the model could not
+produce the final response.
+
+==================================================
+11. MCP VERSION
+==================================================
+
+Do not upgrade or migrate MCP.
+
+The currently reported:
+
+mcp_package_version=2.1.1
+protocol_version=2025-11-25
+transport=streamable-http
+
+is not by itself a failure.
+
+Only verify that the installed SDK can serve the currently negotiated
+protocol and the modern protocol it supports.
+
+Report compatibility.
+
+Do not change it unless a real incompatibility is demonstrated.
+
+==================================================
+12. FINAL REPORT
+==================================================
+
+Return one report with:
+
+- exact root cause of 401
+- files changed
+- model provider actually in use
+- sanitized credential source
+- model actually tested
+- MODEL TEST A PASS/FAIL
+- FAST end-to-end tool test PASS/FAIL
+- DEEP end-to-end tool test PASS/FAIL
+- provider failure test PASS/FAIL
+- MCP compatibility result
+- unresolved blockers
+- new external cost incurred: YES/NO
+
+Do not say the Agent is operational unless the full end-to-end tool
+test passes.
+
+Do not deploy.
+Do not purchase.
+Do not add new search providers.
