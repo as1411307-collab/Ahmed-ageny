@@ -3,7 +3,9 @@ import ipaddress
 import json
 import logging
 import os
+import re
 import socket
+from collections import defaultdict
 from html.parser import HTMLParser
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
@@ -18,6 +20,9 @@ TAVILY_SEARCH_URL = "https://api.tavily.com/search"
 PAGE_FETCH_TIMEOUT_SECONDS = 15
 MAX_QUERY_LENGTH = 1000
 MAX_RESULTS = 10
+MAX_RESEARCH_QUERIES = 3
+MAX_RESEARCH_CANDIDATES = 12
+RESEARCH_MODES = {"FAST", "DEEP"}
 
 
 class _PageTextParser(HTMLParser):
@@ -27,7 +32,8 @@ class _PageTextParser(HTMLParser):
         self._in_title = False
         self._title_parts: list[str] = []
         self._text_parts: list[str] = []
-        self._dates: list[str] = []
+        self._published_dates: list[str] = []
+        self._other_dates: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attributes = {key.lower(): value or "" for key, value in attrs}
@@ -46,11 +52,14 @@ class _PageTextParser(HTMLParser):
             if any(marker in key for marker in ("date", "published", "modified", "created")):
                 content = attributes.get("content", "").strip()
                 if content:
-                    self._dates.append(content)
+                    if "published" in key or "datepublished" in key:
+                        self._published_dates.append(content)
+                    else:
+                        self._other_dates.append(content)
         if lowered_tag == "time":
             date_value = attributes.get("datetime", "").strip()
             if date_value:
-                self._dates.append(date_value)
+                self._published_dates.append(date_value)
 
     def handle_endtag(self, tag: str) -> None:
         lowered_tag = tag.lower()
@@ -78,8 +87,12 @@ class _PageTextParser(HTMLParser):
         return " ".join(self._text_parts).strip()
 
     @property
-    def date(self) -> str | None:
-        return self._dates[0] if self._dates else None
+    def published_at(self) -> str | None:
+        return (
+            self._published_dates[0]
+            if self._published_dates
+            else (self._other_dates[0] if self._other_dates else None)
+        )
 
 
 def _is_public_ip(value: str) -> bool:
@@ -130,7 +143,10 @@ def _fetch_page_sync(url: str) -> tuple[str, str]:
         return response.read().decode(charset, errors="replace"), content_type
 
 
-async def _fetch_page(url: str) -> dict[str, str | None] | None:
+async def _fetch_page(
+    url: str,
+    fallback_published_at: str | None = None,
+) -> dict[str, str | None] | None:
     if not await _is_safe_public_url(url):
         logger.error("Skipped unsafe or non-public URL: %s", url)
         return None
@@ -141,11 +157,11 @@ async def _fetch_page(url: str) -> dict[str, str | None] | None:
             parser.feed(html)
             title = parser.title
             text = parser.text
-            date = parser.date
+            published_at = parser.published_at
         else:
             title = ""
             text = " ".join(html.split())
-            date = None
+            published_at = None
         words = text.split()
         if not words:
             logger.error("Opened page but extracted no text: %s", url)
@@ -167,7 +183,8 @@ async def _fetch_page(url: str) -> dict[str, str | None] | None:
         return {
             "title": title or urlparse(url).netloc,
             "url": url,
-            "date": date,
+            "date": published_at or fallback_published_at,
+            "published_at": published_at or fallback_published_at,
             "snippet": snippet,
         }
     except Exception as error:
