@@ -9,7 +9,7 @@ from openai import AsyncOpenAI
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse, Response
 
-from skill_tools import register_skill_tools, research_search, web_search
+from skill_tools import register_skill_tools, web_search
 
 
 class PingResult(TypedDict):
@@ -154,10 +154,18 @@ async def chat_message(request: Request) -> Response:
     if needs_web_search(message):
         if needs_research_search(message):
             research_mode = research_mode_for_message(message)
-            search_response = await research_search(message, mode=research_mode)
-            search_tool_name = "research_search"
+            search_response = await web_search(
+                message,
+                max_results=5,
+                mode=research_mode,
+            )
+            search_tool_name = "web_search"
         else:
-            search_response = await web_search(message, max_results=5)
+            search_response = await web_search(
+                message,
+                max_results=5,
+                mode="FAST",
+            )
             search_tool_name = "web_search"
         if not search_response.get("ok"):
             logger.error(

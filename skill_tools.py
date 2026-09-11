@@ -19,6 +19,7 @@ from urllib.request import urlopen
 
 logger = logging.getLogger("ahmed_agent.web_search")
 TAVILY_SEARCH_URL = "https://api.tavily.com/search"
+TAVILY_EXTRACT_URL = "https://api.tavily.com/extract"
 PAGE_FETCH_TIMEOUT_SECONDS = 15
 MAX_QUERY_LENGTH = 1000
 MAX_RESULTS = 10
@@ -26,6 +27,7 @@ MAX_RESEARCH_QUERIES = 3
 MAX_RESEARCH_CANDIDATES = 12
 RESEARCH_MODES = {"FAST", "DEEP"}
 MAX_DEEP_SOURCES = 6
+DEEP_CREDIT_BUDGET = 12.0
 MAX_CONCURRENT_SEARCHES = 2
 MAX_TAVILY_RETRIES = 2
 TEMPORARY_TAVILY_STATUSES = {429, 500, 502, 503, 504}
@@ -220,25 +222,15 @@ async def _fetch_page(
         return None
 
 
-def _tavily_search_sync(
-    query: str,
-    max_results: int,
+def _tavily_post_sync(
+    endpoint: str,
+    payload: dict[str, object],
     api_key: str,
-    search_depth: str = "advanced",
-) -> tuple[str, dict[str, object]]:
-    payload = json.dumps(
-        {
-            "api_key": api_key,
-            "query": query,
-            "max_results": max_results,
-            "search_depth": search_depth,
-            "include_answer": False,
-            "include_raw_content": False,
-        }
-    ).encode("utf-8")
+) -> tuple[int, dict[str, object]]:
+    request_payload = {**payload, "api_key": api_key}
     request = UrlRequest(
-        TAVILY_SEARCH_URL,
-        data=payload,
+        endpoint,
+        data=json.dumps(request_payload).encode("utf-8"),
         headers={
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -247,11 +239,87 @@ def _tavily_search_sync(
         method="POST",
     )
     with urlopen(request, timeout=PAGE_FETCH_TIMEOUT_SECONDS) as response:
-        raw_response = response.read().decode("utf-8", errors="replace")
-    parsed_response = json.loads(raw_response)
+        response_status = response.status
+        response_body = response.read().decode("utf-8", errors="replace")
+    parsed_response = json.loads(response_body)
     if not isinstance(parsed_response, dict):
-        raise ValueError("Tavily returned a non-object response")
-    return raw_response, parsed_response
+        raise ValueError("Tavily returned a non-object response.")
+    return response_status, parsed_response
+
+
+def _credits_from_response(response: dict[str, object]) -> float | None:
+    usage = response.get("usage")
+    candidates: list[object] = [usage, response]
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        for key in ("credits_used", "credits", "credit"):
+            value = candidate.get(key)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                return float(value)
+    return None
+
+
+async def _tavily_post(
+    endpoint: str,
+    payload: dict[str, object],
+    api_key: str,
+    mode: str,
+) -> tuple[dict[str, object] | None, float | None]:
+    query_id = uuid.uuid4().hex[:12]
+    for attempt in range(MAX_TAVILY_RETRIES + 1):
+        started_at = time.perf_counter()
+        response_status: int | str = "error"
+        try:
+            response_status, response = await asyncio.to_thread(
+                _tavily_post_sync,
+                endpoint,
+                payload,
+                api_key,
+            )
+            elapsed_ms = round((time.perf_counter() - started_at) * 1000)
+            credits = _credits_from_response(response)
+            logger.info(
+                "Tavily request endpoint=%s mode=%s query_id=%s status=%s "
+                "elapsed_ms=%d credits_used=%s",
+                endpoint,
+                mode,
+                query_id,
+                response_status,
+                elapsed_ms,
+                credits if credits is not None else "unknown",
+            )
+            return response, credits
+        except HTTPError as error:
+            response_status = error.code
+            elapsed_ms = round((time.perf_counter() - started_at) * 1000)
+            logger.info(
+                "Tavily request endpoint=%s mode=%s query_id=%s status=%s "
+                "elapsed_ms=%d credits_used=unknown",
+                endpoint,
+                mode,
+                query_id,
+                response_status,
+                elapsed_ms,
+            )
+            if response_status not in TEMPORARY_TAVILY_STATUSES or attempt >= MAX_TAVILY_RETRIES:
+                logger.exception("Tavily request failed after retry policy.")
+                return None, None
+        except (OSError, TimeoutError, ValueError, json.JSONDecodeError):
+            elapsed_ms = round((time.perf_counter() - started_at) * 1000)
+            logger.info(
+                "Tavily request endpoint=%s mode=%s query_id=%s status=error "
+                "elapsed_ms=%d credits_used=unknown",
+                endpoint,
+                mode,
+                query_id,
+                elapsed_ms,
+            )
+            if attempt >= MAX_TAVILY_RETRIES:
+                logger.exception("Tavily request failed after retry policy.")
+                return None, None
+        await asyncio.sleep(0.25 * (2**attempt))
+    return None, None
 
 
 def _valid_query(query: str) -> str:
@@ -266,7 +334,22 @@ def _domain_for_url(url: str) -> str:
 def _normalized_url(url: str) -> str:
     parsed = urlparse(url)
     path = parsed.path.rstrip("/") or "/"
-    return f"{parsed.scheme.lower()}://{(parsed.hostname or '').lower()}{path}"
+    query_items = [
+        (key, value)
+        for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+        if key.casefold() not in TRACKING_QUERY_KEYS
+    ]
+    query = urlencode(sorted(query_items))
+    return urlunparse(
+        (
+            parsed.scheme.lower(),
+            (parsed.hostname or "").lower(),
+            path,
+            "",
+            query,
+            "",
+        )
+    )
 
 
 def _classify_query(query: str) -> str:
@@ -282,19 +365,47 @@ def _classify_query(query: str) -> str:
         )
     ):
         return "official"
+    technical_markers = (
+        "github",
+        "documentation",
+        "docs",
+        "api",
+        "sdk",
+        "python",
+        "javascript",
+        "technical",
+        "توثيق",
+        "برمجة",
+        "تقني",
+    )
     if any(
         marker in lowered
         for marker in (
-            "latest",
             "breaking news",
             "current news",
+            "news",
             "أخبار",
             "خبر",
             "آخر المستجدات",
             "اليوم",
         )
-    ):
+    ) or ("latest" in lowered and not any(marker in lowered for marker in technical_markers)):
         return "current_news"
+    if any(
+        marker in lowered
+        for marker in (
+            "finance",
+            "financial",
+            "stock",
+            "stocks",
+            "market",
+            "سهم",
+            "أسهم",
+            "مالي",
+            "أسواق",
+        )
+    ):
+        return "finance"
     if any(
         marker in lowered
         for marker in (
@@ -330,17 +441,7 @@ def _classify_query(query: str) -> str:
     if any(
         marker in lowered
         for marker in (
-            "github",
-            "documentation",
-            "docs",
-            "api",
-            "sdk",
-            "python",
-            "javascript",
-            "technical",
-            "توثيق",
-            "برمجة",
-            "تقني",
+            *technical_markers,
         )
     ):
         return "technical"
@@ -356,6 +457,10 @@ def _research_queries(query: str, query_type: str, mode: str) -> list[str]:
     queries = [query]
     if mode == "FAST":
         return queries
+    if query_type == "general_web" and not any(
+        marker in query.casefold() for marker in (" and ", " or ", "compare", "مقارنة", "تحقيق")
+    ):
+        return queries
 
     suffixes = {
         "official": (
@@ -365,6 +470,10 @@ def _research_queries(query: str, query_type: str, mode: str) -> list[str]:
         "current_news": (
             "latest official statement news",
             "international English coverage independent sources",
+        ),
+        "finance": (
+            "market data primary financial source",
+            "independent financial analysis",
         ),
         "academic": (
             "research paper study primary academic source",
@@ -394,7 +503,33 @@ def _research_queries(query: str, query_type: str, mode: str) -> list[str]:
     return queries[:MAX_RESEARCH_QUERIES]
 
 
-def _source_type(domain: str, url: str, title: str, query_type: str) -> tuple[str, bool]:
+def _temporal_filters(query: str, query_type: str) -> dict[str, str]:
+    lowered = query.casefold()
+    if query_type == "current_news" or any(
+        marker in lowered
+        for marker in (
+            "breaking news",
+            "current news",
+            "news today",
+            "today's news",
+            "أخبار اليوم",
+            "خبر عاجل",
+            "هذا الأسبوع",
+        )
+    ):
+        return {"time_range": "week" if any(
+            marker in lowered
+            for marker in ("today", "today's", "this week", "هذا الأسبوع", "اليوم")
+        ) else "month"}
+    return {}
+
+
+def _source_type(
+    domain: str,
+    url: str,
+    title: str,
+    query_type: str,
+) -> tuple[str, str, float]:
     lowered_domain = domain.casefold()
     lowered_url = url.casefold()
     official_documentation_domains = (
@@ -417,35 +552,35 @@ def _source_type(domain: str, url: str, title: str, query_type: str) -> tuple[st
         lowered_domain == host or lowered_domain.endswith(f".{host}")
         for host in official_documentation_domains
     ):
-        return "official_documentation", True
+        return "official_documentation", "primary", 0.98
     if lowered_domain.endswith("europa.eu") or lowered_domain.endswith(".int"):
-        return "government", True
+        return "government", "primary", 0.95
     if any(
         lowered_domain == host or lowered_domain.endswith(f".{host}")
         for host in academic_domains
     ):
-        return "academic", False
+        return "academic", "secondary", 0.85
     if lowered_domain.endswith(".gov") or ".gov." in lowered_domain:
-        return "government", True
+        return "government", "primary", 0.95
     if lowered_domain.endswith(".edu") or ".ac." in lowered_domain:
-        return "academic", True
+        return "academic", "secondary", 0.8
     if lowered_domain == "github.com" or lowered_domain.endswith(".github.io"):
         if any(
             marker in lowered_url
             for marker in ("modelcontextprotocol", "openai", "python", "official")
         ):
-            return "official_repository", True
-        return "repository", False
+            return "official_repository", "primary", 0.98
+        return "repository", "secondary", 0.75
     if any(marker in lowered_domain for marker in ("wikipedia.org", "reddit.com", "x.com")):
-        return "social_community", False
+        return "social_community", "community", 0.7
     if any(
         marker in lowered_domain
         for marker in ("news", "reuters.com", "apnews.com", "bbc.com")
     ):
-        return "news", False
+        return "news", "secondary", 0.8
     if query_type == "social_community":
-        return "social_community", False
-    return "general_web", False
+        return "social_community", "community", 0.65
+    return "general_web", "unknown", 0.45
 
 
 def _enrich_source(
@@ -457,14 +592,21 @@ def _enrich_source(
     url = str(page.get("url") or "")
     title = str(page.get("title") or "")
     domain = _domain_for_url(url)
-    source_type, is_primary = _source_type(domain, url, title, query_type)
-    published_at = page.get("published_at") or tavily_item.get("published_date")
+    source_type, classification, confidence = _source_type(
+        domain,
+        url,
+        title,
+        query_type,
+    )
+    published_at = _valid_date_value(
+        str(page.get("published_at") or tavily_item.get("published_date") or "")
+    )
     score_value = tavily_item.get("score")
     try:
         tavily_score = float(score_value) if score_value is not None else 0.0
     except (TypeError, ValueError):
         tavily_score = 0.0
-    priority = 100 if is_primary else 0
+    priority = 100 if classification == "primary" else 0
     if source_type in {"official_documentation", "official_repository", "government", "academic"}:
         priority += 25
     priority += round(tavily_score * 20, 4)
@@ -477,8 +619,11 @@ def _enrich_source(
         "published_at": str(published_at) if published_at else None,
         "date": str(published_at) if published_at else None,
         "source_type": source_type,
-        "primary_or_secondary": "primary" if is_primary else "secondary",
-        "snippet": page.get("snippet") or "",
+        "classification": classification,
+        "confidence": confidence,
+        "primary_or_secondary": classification,
+        "content": page.get("content") or page.get("snippet") or "",
+        "snippet": page.get("content") or page.get("snippet") or "",
         "query": query,
         "tavily_score": tavily_score,
         "_priority": priority,
@@ -489,41 +634,60 @@ async def _run_tavily_query(
     query: str,
     max_results: int,
     api_key: str,
-) -> list[dict[str, object]] | None:
-    logger.info("Tavily request sent query=%r max_results=%d", query, max_results)
-    try:
-        raw_response, tavily_response = await asyncio.to_thread(
-            _tavily_search_sync,
-            query,
-            max_results,
-            api_key,
-        )
-        logger.info("Tavily raw response: %s", raw_response)
-    except Exception as error:
-        logger.exception("Tavily search failed query=%r error=%s", query, error)
-        return None
+    mode: str,
+    query_type: str,
+    include_domains: list[str] | None = None,
+) -> tuple[list[dict[str, object]], float | None]:
+    topic = "news" if query_type == "current_news" else "general"
+    if query_type == "finance":
+        topic = "finance"
+    payload: dict[str, object] = {
+        "query": query,
+        "max_results": max_results,
+        "search_depth": "basic" if mode == "FAST" else "advanced",
+        "topic": topic,
+        "include_answer": False,
+        "include_usage": True,
+    }
+    payload.update(_temporal_filters(query, query_type))
+    if mode == "DEEP" and include_domains:
+        payload["include_domains"] = include_domains
+    tavily_response, credits = await _tavily_post(
+        TAVILY_SEARCH_URL,
+        payload,
+        api_key,
+        mode,
+    )
+    if tavily_response is None:
+        return [], credits
 
     raw_results = tavily_response.get("results", [])
     if not isinstance(raw_results, list):
-        logger.error("Tavily response has invalid results field query=%r", query)
-        return None
+        logger.error("Tavily response has invalid results field.")
+        return [], credits
 
-    pages: list[dict[str, object]] = []
+    candidates: list[dict[str, object]] = []
     for item in raw_results[:max_results]:
         if not isinstance(item, dict):
             continue
         url = item.get("url")
         if not isinstance(url, str) or not url:
-            logger.error("Tavily result had no usable URL: %r", item)
+            logger.error("Tavily result had no usable URL.")
             continue
-        fallback_date = item.get("published_date")
-        page = await _fetch_page(
-            url,
-            fallback_date if isinstance(fallback_date, str) else None,
+        candidates.append(
+            {
+                "url": url,
+                "title": str(item.get("title") or url),
+                "content": str(item.get("content") or ""),
+                "published_at": _valid_date_value(
+                    str(item.get("published_date") or "")
+                ),
+                "tavily_score": item.get("score"),
+                "_tavily_item": item,
+                "_query": query,
+            }
         )
-        if page is not None:
-            pages.append({**page, "_tavily_item": item, "_query": query})
-    return pages
+    return candidates, credits
 
 
 def _rank_and_deduplicate(
@@ -548,7 +712,7 @@ def _rank_and_deduplicate(
     )
     selected: list[dict[str, object]] = []
     domains_used: dict[str, int] = defaultdict(int)
-    limit = 5 if mode == "FAST" else MAX_RESEARCH_CANDIDATES
+    limit = 5 if mode == "FAST" else MAX_DEEP_SOURCES
     for item in ordered:
         domain = str(item.get("domain") or "")
         if domains_used[domain] >= 2:
@@ -574,12 +738,160 @@ def _rank_and_deduplicate(
     return selected, len(candidates)
 
 
-async def web_search(query: str, max_results: int = 5) -> dict[str, object]:
+async def _run_tavily_extract(
+    urls: list[str],
+    mode: str,
+    api_key: str,
+    extract_depth: str,
+) -> tuple[dict[str, dict[str, object]], float | None]:
+    if not urls:
+        return {}, None
+    response, credits = await _tavily_post(
+        TAVILY_EXTRACT_URL,
+        {
+            "urls": urls,
+            "extract_depth": extract_depth,
+            "include_images": False,
+            "include_usage": True,
+        },
+        api_key,
+        mode,
+    )
+    if response is None:
+        return {}, credits
+
+    extracted: dict[str, dict[str, object]] = {}
+    raw_results = response.get("results", [])
+    if isinstance(raw_results, list):
+        for item in raw_results:
+            if not isinstance(item, dict):
+                continue
+            url = item.get("url")
+            if not isinstance(url, str):
+                continue
+            content = item.get("raw_content") or item.get("content") or ""
+            extracted[_normalized_url(url)] = {
+                "content": str(content),
+                "status": "extracted" if str(content).strip() else "partial",
+            }
+
+    failed_results = response.get("failed_results", [])
+    if isinstance(failed_results, list):
+        for item in failed_results:
+            if not isinstance(item, dict):
+                continue
+            url = item.get("url")
+            if isinstance(url, str):
+                extracted.setdefault(
+                    _normalized_url(url),
+                    {"content": "", "status": "failed"},
+                )
+    for url in urls:
+        extracted.setdefault(
+            _normalized_url(url),
+            {"content": "", "status": "failed"},
+        )
+    return extracted, credits
+
+
+def _official_domains_for_query(query: str, query_type: str) -> list[str]:
+    lowered = query.casefold()
+    if query_type != "official":
+        return []
+    domains: list[str] = []
+    if "mcp" in lowered or "model context protocol" in lowered:
+        domains.extend(
+            [
+                "modelcontextprotocol.io",
+                "github.com/modelcontextprotocol",
+                "py.sdk.modelcontextprotocol.io",
+            ]
+        )
+    if "python" in lowered:
+        domains.extend(["docs.python.org", "python.org", "github.com/python"])
+    if "openai" in lowered:
+        domains.extend(["platform.openai.com", "openai.com"])
+    return list(dict.fromkeys(domains))
+
+
+async def _deep_extract(
+    selected: list[dict[str, object]],
+    mode: str,
+    api_key: str,
+) -> tuple[list[dict[str, object]], dict[str, object]]:
+    urls = [str(item.get("url")) for item in selected if item.get("url")]
+    basic, basic_credits = await _run_tavily_extract(
+        urls,
+        mode,
+        api_key,
+        "basic",
+    )
+    advanced_urls = [
+        url
+        for url in urls
+        if basic.get(_normalized_url(url), {}).get("status") in {"failed", "partial"}
+    ]
+    advanced: dict[str, dict[str, object]] = {}
+    advanced_credits: float | None = None
+    if advanced_urls:
+        advanced, advanced_credits = await _run_tavily_extract(
+            advanced_urls,
+            mode,
+            api_key,
+            "advanced",
+        )
+
+    final_results: list[dict[str, object]] = []
+    for item in selected:
+        url = str(item.get("url") or "")
+        extraction = advanced.get(_normalized_url(url)) or basic.get(
+            _normalized_url(url),
+            {"content": "", "status": "failed"},
+        )
+        content = str(extraction.get("content") or "")
+        updated = dict(item)
+        if content.strip():
+            updated["content"] = content
+            updated["snippet"] = content[:2500]
+        updated["extraction_status"] = extraction.get("status", "failed")
+        final_results.append(updated)
+
+    credits = [value for value in (basic_credits, advanced_credits) if value is not None]
+    return final_results, {
+        "extract_calls": 1 + (1 if advanced_urls else 0),
+        "urls_extracted": sum(
+            1
+            for item in final_results
+            if item.get("extraction_status") == "extracted"
+        ),
+        "failed_extractions": sum(
+            1
+            for item in final_results
+            if item.get("extraction_status") == "failed"
+        ),
+        "extract_credits": sum(credits) if len(credits) == 2 else (
+            credits[0] if credits else None
+        ),
+    }
+
+
+async def web_search(
+    query: str,
+    max_results: int = 5,
+    mode: str = "FAST",
+) -> dict[str, object]:
     query = _valid_query(query)
+    mode = mode.upper().strip() if isinstance(mode, str) else ""
     if not query or len(query) > MAX_QUERY_LENGTH:
         return {
             "ok": False,
             "error": "يجب أن يكون البحث بين 1 و1000 حرف.",
+            "results": [],
+        }
+    if mode not in RESEARCH_MODES:
+        return {
+            "ok": False,
+            "error": "وضع البحث يجب أن يكون FAST أو DEEP.",
             "results": [],
         }
     if not isinstance(max_results, int) or not 1 <= max_results <= MAX_RESULTS:
@@ -598,108 +910,147 @@ async def web_search(query: str, max_results: int = 5) -> dict[str, object]:
             "results": [],
         }
 
-    pages = await _run_tavily_query(query, max_results, api_key)
-    if pages is None:
+    query_type = _classify_query(query)
+    if mode == "FAST":
+        candidates, credits = await _run_tavily_query(
+            query,
+            5,
+            api_key,
+            mode,
+            query_type,
+        )
+        if not candidates:
+            return {
+                "ok": False,
+                "error": "تعذر تنفيذ البحث الآن. حاول مرة أخرى لاحقًا.",
+                "results": [],
+                "mode": mode,
+                "query_type": query_type,
+                "search_calls": 1,
+                "extract_calls": 0,
+                "credits_used": credits,
+            }
+        enriched = [
+            _enrich_source(
+                candidate,
+                candidate.get("_tavily_item")
+                if isinstance(candidate.get("_tavily_item"), dict)
+                else {},
+                query,
+                query_type,
+            )
+            for candidate in candidates
+        ]
+        results, candidate_count = _rank_and_deduplicate(
+            enriched,
+            query_type,
+            mode,
+        )
+        return {
+            "ok": True,
+            "query": query,
+            "mode": mode,
+            "query_type": query_type,
+            "queries": [query],
+            "search_calls": 1,
+            "extract_calls": 0,
+            "credits_used": credits,
+            "candidate_count": candidate_count,
+            "deduplicated_count": len(results),
+            "failed_calls": 0,
+            "results": results,
+        }
+
+    queries = _research_queries(query, query_type, mode)
+    official_domains = _official_domains_for_query(query, query_type)
+    semaphore = asyncio.Semaphore(MAX_CONCURRENT_SEARCHES)
+
+    async def run_query(index: int, related_query: str) -> tuple[list[dict[str, object]], float | None]:
+        async with semaphore:
+            domains = official_domains if query_type == "official" and index > 0 else None
+            return await _run_tavily_query(
+                related_query,
+                7,
+                api_key,
+                mode,
+                query_type,
+                domains,
+            )
+
+    query_results: list[tuple[list[dict[str, object]], float | None]] = []
+    known_search_credits = 0.0
+    for batch_start in range(0, len(queries), MAX_CONCURRENT_SEARCHES):
+        batch = queries[batch_start : batch_start + MAX_CONCURRENT_SEARCHES]
+        batch_results = await asyncio.gather(
+            *(
+                run_query(batch_start + index, related_query)
+                for index, related_query in enumerate(batch)
+            )
+        )
+        query_results.extend(batch_results)
+        known_search_credits += sum(
+            value for _, value in batch_results if value is not None
+        )
+        if known_search_credits >= DEEP_CREDIT_BUDGET:
+            break
+    candidates: list[dict[str, object]] = []
+    credits: list[float] = []
+    failed_calls = 0
+    for query_candidates, query_credits in query_results:
+        if not query_candidates:
+            failed_calls += 1
+        candidates.extend(
+            _enrich_source(
+                candidate,
+                candidate.get("_tavily_item")
+                if isinstance(candidate.get("_tavily_item"), dict)
+                else {},
+                str(candidate.get("_query") or query),
+                query_type,
+            )
+            for candidate in query_candidates
+        )
+        if query_credits is not None:
+            credits.append(query_credits)
+
+    ranked, candidate_count = _rank_and_deduplicate(candidates, query_type, mode)
+    ranked = ranked[:MAX_DEEP_SOURCES]
+    if not ranked:
         return {
             "ok": False,
             "error": "تعذر تنفيذ البحث الآن. حاول مرة أخرى لاحقًا.",
             "results": [],
-        }
-
-    if not pages:
-        logger.error("Tavily returned no pages that could be read")
-        return {
-            "ok": False,
-            "error": "لم نتمكن من قراءة صفحات نتائج البحث.",
-            "results": [],
-        }
-
-    logger.info("web_search completed query=%r pages_opened=%d", query, len(pages))
-    results = [
-        _enrich_source(
-            page,
-            page.get("_tavily_item")
-            if isinstance(page.get("_tavily_item"), dict)
-            else {},
-            query,
-            "general_web",
-        )
-        for page in pages
-    ]
-    return {"ok": True, "query": query, "results": results}
-
-
-async def research_search(query: str, mode: str = "FAST") -> dict[str, object]:
-    query = _valid_query(query)
-    mode = mode.upper().strip() if isinstance(mode, str) else ""
-    if not query or len(query) > MAX_QUERY_LENGTH:
-        return {
-            "ok": False,
-            "error": "يجب أن يكون البحث بين 1 و1000 حرف.",
-            "results": [],
-        }
-    if mode not in RESEARCH_MODES:
-        return {
-            "ok": False,
-            "error": "وضع البحث يجب أن يكون FAST أو DEEP.",
-            "results": [],
-        }
-
-    api_key = os.environ.get("TAVILY_API_KEY")
-    if not api_key:
-        logger.error("TAVILY_API_KEY is not configured")
-        return {
-            "ok": False,
-            "error": "البحث غير متاح حاليًا لأن إعداد البحث غير مكتمل.",
-            "results": [],
-        }
-
-    query_type = _classify_query(query)
-    queries = _research_queries(query, query_type, mode)
-    logger.info(
-        "research_search started mode=%s query_type=%s query_count=%d",
-        mode,
-        query_type,
-        len(queries),
-    )
-    candidates: list[dict[str, object]] = []
-    for related_query in queries:
-        pages = await _run_tavily_query(related_query, 5, api_key)
-        if not pages:
-            logger.warning("research_search query returned no readable pages: %r", related_query)
-            continue
-        for page in pages:
-            item = page.get("_tavily_item")
-            if not isinstance(item, dict):
-                continue
-            candidates.append(
-                _enrich_source(
-                    page,
-                    item,
-                    str(page.get("_query") or related_query),
-                    query_type,
-                )
-            )
-
-    results, candidate_count = _rank_and_deduplicate(candidates, query_type, mode)
-    if not results:
-        return {
-            "ok": False,
-            "error": "لم نتمكن من العثور على مصادر قابلة للقراءة.",
-            "results": [],
-            "query_type": query_type,
             "mode": mode,
-            "tavily_requests": len(queries),
+            "query_type": query_type,
+            "search_calls": len(query_results),
+            "extract_calls": 0,
+            "credits_used": sum(credits) if len(credits) == len(query_results) else None,
+            "credit_budget": DEEP_CREDIT_BUDGET,
+            "budget_exhausted": known_search_credits >= DEEP_CREDIT_BUDGET,
+            "failed_calls": failed_calls,
         }
 
-    logger.info(
-        "research_search completed mode=%s query_type=%s tavily_requests=%d "
-        "candidates=%d selected=%d",
-        mode,
-        query_type,
-        len(queries),
-        candidate_count,
-        len(results),
+    if known_search_credits >= DEEP_CREDIT_BUDGET:
+        extracted_results = [
+            {**item, "extraction_status": "not_run_budget"} for item in ranked
+        ]
+        extraction_metrics = {
+            "extract_calls": 0,
+            "urls_extracted": 0,
+            "failed_extractions": 0,
+            "extract_credits": 0.0,
+        }
+    else:
+        extracted_results, extraction_metrics = await _deep_extract(
+            ranked,
+            mode,
+            api_key,
+        )
+    total_credits = (
+        sum(credits) + extraction_metrics["extract_credits"]
+        if extraction_metrics["extract_credits"] is not None
+        and len(credits) == len(query_results)
+        else None
     )
     return {
         "ok": True,
@@ -707,18 +1058,26 @@ async def research_search(query: str, mode: str = "FAST") -> dict[str, object]:
         "mode": mode,
         "query_type": query_type,
         "queries": queries,
-        "tavily_requests": len(queries),
+        "search_calls": len(query_results),
+        "extract_calls": extraction_metrics["extract_calls"],
+        "credits_used": total_credits,
+        "credit_budget": DEEP_CREDIT_BUDGET,
+        "budget_exhausted": known_search_credits >= DEEP_CREDIT_BUDGET,
         "candidate_count": candidate_count,
-        "independent_domains": len({item.get("domain") for item in results}),
-        "results": results,
+        "deduplicated_count": len(ranked),
+        "urls_extracted": extraction_metrics["urls_extracted"],
+        "failed_calls": failed_calls + extraction_metrics["failed_extractions"],
+        "independent_domains": len({item.get("domain") for item in ranked}),
+        "results": extracted_results,
     }
 
 
 def register_skill_tools(server: MCPServer) -> None:
     server.tool(
         description=(
-            "Searches the public web with Tavily, opens each returned page, "
-            "and extracts a text snippet with source metadata."
+            "Searches the public web with Tavily in FAST or DEEP mode. "
+            "FAST uses one low-cost search; DEEP uses multiple queries, "
+            "ranking, deduplication, and Tavily Extract."
         ),
         annotations=ToolAnnotations(
             readOnlyHint=True,
@@ -728,17 +1087,3 @@ def register_skill_tools(server: MCPServer) -> None:
         ),
         structured_output=True,
     )(web_search)
-    server.tool(
-        description=(
-            "Performs FAST or DEEP multi-query web research with Tavily. "
-            "Classifies the request, prioritizes primary sources, opens pages, "
-            "deduplicates domains, and returns ranked source metadata."
-        ),
-        annotations=ToolAnnotations(
-            readOnlyHint=True,
-            destructiveHint=False,
-            idempotentHint=True,
-            openWorldHint=True,
-        ),
-        structured_output=True,
-    )(research_search)
