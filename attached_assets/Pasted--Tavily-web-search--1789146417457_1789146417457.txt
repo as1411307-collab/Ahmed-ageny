@@ -1,0 +1,276 @@
+اعتبر ربط Tavily الحالي واختبار web_search ناجحين.
+لا تنشر التطبيق، لا تغيّر معمارية المشروع، ولا تضف مزود بحث آخر الآن.
+
+الهدف:
+تطوير طبقة البحث الحالية فقط إلى نظام بحث شخصي موثوق وقابل للتحكم في التكلفة.
+
+احتفظ بـ web_search، وأضف وضعين داخله:
+FAST
+DEEP
+
+========================
+1. SECURITY
+========================
+
+- اقرأ TAVILY_API_KEY حصراً من Replit Secrets / environment.
+- لا تطبع قيمة المفتاح في logs أو exceptions أو responses.
+- لا تضع المفتاح في source code أو config files.
+- لا تعرض جميع environment variables لأغراض التشخيص.
+- عند تسجيل request إلى Tavily سجّل فقط:
+  endpoint
+  mode
+  query_id
+  response status
+  elapsed time
+  credits used
+ولا تسجل Authorization headers.
+
+========================
+2. FAST MODE
+========================
+
+الغرض: البحث اليومي السريع قليل التكلفة.
+
+استخدم Tavily Search:
+- search_depth="basic"
+- max_results=5
+- include_answer=false
+- include_usage=true
+- country unset unless user explicitly asks for a country
+- choose topic dynamically:
+  general
+  news
+  finance
+
+استخدم time_range/start_date/end_date فقط عندما يكون للسؤال بعد زمني.
+
+أرجع أفضل النتائج مع:
+- title
+- url
+- domain
+- score
+- content
+- published_date when actually available
+
+لا تخترع metadata غير موجودة.
+
+========================
+3. DEEP MODE
+========================
+
+أولاً صنّف نية السؤال:
+- official / primary source
+- technical
+- academic/scientific
+- legal/government
+- news/current
+- general
+- social/community
+- comparison/investigation
+
+إذا كان السؤال بسيطاً لا تفككه بلا داعٍ.
+
+إذا كان مركباً:
+كوّن 2 إلى 5 sub-queries مركزة.
+احتفظ بالسؤال الأصلي بينها عندما يكون مفيداً.
+
+للبحث العالمي:
+- لا تستخدم country افتراضياً.
+- ابدأ بلغة المستخدم.
+- أضف English query عند فائدته.
+- أضف لغة محلية إضافية فقط إذا كانت مرتبطة فعلياً بالموضوع أو البلد.
+
+نفّذ sub-queries بشكل async مع bounded concurrency.
+لا تجعل فشل query واحد يفشل البحث كله.
+استخدم timeout وretry محدود مع backoff للأخطاء المؤقتة و429.
+
+في DEEP:
+- استخدم search_depth="advanced"
+- ابدأ بـ max_results بين 6 و8 لكل sub-query، وليس رقماً ثابتاً ضخماً.
+- include_usage=true
+- include_answer=false
+
+بعد جمع النتائج:
+1. canonicalize URLs
+2. remove tracking parameters where safe
+3. deduplicate URLs
+4. merge unique chunks
+5. rank by Tavily score + source quality + intent match
+6. remove obvious copies/syndications when they repeat the same source
+
+========================
+4. PRIMARY / OFFICIAL SOURCES
+========================
+
+لا تفترض أن Tavily score يعني أن المصدر رسمي.
+
+أنشئ classifier داخل التطبيق لكل مصدر:
+- primary
+- secondary
+- community
+- unknown
+
+وأضف confidence.
+
+Primary يعني مثلاً:
+- الجهة نفسها
+- الوثائق الرسمية للمنتج
+- المستودع الرسمي
+- جهة حكومية أصلية
+- الدراسة/الورقة الأصلية
+- filing أو dataset الأصلي
+
+إذا طلب المستخدم official:
+نفّذ خطوة بحث إضافية مخصصة للمصدر الرسمي.
+
+إذا عُرف الـofficial domain بثقة:
+استخدم include_domains في الاستعلام الرسمي.
+
+لا تعتبر طلب official ناجحاً إذا كان المصدر الأولي المتاح غائباً من القائمة النهائية.
+
+========================
+5. SEARCH -> EXTRACT
+========================
+
+لا تستخرج الصفحة الكاملة لكل نتيجة بحث.
+
+بعد البحث والترتيب:
+اختر تقريباً 5 إلى 8 مصادر عالية القيمة فقط.
+
+استخدم Tavily Extract عليها.
+
+ابدأ:
+extract_depth="basic"
+
+ارفع إلى:
+extract_depth="advanced"
+فقط للصفحات المعقدة أو JS أو الجداول أو عندما يفشل basic في الحصول على المحتوى المطلوب.
+
+احتفظ بحالة كل URL:
+- extracted
+- failed
+- partial
+
+فشل استخراج صفحة واحدة لا يفشل العملية كلها.
+
+========================
+6. EVIDENCE
+========================
+
+لكل claim مهم في النتيجة النهائية:
+اربطه بالمصدر الداعم.
+
+حاول قدر الإمكان:
+- primary source واحد على الأقل
+أو
+- مصدرين مستقلين عندما لا يوجد مصدر أولي واضح.
+
+إذا اختلفت مصادر موثوقة:
+لا تحذف التعارض.
+أظهر:
+- claim A
+- source A
+- claim B
+- source B
+- ما الذي نستطيع تأكيده
+- ما الذي ما زال غير مؤكد
+
+لا تعتبر عدة مواقع أعادت نشر الخبر نفسه مصادر مستقلة.
+
+========================
+7. COST CONTROL
+========================
+
+تتبع Tavily credits لكل عملية مستخدم.
+
+أنشئ:
+search_calls
+extract_calls
+credits_used
+urls_extracted
+failed_calls
+
+ضع budget افتراضي لـ DEEP.
+
+إذا البحث على وشك تجاوز الميزانية المحددة:
+توقف عند أفضل الأدلة المتاحة بدلاً من الاستمرار بلا حد.
+
+لا تستخدم Tavily Research API الآن.
+جهزه فقط لاحقاً كخيار SUPERDEEP منفصل، ولا يتم تشغيله إلا بطلب صريح.
+
+========================
+8. MCP
+========================
+
+لا تعيد كتابة MCP طالما ping الحالي ناجح.
+
+اعرض:
+- installed mcp package version
+- negotiated protocol version إن أمكن
+- transport المستخدم فعلياً
+
+اختبر توافق Streamable HTTP مع النسخة المثبتة فقط.
+لا تعمل migration أو upgrade تلقائي.
+
+========================
+9. TESTS
+========================
+
+نفذ الاختبارات فعلياً.
+
+TEST 1 — FAST
+Query:
+latest MCP Python SDK documentation
+
+المطلوب:
+بحث ناجح سريع + URLs + scores + credits used.
+
+TEST 2 — OFFICIAL
+Query:
+official Python MCP Streamable HTTP documentation
+
+المطلوب:
+وجود مصدر رسمي مثل:
+modelcontextprotocol/python-sdk
+أو
+modelcontextprotocol.io
+أو الوثائق الرسمية المقابلة
+ضمن النتائج النهائية ذات الأولوية.
+
+TEST 3 — DEEP
+اختر سؤالاً تقنياً متعدد الجوانب.
+أظهر:
+- original query
+- generated sub-queries
+- raw result count
+- deduplicated count
+- extracted URLs
+- final sources
+- credits used
+
+TEST 4 — FAILURE
+اجعل URL واحداً يفشل في extraction عمداً أو استخدم URL غير صالح.
+يجب أن تكمل بقية العملية بدون انهيار.
+
+TEST 5 — RECENCY
+نفذ سؤال أخبار حديثاً باستخدام topic=news وفلتر زمني.
+تحقق من metadata الخاصة بالتاريخ عندما تكون متاحة.
+
+========================
+10. FINAL REPORT
+========================
+
+لا تقل "تم" أو "نجح" إلا بعد تشغيل الاختبارات.
+
+أعطني تقريراً واحداً فقط يحتوي:
+- الملفات التي تغيرت
+- functions/classes التي أضيفت
+- نتائج كل test PASS/FAIL
+- استهلاك Tavily لكل test
+- الـMCP version الفعلي
+- أي قيود أو أخطاء بقيت
+
+لا تنشر التطبيق.
+لا تضف Exa أو Brave.
+لا تستخدم Tavily Research API.
+لا تشترِ أو تفعل أي خطة مدفوعة.
