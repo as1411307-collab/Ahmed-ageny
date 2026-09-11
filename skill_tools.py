@@ -41,6 +41,7 @@ class _PageTextParser(HTMLParser):
                 attributes.get("property")
                 or attributes.get("name")
                 or attributes.get("itemprop")
+                or ""
             ).lower()
             if any(marker in key for marker in ("date", "published", "modified", "created")):
                 content = attributes.get("content", "").strip()
@@ -149,6 +150,13 @@ async def _fetch_page(url: str) -> dict[str, str | None] | None:
         if not words:
             logger.error("Opened page but extracted no text: %s", url)
             return None
+        if len(words) < 200:
+            logger.error(
+                "Skipped page with insufficient extracted text url=%s words=%d",
+                url,
+                len(words),
+            )
+            return None
         snippet = " ".join(words[:350])
         logger.info(
             "Opened page url=%s content_type=%s words=%d",
@@ -162,7 +170,7 @@ async def _fetch_page(url: str) -> dict[str, str | None] | None:
             "date": date,
             "snippet": snippet,
         }
-    except (HTTPError, URLError, TimeoutError, OSError, UnicodeError) as error:
+    except Exception as error:
         logger.exception("Failed to fetch page url=%s error=%s", url, error)
         return None
 
