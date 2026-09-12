@@ -237,6 +237,115 @@ async def record_tool_event(
         raise PersistenceError("Could not persist the tool event.") from error
 
 
+async def find_document_by_hash(file_hash: str) -> dict[str, Any] | None:
+    pool = await _get_pool()
+    try:
+        row = await pool.fetchrow(
+            """
+            SELECT d.document_id, d.filename, d.status, COUNT(c.chunk_id)::int AS chunk_count
+            FROM documents d
+            LEFT JOIN document_chunks c ON c.document_id = d.document_id
+            WHERE d.file_hash = $1
+            GROUP BY d.document_id, d.filename, d.status
+            LIMIT 1
+            """,
+            file_hash,
+        )
+    except Exception as error:
+        raise PersistenceError("Could not check for a duplicate document.") from error
+    return dict(row) if row is not None else None
+
+
+async def store_document(
+    *,
+    document_id: str,
+    filename: str,
+    mime_type: str | None,
+    file_hash: str,
+    status: str,
+    chunks: Sequence[Any],
+) -> None:
+    pool = await _get_pool()
+    try:
+        async with pool.acquire() as connection:
+            async with connection.transaction():
+                await connection.execute(
+                    """
+                    INSERT INTO documents (
+                        document_id,
+                        filename,
+                        mime_type,
+                        source_type,
+                        file_hash,
+                        status
+                    )
+                    VALUES ($1::uuid, $2, $3, 'upload', $4, $5)
+                    """,
+                    document_id,
+                    filename,
+                    mime_type,
+                    file_hash,
+                    status,
+                )
+                if chunks:
+                    await connection.executemany(
+                        """
+                        INSERT INTO document_chunks (
+                            document_id,
+                            chunk_index,
+                            page_number,
+                            content,
+                            metadata
+                        )
+                        VALUES ($1::uuid, $2, $3, $4, $5::jsonb)
+                        """,
+                        [
+                            (
+                                document_id,
+                                chunk.chunk_index,
+                                chunk.page_number,
+                                chunk.content,
+                                json.dumps(chunk.metadata, separators=(",", ":")),
+                            )
+                            for chunk in chunks
+                        ],
+                    )
+    except Exception as error:
+        raise PersistenceError("Could not store the uploaded document.") from error
+
+
+async def search_document_chunks(query: str, top_k: int) -> list[dict[str, Any]]:
+    pool = await _get_pool()
+    try:
+        rows = await pool.fetch(
+            """
+            SELECT
+                c.document_id,
+                d.filename,
+                d.mime_type,
+                c.chunk_index,
+                c.page_number,
+                c.content,
+                ts_rank_cd(
+                    to_tsvector('simple', c.content),
+                    plainto_tsquery('simple', $1)
+                ) AS rank
+            FROM document_chunks c
+            JOIN documents d ON d.document_id = c.document_id
+            WHERE d.status = 'ready'
+              AND to_tsvector('simple', c.content)
+                  @@ plainto_tsquery('simple', $1)
+            ORDER BY rank DESC, c.document_id, c.chunk_index
+            LIMIT $2
+            """,
+            query,
+            top_k,
+        )
+    except Exception as error:
+        raise PersistenceError("Could not search uploaded documents.") from error
+    return [dict(row) for row in rows]
+
+
 async def close_pool() -> None:
     global _pool
     if _pool is not None:

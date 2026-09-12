@@ -8,6 +8,7 @@ from typing import TypedDict
 
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
+from starlette.datastructures import UploadFile
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse, Response
 
@@ -27,6 +28,8 @@ from persistence import (
     load_message_history,
     record_tool_event,
 )
+from config import MAX_UPLOAD_BYTES
+from my_files import SUPPORTED_EXTENSIONS, extension_for, ingest_document
 from skill_tools import register_skill_tools
 
 
@@ -99,6 +102,62 @@ async def chat_page(_: Request) -> Response:
     return FileResponse(WEB_DIR / "index.html")
 
 
+@server.custom_route("/files/upload", methods=["POST"])
+async def files_upload(request: Request) -> Response:
+    try:
+        form = await request.form()
+    except Exception:
+        return JSONResponse({"error": "صيغة رفع الملف غير صالحة."}, status_code=400)
+
+    uploads = [item for item in form.getlist("file") if isinstance(item, UploadFile)]
+    if not uploads:
+        return JSONResponse({"error": "يجب إرفاق ملف واحد على الأقل باسم file."}, status_code=400)
+
+    prepared: list[tuple[UploadFile, str, str | None, bytes]] = []
+    for upload in uploads:
+        filename = Path(upload.filename or "").name
+        extension = extension_for(filename)
+        if not filename or extension not in SUPPORTED_EXTENSIONS:
+            return JSONResponse(
+                {
+                    "error": "نوع الملف غير مدعوم.",
+                    "supported_extensions": sorted(SUPPORTED_EXTENSIONS),
+                    "filename": filename or None,
+                },
+                status_code=415,
+            )
+        data = await upload.read(MAX_UPLOAD_BYTES + 1)
+        if len(data) > MAX_UPLOAD_BYTES:
+            return JSONResponse(
+                {"error": "حجم الملف أكبر من الحد المسموح.", "filename": filename},
+                status_code=413,
+            )
+        prepared.append((upload, filename, upload.content_type, data))
+
+    results: list[dict[str, object]] = []
+    try:
+        for _, filename, mime_type, data in prepared:
+            result = await ingest_document(
+                document_id=str(uuid4()),
+                filename=filename,
+                mime_type=mime_type,
+                data=data,
+            )
+            results.append(result)
+    except PersistenceError as error:
+        logger.error("File persistence failed error_type=%s", type(error).__name__)
+        return JSONResponse(
+            {"error": "تعذر حفظ الملف الآن. حاول مرة أخرى."},
+            status_code=503,
+        )
+
+    if any(result.get("duplicate") for result in results):
+        return JSONResponse({"files": results}, status_code=409)
+    if any(result.get("status") != "ready" for result in results):
+        return JSONResponse({"files": results}, status_code=422)
+    return JSONResponse({"files": results}, status_code=201)
+
+
 @server.custom_route("/chat/message", methods=["POST"])
 async def chat_message(request: Request) -> Response:
     try:
@@ -125,6 +184,12 @@ async def chat_message(request: Request) -> Response:
 
     conversation_id = payload.get("conversation_id", payload.get("session_id"))
     run_id = payload.get("run_id")
+    scope = payload.get("scope", "WEB")
+    if scope not in {"WEB", "MY_FILES"}:
+        return JSONResponse(
+            {"error": "scope غير صالح. استخدم WEB أو MY_FILES."},
+            status_code=400,
+        )
     try:
         session_id = _request_uuid(conversation_id, "conversation_id")
         run_uuid = _request_uuid(run_id, "run_id")
@@ -134,7 +199,7 @@ async def chat_message(request: Request) -> Response:
     trace_id = str(uuid4())
     started_at = time.perf_counter()
     try:
-        await ensure_session(session_id)
+        await ensure_session(session_id, scope=scope)
         stored_history = await load_message_history(session_id)
         if stored_history:
             message_history = parse_message_history(stored_history)
@@ -177,6 +242,7 @@ async def chat_message(request: Request) -> Response:
             message_history=message_history,
             conversation_id=session_id,
             run_id=run_uuid,
+            scope=scope,
             tool_event_recorder=save_tool_event,
         )
     except AgentCoreError as error:
