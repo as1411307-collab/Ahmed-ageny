@@ -10,7 +10,7 @@ from auth import auth_health
 from embeddings import embedding_health
 from persistence import PersistenceError, doctor_storage_health, verify_audit_chain
 from policy import TOOL_POLICIES
-from skill_tools import tavily_health
+from skill_tools import search_fabric_health
 
 
 _CACHE_TTL_SECONDS = 15.0
@@ -87,7 +87,7 @@ async def _build_report(*, probe_search: bool) -> dict[str, Any]:
         }
 
     mcp_status = "READY" if TOOL_POLICIES else "ERROR"
-    search = tavily_health()
+    search = search_fabric_health()
     if probe_search and search["status"] == "READY":
         # A live search probe is intentionally opt-in because it can spend credits.
         search["fast_probe"] = "not_run"

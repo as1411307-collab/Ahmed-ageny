@@ -881,7 +881,7 @@ async def _deep_extract(
     }
 
 
-async def web_search(
+async def _tavily_web_search(
     query: str,
     max_results: int = 5,
     mode: str = "FAST",
@@ -1126,12 +1126,46 @@ def tavily_health() -> dict[str, object]:
     }
 
 
+_search_fabric_instance: object | None = None
+
+
+def _get_search_fabric() -> object:
+    global _search_fabric_instance
+    if _search_fabric_instance is None:
+        from search_fabric import BraveProvider, SearchFabric, TavilyProvider
+
+        _search_fabric_instance = SearchFabric(
+            TavilyProvider(_tavily_web_search, tavily_health),
+            BraveProvider(),
+        )
+    return _search_fabric_instance
+
+
+async def web_search(
+    query: str,
+    max_results: int = 5,
+    mode: str = "FAST",
+) -> dict[str, object]:
+    fabric = _get_search_fabric()
+    return await fabric.search(  # type: ignore[union-attr]
+        query=query,
+        mode=mode,
+        max_results=max_results,
+        tavily_legacy_search=_tavily_web_search,
+    )
+
+
+def search_fabric_health() -> dict[str, object]:
+    fabric = _get_search_fabric()
+    return fabric.health()  # type: ignore[union-attr]
+
+
 def register_skill_tools(server: MCPServer) -> None:
     server.tool(
         description=(
-            "Searches the public web with Tavily in FAST or DEEP mode. "
-            "FAST uses one low-cost search; DEEP uses multiple queries, "
-            "ranking, deduplication, and Tavily Extract."
+            "Searches the public web through the provider-neutral Search Fabric. "
+            "FAST uses Tavily only; DEEP uses selective provider routing, "
+            "normalization, deduplication, and rank-based fusion."
         ),
         annotations=ToolAnnotations(
             readOnlyHint=True,

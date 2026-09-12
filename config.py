@@ -34,6 +34,13 @@ def _bounded_float(name: str, default: float, *, minimum: float, maximum: float)
     return max(minimum, min(value, maximum))
 
 
+def _bounded_bool(name: str, default: bool) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().casefold() in {"1", "true", "yes", "on"}
+
+
 CHUNK_SIZE = _bounded_int("CHUNK_SIZE", 1200, minimum=200, maximum=10000)
 CHUNK_OVERLAP = _bounded_int("CHUNK_OVERLAP", 200, minimum=0, maximum=2000)
 if CHUNK_OVERLAP >= CHUNK_SIZE:
@@ -85,3 +92,35 @@ GEMINI_429_BACKOFF_MAX_SECONDS = _bounded_float(
     minimum=0.1,
     maximum=300.0,
 )
+
+SEARCH_PROVIDER_TIMEOUT_SECONDS = _bounded_float(
+    "SEARCH_PROVIDER_TIMEOUT_SECONDS",
+    12.0,
+    minimum=2.0,
+    maximum=60.0,
+)
+SEARCH_MAX_PROVIDER_CALLS = _bounded_int(
+    "SEARCH_MAX_PROVIDER_CALLS",
+    2,
+    minimum=1,
+    maximum=6,
+)
+SEARCH_MAX_CONCURRENCY = _bounded_int(
+    "SEARCH_MAX_CONCURRENCY",
+    2,
+    minimum=1,
+    maximum=4,
+)
+SEARCH_MAX_RESULTS_PER_PROVIDER = _bounded_int(
+    "SEARCH_MAX_RESULTS_PER_PROVIDER",
+    5,
+    minimum=1,
+    maximum=10,
+)
+SEARCH_RRF_K = _bounded_int(
+    "SEARCH_RRF_K",
+    60,
+    minimum=1,
+    maximum=1000,
+)
+BRAVE_SEARCH_ENABLED = _bounded_bool("BRAVE_SEARCH_ENABLED", False)

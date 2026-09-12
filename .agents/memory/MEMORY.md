@@ -7,3 +7,4 @@
 - [Gemini rate limits](gemini-rate-limits.md) — rapid live test bursts can cause sustained 429s; use bounded backoff and report the provider blocker.
 - [Hybrid RAG embedding](hybrid-rag-embedding.md) — validate local multilingual models first; preserve FTS when vector indexing is unavailable and version vector metadata.
 - [Policy and HITL boundary](policy-hitl.md) — sensitive actions require trusted identity, persisted state transitions, and tamper-evident audit events.
+- [Search fabric routing](search-fabric.md) — Tavily remains primary; Brave is an optional independent index, disabled by default until benchmark evidence.
