@@ -1,0 +1,186 @@
+ابدأ Phase 1E.2 فقط: Single Owner Authentication.
+
+المشروع لم يجد Replit Auth verifier موثوقًا ومتاحًا فعليًا،
+ونحن لا نريد إضافة نظام مصادقة معقد لأن التطبيق لمستخدم واحد فقط.
+
+الهدف:
+استخدام Secret واحد قوي كمصادقة للمالك.
+
+1. OWNER SECRET
+
+استخدم Replit Secret باسم:
+
+AHMED_OWNER_TOKEN
+
+لا تنشئه داخل الكود.
+لا تطبعه.
+لا تسجله في logs.
+
+يجب أن يكون token طويلًا وعشوائيًا.
+
+2. AUTH HEADER
+
+كل endpoint خاص يتطلب:
+
+Authorization: Bearer <AHMED_OWNER_TOKEN>
+
+تحقق server-side.
+
+استخدم constant-time comparison مثل:
+secrets.compare_digest
+
+3. REMOVE DEPENDENCY ON REPLIT IDENTITY
+
+لا تعتمد على:
+X-Replit-User-Id
+X-Replit-User-Name
+request.state identity
+Replit Auth verifier
+
+ولا تحتاج:
+AHMED_OWNER_USER_ID
+
+لهذه النسخة.
+
+4. PROTECTED ENDPOINTS
+
+احمِ:
+
+POST /chat/message
+POST /files/upload
+GET /doctor
+POST /actions/{action_id}/approve
+POST /actions/{action_id}/reject
+
+وأي endpoint يحتوي private data.
+
+5. PUBLIC HEALTH
+
+يمكن أن يبقى:
+
+GET /health
+
+بدون auth.
+
+لكن يجب أن يعيد فقط:
+
+{"ok": true}
+
+ولا يعرض:
+provider
+model
+database
+errors
+quota
+internal configuration
+
+6. HITL
+
+أي approve/reject يتطلب نفس OWNER TOKEN.
+
+pending_action يجب أن يظل مرتبطًا بـ:
+action_id
+session_id
+run_id
+status
+
+ولا يكفي معرفة action_id للتنفيذ.
+
+7. IDEMPOTENCY
+
+approval لنفس action أكثر من مرة:
+لا ينفذ مرتين.
+
+احتفظ بالحماية الحالية باستخدام PostgreSQL row locks/state transitions.
+
+8. AUDIT
+
+سجّل فقط:
+
+principal="owner"
+authenticated=true/false
+endpoint
+action_id إذا وجد
+result
+timestamp
+
+لا تسجل token أو Authorization header.
+
+9. FAILURE RESPONSE
+
+Missing token:
+401
+
+Wrong token:
+401
+
+لا تفرق في الرد الخارجي بين missing وwrong بطريقة تكشف معلومات.
+
+10. TESTS
+
+TEST A
+No Authorization header
+/chat/message
+Expected: 401
+
+TEST B
+Wrong Bearer token
+Expected: 401
+
+TEST C
+Correct owner token
+Expected: 200
+
+TEST D
+Spoof X-Replit-User-Id with no owner token
+Expected: 401
+
+TEST E
+Correct owner token + HITL approve
+Expected: PASS
+
+TEST F
+Wrong token + HITL approve
+Expected: 401 and no execution
+
+TEST G
+Duplicate approval
+Expected: no second execution
+
+TEST H
+Restart server
+Expected:
+same owner token still works
+pending actions still work
+
+TEST I
+/health
+Expected:
+200 {"ok":true}
+with no internal details
+
+11. DO NOT ADD
+
+- Replit Auth
+- custom login page
+- OAuth
+- users table
+- roles
+- organizations
+- Clerk/Auth0
+- DBOS
+- n8n
+- SearXNG
+- Brave
+- Agent Reach
+
+في النهاية أعطني فقط:
+
+- owner token auth PASS/FAIL
+- protected endpoints PASS/FAIL
+- spoof test PASS/FAIL
+- HITL owner approval PASS/FAIL
+- duplicate approval PASS/FAIL
+- restart PASS/FAIL
+- health endpoint PASS/FAIL
+- remaining blocker
