@@ -1,0 +1,267 @@
+ابدأ Phase 2B.1 فقط:
+Academic Contract Benchmark + Regression Baseline.
+
+لا تضف أي provider جديد.
+لا تغيّر routing.
+لا تغيّر Tavily أو Search Fabric أو MY_FILES أو MCP.
+لا تضف PubMed أو GitHub أو Semantic Scholar أو arXiv.
+
+الهدف:
+تحويل Phase 2B من "الوظائف تعمل" إلى baseline قابل للقياس والمقارنة مستقبلًا.
+
+==================================================
+1. FIXED BENCHMARK DATASET
+==================================================
+
+أنشئ dataset ثابت داخل tests/fixtures/academic_benchmark/
+
+يجب أن يحتوي على حالات حقيقية ومعروفة مسبقًا:
+
+A. exact Crossref DOI
+B. exact DataCite DOI
+C. DOI بصيغة https://doi.org/
+D. exact paper title
+E. ambiguous title
+F. author search
+G. topic search
+H. latest research
+I. citation lookup
+J. reference lookup
+K. duplicate same paper from Crossref + OpenAlex
+L. conflicting metadata
+M. missing DOI
+N. Arabic academic query
+O. invalid DOI
+P. no-result query
+
+لكل fixture خزّن expected contract فقط:
+- expected DOI
+- expected title أو title pattern
+- expected provider route
+- expected merge behavior
+- required fields
+- whether enrichment is expected
+- whether Tavily fallback is allowed
+
+لا تخزن raw provider responses في fixtures.
+
+==================================================
+2. TEST TWO MODES
+==================================================
+
+MODE A — CONTRACT / DETERMINISTIC
+
+يستخدم mocked/minimal provider responses
+لا يعتمد على توفر APIs الحية.
+
+الهدف:
+regression tests مستقرة.
+
+MODE B — LIVE SMOKE
+
+عدد صغير فقط من الحالات:
+- one Crossref DOI
+- one DataCite DOI
+- one OpenAlex author/topic
+- one merged paper
+
+إذا provider غير متاح أو rate-limited:
+سجل LIVE_DEGRADED
+ولا تفشل deterministic suite.
+
+==================================================
+3. METRICS
+==================================================
+
+قِس:
+
+- DOI normalization accuracy
+- provider routing accuracy
+- exact-result accuracy
+- duplicate merge accuracy
+- conflict preservation accuracy
+- required-field completeness
+- citation/provenance completeness
+- no-result correctness
+- privacy violations = 0
+- latency per provider
+- provider request count
+
+لا تستخدم LLM-as-judge كأساس وحيد.
+
+==================================================
+4. PROVIDER REQUEST EFFICIENCY
+==================================================
+
+تحقق أن routing لا يسبب calls زائدة.
+
+أمثلة:
+
+DOI owned by Crossref:
+Expected:
+Crossref only
+OpenAlex only if enrichment requested
+
+DataCite DOI:
+Expected:
+DataCite route
+No unnecessary Crossref retry loop
+
+Author/topic:
+Expected:
+OpenAlex first
+No unnecessary Crossref call unless enrichment needed
+
+سجّل:
+calls_per_fixture
+
+==================================================
+5. MERGE CONTRACT
+==================================================
+
+ثبت قواعد merge كاختبارات صريحة:
+
+Identity:
+1. normalized DOI
+2. stable provider ID
+3. title + author + year fallback
+
+Field ownership:
+- DOI-registration metadata:
+  Crossref/DataCite source
+- graph/citation/OA:
+  OpenAlex source
+
+إذا يوجد conflict:
+- preserve provenance
+- no silent overwrite
+
+==================================================
+6. NO-HALLUCINATION CONTRACT
+==================================================
+
+اختبر أن Academic Layer لا ينشئ:
+
+- DOI غير موجود
+- author ID غير موجود
+- citation count غير موجود
+- retraction status غير موثوق
+- full-text URL غير موجود
+
+missing data = null/unknown
+
+وليس fabricated value.
+
+==================================================
+7. RETRACTION/CORRECTION SAFETY
+==================================================
+
+أضف fixture لحالة update/retraction إن أمكن.
+
+المطلوب:
+- إذا provider يؤكد status → أظهره مع provenance
+- إذا لا توجد بيانات → status=unknown
+
+ممنوع:
+"not retracted"
+فقط لأن provider لم يرجع update.
+
+==================================================
+8. ARABIC QUERY CONTRACT
+==================================================
+
+أضف fixtures عربية مثل:
+- "ابحث عن أبحاث حديثة عن ..."
+- "ما بيانات هذه الورقة؟"
+- "من مؤلف هذه الدراسة؟"
+
+Expected:
+- academic routing صحيح
+- لا forced English rewrite بلا داعٍ
+- لا private data leakage
+- النتائج المنظمة تبقى صحيحة
+
+==================================================
+9. FAILURE CONTRACT
+==================================================
+
+اختبر:
+
+- Crossref timeout
+- DataCite timeout
+- OpenAlex timeout
+- 429
+- malformed provider JSON
+- incomplete metadata
+
+Expected:
+- bounded retry
+- provider isolation
+- clean degraded result
+- no crash
+- no false success
+
+==================================================
+10. DOCTOR
+==================================================
+
+أضف academic benchmark summary آمن إلى Doctor أو test report فقط:
+
+- last_contract_test
+- deterministic_pass_rate
+- last_live_smoke
+- provider statuses
+
+لا تجعل /doctor يشغّل live benchmark كامل كل مرة.
+
+==================================================
+11. ACCEPTANCE CRITERIA
+==================================================
+
+Phase 2B.1 PASS إذا:
+
+- deterministic contract suite كلها PASS
+- routing accuracy PASS
+- merge contract PASS
+- no hallucinated identifiers PASS
+- privacy PASS
+- failure isolation PASS
+- live smoke يعمل أو يسجل DEGRADED بوضوح عند provider issue
+
+==================================================
+12. DO NOT ADD
+==================================================
+
+لا تضف:
+
+- PubMed
+- GitHub API
+- Semantic Scholar
+- arXiv
+- SearXNG
+- Brave key
+- RSS
+- YouTube
+- Agent Reach
+- n8n
+
+==================================================
+13. FINAL REPORT
+==================================================
+
+أعطني فقط:
+
+- files changed
+- fixture count
+- deterministic tests PASS/FAIL
+- live smoke PASS/DEGRADED/FAIL
+- DOI routing accuracy
+- merge accuracy
+- conflict preservation PASS/FAIL
+- no-hallucination contract PASS/FAIL
+- Arabic routing PASS/FAIL
+- provider failure isolation PASS/FAIL
+- average calls per fixture
+- latency summary
+- privacy PASS/FAIL
+- remaining blocker
