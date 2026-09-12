@@ -1,0 +1,290 @@
+CURRENT AHMED AGENT CAPABILITY AUDIT — READ ONLY
+
+هذه مراجعة فقط.
+ممنوع تعديل أي ملف أو dependency أو secret أو database schema.
+ممنوع إضافة أي capability جديدة.
+
+الهدف:
+تحديد ما يستطيع Ahmed Agent runtime نفسه فعله فعليًا الآن، وفصل ذلك تمامًا عن قدرات Replit Agent/Workspace.
+
+اعتبر server.py هو نقطة البداية، ثم تتبع runtime call graph الحقيقي.
+
+لكل Capability اكتشفها، أعطني:
+
+1. Capability name
+2. ملفات التنفيذ
+3. Runtime entry point
+4. هل هي:
+   - REGISTERED_WITH_AGENT
+   - INTERNAL_ONLY
+   - MCP_PUBLIC
+   - HTTP_ENDPOINT
+   - DORMANT
+   - TEST_ONLY
+   - REPLIT_AGENT_ONLY
+5. ما الـprovider أو الخدمة التي تعتمد عليها
+6. هل تحتاج Secret
+7. هل الـSecret موجود/configured أم لا
+8. هل هناك live end-to-end proof
+9. آخر اختبار live معروف
+10. هل توجد fallback path
+11. هل تحفظ بيانات
+12. ما الذي تحفظه بالضبط
+13. هل ترسل بيانات إلى external provider
+14. resource cost:
+    - startup RAM
+    - background processes
+    - external API calls
+15. dependencies المستخدمة فعليًا
+16. duplicate/overlapping capability إن وجدت
+
+==================================================
+A. RUNTIME MAP
+==================================================
+
+ابدأ من:
+server.py
+
+تتبع فقط المسارات التي يمكن الوصول إليها فعليًا أثناء التشغيل.
+
+أخرج:
+
+User request
+→ HTTP route
+→ AgentCore
+→ registered tool
+→ provider/client
+→ external service
+→ returned result
+
+لا تعتبر وجود function أو module دليلاً على أنها مستخدمة.
+
+==================================================
+B. AGENT TOOLS
+==================================================
+
+أخرج القائمة الفعلية الكاملة للأدوات المسجلة حاليًا داخل PydanticAI Agent.
+
+لكل tool:
+- name
+- scope
+- implementation function
+- action level/policy
+- external provider
+- live tested yes/no
+
+==================================================
+C. MCP
+==================================================
+
+أخرج فقط الأدوات التي يعلنها MCP server للعالم فعليًا.
+
+افصل:
+- public MCP tools
+- internal Agent tools
+- helper functions
+
+==================================================
+D. HTTP CAPABILITIES
+==================================================
+
+أخرج جميع routes الحالية:
+
+- public
+- owner-authenticated
+- upload
+- chat
+- actions
+- doctor
+- health
+- any others
+
+وما capability التي يتيحها كل route.
+
+==================================================
+E. PROVIDERS
+==================================================
+
+اعمل inventory لكل provider:
+
+Gemini
+Tavily
+Brave
+Crossref
+DataCite
+OpenAlex
+GitHub
+وأي provider آخر موجود فعليًا.
+
+صنف كل واحد:
+
+ACTIVE
+CONFIGURED_BUT_UNUSED
+OPTIONAL
+NOT_CONFIGURED
+DORMANT
+TEST_ONLY
+
+==================================================
+F. FILE / DATA CAPABILITIES
+==================================================
+
+حدد فعليًا:
+
+- supported upload formats
+- extraction
+- FTS
+- vector search
+- embeddings
+- citations
+- persistence
+- deletion/update capability
+- file creation capability
+
+لا تفترض وجود create/edit/delete إلا إذا له runtime path حقيقي.
+
+==================================================
+G. EXECUTION CAPABILITIES
+==================================================
+
+تحقق هل Ahmed Agent نفسه يملك فعلاً:
+
+- Python/code execution
+- shell execution
+- browser control
+- file download
+- arbitrary URL fetch
+- screenshot/OCR
+- email
+- calendar
+- phone/voice
+- WhatsApp
+- background tasks
+- scheduled jobs
+- external app actions
+
+مهم جدًا:
+إذا هذه القدرات موجودة فقط في Replit Agent الذي يبني المشروع، صنفها:
+
+REPLIT_AGENT_ONLY
+
+ولا تنسبها إلى Ahmed Agent.
+
+==================================================
+H. PERSISTENCE
+==================================================
+
+أخرج كل شيء يتم حفظه حاليًا:
+
+- chat messages
+- runs
+- sessions
+- tool events
+- documents
+- embeddings
+- pending actions
+- audit events
+- search results
+- provider raw responses
+
+وحدد:
+PERSISTENT
+TEMPORARY
+NOT_STORED
+
+أريد معرفة هل نتائج WEB SEARCH يتم حفظ محتواها فعلاً أم لا.
+
+==================================================
+I. STARTUP / RESOURCE COST
+==================================================
+
+اعرض ما الذي يتم تحميله عند startup.
+
+خصوصًا:
+- embedding model
+- pgvector usage
+- local model memory
+- background workers
+- provider clients
+
+وقس إن أمكن:
+- baseline RSS
+- RSS after full startup
+- RSS after embeddings loaded
+
+==================================================
+J. DEPENDENCY REALITY
+==================================================
+
+لكل direct dependency:
+- actually imported in runtime?
+- test only?
+- unused?
+- transitive only?
+
+لا تحذف شيئًا.
+
+==================================================
+K. TEST EVIDENCE
+==================================================
+
+لا تعتبر unit test وحده دليلاً على live capability.
+
+صنف الإثبات:
+
+LEVEL 0 = file exists
+LEVEL 1 = unit tested
+LEVEL 2 = integrated
+LEVEL 3 = live provider test
+LEVEL 4 = full User → Agent → Tool → Provider → Answer E2E
+
+==================================================
+L. FINAL MATRIX
+==================================================
+
+أعطني جدولًا نهائيًا:
+
+Capability
+Runtime Status
+Evidence Level 0-4
+Provider
+Persistent Data
+External Data Egress
+Approx Runtime Cost
+Overlap/Duplication
+Recommendation
+
+Recommendation فقط واحدة من:
+KEEP_CORE
+KEEP_OPTIONAL
+SIMPLIFY
+DORMANT
+REMOVE_CANDIDATE
+REPLIT_AGENT_ONLY
+UNKNOWN_NEEDS_TEST
+
+==================================================
+M. IMPORTANT
+==================================================
+
+لا تنفذ cleanup.
+لا تعدل code.
+لا تضف tests.
+لا تغير secrets.
+لا تصلح المشاكل.
+
+هذه المرحلة Evidence فقط.
+
+وفي النهاية أعطني أرقامًا:
+
+- total discovered capabilities
+- full E2E capabilities
+- integrated but unproven capabilities
+- dormant capabilities
+- Replit-Agent-only capabilities
+- providers active
+- providers dormant
+- direct runtime dependencies
+- estimated removable complexity
+
+ثم STOP.
