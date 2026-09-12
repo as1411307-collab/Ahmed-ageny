@@ -1,0 +1,367 @@
+ابدأ Phase 2B Implementation فقط:
+Structured Academic + DOI Retrieval MVP.
+
+لا تغيّر:
+- Tavily
+- Search Fabric العام
+- MY_FILES
+- MCP
+- Gemini
+- Policy/HITL
+- Auth
+- existing SearchProvider behavior
+
+الهدف:
+إضافة Academic Layer مستقلة للبحث الأكاديمي المنظم،
+مع DOI routing صحيح عبر أكثر من Registration Agency.
+
+==================================================
+1. ACADEMIC LAYER
+==================================================
+
+أنشئ module مستقل، مثل:
+
+academic_search.py
+
+لا تحشر AcademicResult داخل NormalizedSearchResult.
+
+أنشئ:
+
+AcademicProvider
+AcademicResult
+DOIResolver
+
+==================================================
+2. DOI NORMALIZATION
+==================================================
+
+أضف normalize_doi():
+
+يدعم:
+- 10.xxxx/...
+- doi:10.xxxx/...
+- https://doi.org/10.xxxx/...
+- http://dx.doi.org/10.xxxx/...
+
+ينظف:
+- whitespace
+- prefix
+- URL wrapper
+
+لا يغير suffix بشكل قد يفسد DOI.
+
+احتفظ بـ:
+original_doi
+normalized_doi
+
+==================================================
+3. DOI REGISTRATION AGENCY ROUTING
+==================================================
+
+لا تفترض أن كل DOI هو Crossref.
+
+حدد Registration Agency عبر مصدر رسمي مناسب:
+- Crossref /works/{doi}/agency
+أو
+- DOI Foundation doiRA service
+
+ثم:
+
+Crossref DOI
+→ Crossref metadata
+
+DataCite DOI
+→ DataCite Public REST API
+
+Other/unknown RA
+→ resolve DOI safely
+→ return RA/landing URL if available
+→ لا تخترع structured metadata
+
+==================================================
+4. CROSSREF
+==================================================
+
+استخدم REST API الرسمي مباشرة.
+
+لا تضف SDK.
+
+نفذ فقط:
+- exact DOI lookup
+- title lookup
+- minimal metadata enrichment
+
+أضف optional config:
+
+CROSSREF_MAILTO
+
+إذا موجود:
+استخدم polite pool.
+
+إذا غير موجود:
+public access remains functional.
+
+احترم:
+- provider rate limits
+- Retry-After
+- bounded retries
+- provider timeout
+
+لا تخزن raw response دائمًا.
+
+==================================================
+5. DATACITE
+==================================================
+
+استخدم DataCite Public REST API فقط.
+
+لا تحتاج API key.
+
+في Phase 2B:
+استخدم DataCite فقط لـ:
+- exact DOI metadata lookup
+- DataCite DOI resolution
+
+لا تستخدمه كـgeneral academic search provider الآن.
+
+لا تضف member credentials.
+
+==================================================
+6. OPENALEX
+==================================================
+
+استخدم OpenAlex API مباشرة عبر HTTP.
+
+أضف optional:
+
+OPENALEX_API_KEY
+
+إذا غير موجود:
+basic keyless access يظل ممكنًا ضمن حدوده الحالية.
+
+إذا موجود:
+استخدمه لرفع budget وتتبع الاستخدام.
+
+لا تشترِ usage.
+لا تفعل billing.
+
+استخدم OpenAlex فقط عندما intent يحتاج:
+- paper/topic discovery
+- author resolution
+- citations/references
+- OA locations
+- citation counts
+- graph enrichment
+
+لا تستخدم OpenAlex لكل DOI lookup إذا Crossref/DataCite كافيين.
+
+==================================================
+7. MINIMAL ACADEMICRESULT
+==================================================
+
+ابدأ بالحقول:
+
+title
+authors
+doi
+normalized_doi
+publication_date
+work_type
+venue
+publisher
+abstract nullable
+identifiers
+citation_count nullable
+landing_url
+open_access
+update_status
+source_provenance
+retrieved_at
+
+لا تخزن references/citations graph كاملة داخل كل result.
+
+اجلب graph edges on-demand فقط.
+
+==================================================
+8. ACADEMIC MERGE
+==================================================
+
+Identity priority:
+
+1. normalized DOI
+2. provider-native stable ID
+3. title + author + publication year fallback
+
+لا تستخدم URL dedupe الخاص بالويب لتحديد paper identity.
+
+إذا metadata تعارضت:
+- لا تخفِ التعارض
+- احتفظ بـprovenance
+- Crossref/DataCite record يفضل لحقول DOI registration الخاصة به
+- OpenAlex يفضل للgraph/citation/OA enrichment
+
+لا توجد قاعدة واحدة تفضل provider واحد لكل الحقول.
+
+==================================================
+9. ROUTING
+==================================================
+
+DOI intent:
+→ DOI Resolver
+→ provider responsible for DOI
+→ OpenAlex enrichment فقط عند الحاجة
+
+Exact title:
+→ Crossref search
+→ OpenAlex if ambiguity/enrichment needed
+
+Author/topic:
+→ OpenAlex
+
+Citations/references:
+→ OpenAlex
+
+Latest research:
+→ OpenAlex date-filtered results
+→ Tavily only if current web/publisher context is useful
+
+Generic non-academic:
+→ current web_search
+→ لا تستخدم Academic Layer
+
+==================================================
+10. PRIVACY
+==================================================
+
+Academic Layer جزء من WEB scope.
+
+ممنوع إرسال:
+- MY_FILES chunks
+- private uploaded content
+- private conversation history
+- hidden system instructions
+
+إلى:
+Crossref
+DataCite
+OpenAlex
+
+أرسل فقط query الأكاديمية العامة اللازمة.
+
+==================================================
+11. HEALTH / DOCTOR
+==================================================
+
+أضف:
+
+Crossref:
+READY / RATE_LIMITED / ERROR
+
+DataCite:
+READY / RATE_LIMITED / ERROR
+
+OpenAlex:
+READY / RATE_LIMITED / NOT_CONFIGURED_IF_KEY_REQUIRED_FOR_SELECTED_MODE / ERROR
+
+لكن:
+غياب OPENALEX_API_KEY لا يعني ERROR إذا keyless operation تعمل.
+
+اعرض usage/budget metadata الآمنة إن توفرت.
+
+==================================================
+12. TEST FIXTURES
+==================================================
+
+نفذ:
+
+A. Crossref DOI lookup
+Expected:
+correct canonical metadata
+
+B. DOI with https://doi.org prefix
+Expected:
+same normalized DOI
+
+C. DataCite DOI
+Expected:
+DataCite route, not false Crossref failure
+
+D. invalid DOI
+Expected:
+clean invalid/no-result state
+
+E. exact paper title
+Expected:
+correct structured result
+
+F. author search
+Expected:
+OpenAlex author resolution
+
+G. topic search
+Expected:
+structured OpenAlex works
+
+H. duplicate Crossref/OpenAlex paper
+Expected:
+one merged AcademicResult with provenance
+
+I. conflicting metadata
+Expected:
+conflict preserved/resolved deterministically
+
+J. provider timeout
+Expected:
+provider isolation
+
+K. rate limit
+Expected:
+bounded backoff, no tight loop
+
+L. Arabic academic query
+Expected:
+valid routing without leaking private data
+
+M. privacy test
+Expected:
+no MY_FILES content reaches academic providers
+
+==================================================
+13. DO NOT ADD
+==================================================
+
+- Semantic Scholar
+- arXiv
+- PubMed
+- SearXNG
+- Brave key
+- GitHub integration
+- RSS
+- Agent Reach
+- n8n
+- new database
+- new vector DB
+
+==================================================
+14. FINAL REPORT
+==================================================
+
+أعطني:
+
+- files changed
+- DOI normalization PASS/FAIL
+- RA detection PASS/FAIL
+- Crossref PASS/FAIL
+- DataCite fallback PASS/FAIL
+- OpenAlex PASS/FAIL
+- exact title PASS/FAIL
+- author search PASS/FAIL
+- topic search PASS/FAIL
+- academic merge PASS/FAIL
+- conflict handling PASS/FAIL
+- privacy PASS/FAIL
+- rate-limit handling PASS/FAIL
+- Doctor PASS/FAIL
+- API keys actually required
+- OpenAlex usage/budget if available
+- remaining blocker
