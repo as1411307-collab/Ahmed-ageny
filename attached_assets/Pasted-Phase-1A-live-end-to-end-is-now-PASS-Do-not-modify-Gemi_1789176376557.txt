@@ -1,0 +1,115 @@
+Phase 1A live end-to-end is now PASS.
+
+Do not modify:
+- Gemini provider
+- Tavily
+- MCP
+- web_search
+- PydanticAI tool path
+- /chat/message behavior except where needed to persist state
+
+Start Phase 1B only:
+
+GOAL:
+Persist conversation/session state in PostgreSQL so chat survives server restart.
+
+Implement these tables:
+
+1) agent_sessions
+- session_id UUID primary key
+- scope TEXT
+- status TEXT
+- created_at TIMESTAMPTZ
+- updated_at TIMESTAMPTZ
+
+2) agent_runs
+- run_id UUID primary key
+- session_id UUID foreign key
+- status TEXT
+- user_prompt TEXT
+- provider_name TEXT
+- model_name TEXT
+- error_code TEXT nullable
+- created_at TIMESTAMPTZ
+- finished_at TIMESTAMPTZ nullable
+
+3) agent_messages
+- id BIGSERIAL primary key
+- session_id UUID foreign key
+- run_id UUID foreign key
+- sequence_number INTEGER
+- message_json JSONB or BYTEA compatible with PydanticAI message serialization
+- created_at TIMESTAMPTZ
+
+4) tool_events
+- id BIGSERIAL primary key
+- run_id UUID foreign key
+- tool_name TEXT
+- status TEXT
+- duration_ms INTEGER nullable
+- safe_metadata JSONB nullable
+- created_at TIMESTAMPTZ
+
+Requirements:
+- Do NOT store conversation history as one giant JSON blob in agent_sessions.
+- Append only new messages from result.new_messages_json().
+- Before each agent run, load prior messages for the session and pass them as message_history.
+- Use existing DATABASE_URL from Replit PostgreSQL.
+- Do not log message bodies, API keys, authorization headers, Tavily raw responses, or private content.
+- Keep structured JSON logs with:
+  trace_id
+  session_id
+  run_id
+  provider
+  model
+  status
+  latency_ms
+- Preserve the existing generic HTTP error message to the user.
+- Do not add DBOS yet.
+- Do not add MY_FILES yet.
+- Do not add n8n, SearXNG, Redis, Qdrant, LangGraph, or LiteLLM.
+- Do not deploy.
+
+Tests required:
+
+TEST 1 — persistence
+1. Send:
+   "My test word is ORANGE-742."
+2. Reuse the same session_id.
+3. Ask:
+   "What was my test word?"
+Expected:
+   ORANGE-742
+
+TEST 2 — restart
+1. Start a conversation.
+2. Stop/restart the server.
+3. Reuse the same session_id.
+4. Ask about information from before restart.
+Expected:
+   Correct answer from persisted history.
+
+TEST 3 — separate sessions
+Session A stores one test word.
+Session B stores another.
+Expected:
+No cross-session leakage.
+
+TEST 4 — tool event
+Use web_search FAST.
+Expected:
+tool_events contains one successful web_search event with no raw sensitive content.
+
+TEST 5 — provider/model recording
+Expected:
+agent_runs records Gemini provider and actual model used.
+
+At the end report only:
+- files changed
+- schema created
+- persistence PASS/FAIL
+- restart PASS/FAIL
+- session isolation PASS/FAIL
+- tool event logging PASS/FAIL
+- provider/model recording PASS/FAIL
+- any remaining error
