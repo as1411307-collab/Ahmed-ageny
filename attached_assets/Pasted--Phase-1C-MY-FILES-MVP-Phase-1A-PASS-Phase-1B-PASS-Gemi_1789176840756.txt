@@ -1,0 +1,266 @@
+ابدأ Phase 1C فقط: MY_FILES MVP.
+
+الحالة الحالية:
+- Phase 1A PASS
+- Phase 1B PASS
+- Gemini live provider PASS
+- PydanticAI PASS
+- Tavily FAST/DEEP PASS
+- MCP PASS
+- PostgreSQL persistence PASS
+- restart PASS
+- session isolation PASS
+- tool_events PASS
+
+لا تغيّر أي جزء شغال.
+
+الهدف:
+إضافة مسار MY_FILES مستقل وآمن، بحيث يمكن رفع ملف واحد أو أكثر، فهرسته، والبحث فيه مع citation واضح، بدون أي استدعاء خارجي للبحث.
+
+1) Scope
+أضف scope صريح:
+- WEB
+- MY_FILES
+
+لا تضف HYBRID بعد.
+
+2) PostgreSQL schema
+
+documents:
+- document_id UUID PRIMARY KEY
+- filename TEXT NOT NULL
+- mime_type TEXT
+- source_type TEXT DEFAULT 'upload'
+- file_hash TEXT
+- status TEXT NOT NULL
+- created_at TIMESTAMPTZ DEFAULT now()
+- updated_at TIMESTAMPTZ DEFAULT now()
+
+document_chunks:
+- chunk_id BIGSERIAL PRIMARY KEY
+- document_id UUID REFERENCES documents(document_id) ON DELETE CASCADE
+- chunk_index INTEGER NOT NULL
+- page_number INTEGER NULL
+- content TEXT NOT NULL
+- metadata JSONB NULL
+- created_at TIMESTAMPTZ DEFAULT now()
+
+أضف indexes المناسبة على document_id وchunk_index.
+
+3) Upload endpoint
+
+POST /files/upload
+
+ادعم فقط:
+- .txt
+- .md
+- .pdf
+- .docx
+
+في هذه المرحلة.
+
+إذا النوع غير مدعوم:
+- HTTP واضح
+- لا crash
+- لا false success
+
+4) Extraction
+
+TXT/MD:
+- decode text safely
+
+PDF:
+- text extraction only
+- page_number إذا متاح
+- إذا PDF image-only ولا يوجد text layer:
+  status=unsupported_ocr_required
+  ولا تستخدم OCR الآن
+
+DOCX:
+- extract paragraphs
+
+5) Chunking
+
+اجعلها config:
+- CHUNK_SIZE
+- CHUNK_OVERLAP
+
+لا hardcode القيم داخل المنطق.
+ضع defaults معقولة في config فقط.
+
+احتفظ لكل chunk بـ:
+- document_id
+- filename
+- chunk_index
+- page_number
+- mime_type
+
+6) Retrieval v1
+
+استخدم PostgreSQL Full Text Search فقط.
+
+لا تضف الآن:
+- pgvector
+- embeddings
+- BGE-M3
+- e5
+- reranker
+
+الهدف هو إثبات المسار أولًا.
+
+7) PydanticAI tool
+
+أضف:
+search_my_files(query: str, top_k: int = 5)
+
+يبحث فقط في document_chunks.
+
+Validation:
+- query غير فارغ
+- حد أقصى لطول query
+- top_k configurable ومحدود
+
+8) Privacy boundary
+
+عند scope=MY_FILES:
+- web_search غير متاح للنموذج
+- Tavily غير متاح
+- أي external search tool غير متاح
+- لا يتم إرسال محتوى الملفات إلى Tavily أو أي search provider
+
+مهم:
+Gemini قد يستقبل فقط المقاطع المسترجعة لصياغة الجواب في هذه المرحلة.
+
+سجّل هذا الوضع باسم:
+PRIVATE_STANDARD
+
+ولا تسميه ZERO_EGRESS.
+
+9) Citations
+
+كل نتيجة من search_my_files يجب أن تعيد metadata كافية:
+
+- document_id
+- filename
+- chunk_index
+- page_number إذا موجود
+
+والجواب النهائي يجب أن يذكر المصدر بشكل واضح، مثل:
+
+[source: filename.pdf, page 3, chunk 7]
+
+10) Logging
+
+سجّل فقط:
+- document_id
+- filename
+- mime_type
+- extraction_status
+- chunk_count
+- retrieval_latency_ms
+- result_count
+
+لا تسجل:
+- raw document text
+- chunk text
+- query text
+- Gemini prompt content
+
+11) Gemini 429 handling
+
+أضف bounded retry فقط لخطأ 429:
+- احترم Retry-After إذا وُجد
+- عدد retries محدود من config
+- exponential backoff إذا Retry-After غير موجود
+- لا تعمل infinite retry
+
+لا تغيّر provider architecture.
+
+12) Tests
+
+TEST 1 — TXT upload
+ارفع ملف يحتوي:
+"The project codename is ORBIT-913."
+
+Expected:
+- document status=ready
+- chunks created
+
+TEST 2 — retrieval
+scope=MY_FILES
+Question:
+"What is the project codename?"
+
+Expected:
+- ORBIT-913
+- citation صحيح
+
+TEST 3 — privacy
+scope=MY_FILES
+اسأل:
+"What is the latest news about Python MCP?"
+
+Expected:
+- web_search NOT CALLED
+- Tavily NOT CALLED
+- answer يقول إن المعلومات غير موجودة في الملفات
+
+TEST 4 — PDF
+ارفع PDF نصي بسيط.
+Expected:
+- extraction PASS
+- page_number محفوظ إذا ممكن
+
+TEST 5 — image-only PDF
+Expected:
+- unsupported_ocr_required
+- no crash
+
+TEST 6 — restart
+ارفع ملف
+restart server
+اسأل عنه
+Expected:
+- retrieval still works
+
+TEST 7 — duplicate file
+ارفع نفس الملف مرتين
+Expected:
+- detection via file_hash
+- لا تنشئ نسخة مكررة بصمت
+
+TEST 8 — unsupported extension
+Expected:
+- clean rejection
+- no false success
+
+في النهاية أعطني فقط:
+
+- files changed
+- packages added
+- schema added
+- supported file types
+- upload PASS/FAIL
+- TXT retrieval PASS/FAIL
+- PDF extraction PASS/FAIL
+- citation PASS/FAIL
+- privacy boundary PASS/FAIL
+- restart PASS/FAIL
+- duplicate detection PASS/FAIL
+- unsupported file PASS/FAIL
+- أي خطأ متبقٍ
+
+لا تضف:
+- pgvector
+- embeddings
+- DBOS
+- HYBRID
+- n8n
+- SearXNG
+- Brave
+- Agent Reach
+- Redis
+- Qdrant
+- LangGraph
+- LiteLLM
+- OCR
