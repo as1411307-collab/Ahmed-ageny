@@ -7,6 +7,14 @@ AHMED_PRIMARY_MODEL = (
     os.environ.get("AHMED_PRIMARY_MODEL", "gemini-flash-lite-latest").strip()
     or "gemini-flash-lite-latest"
 )
+MY_FILES_EMBEDDING_MODEL = os.environ.get(
+    "MY_FILES_EMBEDDING_MODEL",
+    "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+).strip()
+MY_FILES_EMBEDDING_VERSION = os.environ.get(
+    "MY_FILES_EMBEDDING_VERSION",
+    "v1",
+).strip() or "v1"
 
 
 def _bounded_int(name: str, default: int, *, minimum: int, maximum: int) -> int:
@@ -39,6 +47,13 @@ MAX_UPLOAD_BYTES = _bounded_int(
 MAX_QUERY_LENGTH = _bounded_int("MY_FILES_MAX_QUERY_LENGTH", 500, minimum=1, maximum=2000)
 DEFAULT_TOP_K = _bounded_int("MY_FILES_TOP_K", 5, minimum=1, maximum=20)
 MAX_TOP_K = _bounded_int("MY_FILES_MAX_TOP_K", 10, minimum=1, maximum=20)
+MY_FILES_RRF_K = _bounded_int("MY_FILES_RRF_K", 60, minimum=1, maximum=1000)
+MY_FILES_CANDIDATE_K = _bounded_int(
+    "MY_FILES_CANDIDATE_K",
+    20,
+    minimum=5,
+    maximum=100,
+)
 GEMINI_429_MAX_RETRIES = _bounded_int(
     "GEMINI_429_MAX_RETRIES",
     2,

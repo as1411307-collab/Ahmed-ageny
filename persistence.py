@@ -314,7 +314,79 @@ async def store_document(
         raise PersistenceError("Could not store the uploaded document.") from error
 
 
-async def search_document_chunks(query: str, top_k: int) -> list[dict[str, Any]]:
+async def update_document_embedding_status(
+    *,
+    document_id: str,
+    status: str,
+    embedding_model: str | None,
+    embedding_dimension: int | None,
+    embedding_version: str | None,
+) -> None:
+    pool = await _get_pool()
+    try:
+        await pool.execute(
+            """
+            UPDATE documents
+            SET status = $2,
+                embedding_model = $3,
+                embedding_dimension = $4,
+                embedding_version = $5,
+                updated_at = NOW()
+            WHERE document_id = $1::uuid
+            """,
+            document_id,
+            status,
+            embedding_model,
+            embedding_dimension,
+            embedding_version,
+        )
+    except Exception as error:
+        raise PersistenceError("Could not update document embedding status.") from error
+
+
+async def store_document_embeddings(
+    *,
+    document_id: str,
+    embeddings: Sequence[tuple[int, str]],
+    embedding_model: str,
+    embedding_dimension: int,
+    embedding_version: str,
+) -> None:
+    pool = await _get_pool()
+    try:
+        async with pool.acquire() as connection:
+            async with connection.transaction():
+                await connection.executemany(
+                    """
+                    UPDATE document_chunks
+                    SET embedding = $2::vector
+                    WHERE document_id = $1::uuid AND chunk_index = $3
+                    """,
+                    [
+                        (document_id, vector, chunk_index)
+                        for chunk_index, vector in embeddings
+                    ],
+                )
+                await connection.execute(
+                    """
+                    UPDATE documents
+                    SET status = 'ready',
+                        embedding_model = $2,
+                        embedding_dimension = $3,
+                        embedding_version = $4,
+                        updated_at = NOW()
+                    WHERE document_id = $1::uuid
+                    """,
+                    document_id,
+                    embedding_model,
+                    embedding_dimension,
+                    embedding_version,
+                )
+    except Exception as error:
+        raise PersistenceError("Could not store document embeddings.") from error
+
+
+async def search_fts_document_chunks(query: str, top_k: int) -> list[dict[str, Any]]:
     pool = await _get_pool()
     try:
         rows = await pool.fetch(
@@ -323,6 +395,8 @@ async def search_document_chunks(query: str, top_k: int) -> list[dict[str, Any]]
                 c.document_id,
                 d.filename,
                 d.mime_type,
+                d.source_type,
+                d.file_hash,
                 c.chunk_index,
                 c.page_number,
                 c.content,
@@ -332,7 +406,7 @@ async def search_document_chunks(query: str, top_k: int) -> list[dict[str, Any]]
                 ) AS rank
             FROM document_chunks c
             JOIN documents d ON d.document_id = c.document_id
-            WHERE d.status = 'ready'
+            WHERE d.status IN ('ready', 'fts_ready', 'embedding_failed')
               AND to_tsvector('simple', c.content)
                   @@ plainto_tsquery('simple', $1)
             ORDER BY rank DESC, c.document_id, c.chunk_index
@@ -344,6 +418,53 @@ async def search_document_chunks(query: str, top_k: int) -> list[dict[str, Any]]
     except Exception as error:
         raise PersistenceError("Could not search uploaded documents.") from error
     return [dict(row) for row in rows]
+
+
+async def search_vector_document_chunks(
+    *,
+    vector: str,
+    top_k: int,
+    embedding_model: str,
+    embedding_dimension: int,
+    embedding_version: str,
+) -> list[dict[str, Any]]:
+    pool = await _get_pool()
+    try:
+        rows = await pool.fetch(
+            """
+            SELECT
+                c.document_id,
+                d.filename,
+                d.mime_type,
+                d.source_type,
+                d.file_hash,
+                c.chunk_index,
+                c.page_number,
+                c.content,
+                c.embedding <=> $1::vector AS distance
+            FROM document_chunks c
+            JOIN documents d ON d.document_id = c.document_id
+            WHERE d.status = 'ready'
+              AND d.embedding_model = $2
+              AND d.embedding_dimension = $3
+              AND d.embedding_version = $4
+              AND c.embedding IS NOT NULL
+            ORDER BY c.embedding <=> $1::vector ASC, c.document_id, c.chunk_index
+            LIMIT $5
+            """,
+            vector,
+            embedding_model,
+            embedding_dimension,
+            embedding_version,
+            top_k,
+        )
+    except Exception as error:
+        raise PersistenceError("Could not search document vectors.") from error
+    return [dict(row) for row in rows]
+
+
+async def search_document_chunks(query: str, top_k: int) -> list[dict[str, Any]]:
+    return await search_fts_document_chunks(query, top_k)
 
 
 async def close_pool() -> None:

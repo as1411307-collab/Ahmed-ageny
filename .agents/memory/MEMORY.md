@@ -5,3 +5,4 @@
 - [Gemini agent provider](gemini-agent-provider.md) — live agent uses Gemini with GEMINI_API_KEY; Replit-managed OpenAI is inactive.
 - [Phase 1B PostgreSQL persistence](phase1b-postgres-persistence.md) — messages, runs, and safe tool events persist per row with asyncpg.
 - [Gemini rate limits](gemini-rate-limits.md) — rapid live test bursts can cause sustained 429s; use bounded backoff and report the provider blocker.
+- [Hybrid RAG embedding](hybrid-rag-embedding.md) — validate local multilingual models first; preserve FTS when vector indexing is unavailable and version vector metadata.

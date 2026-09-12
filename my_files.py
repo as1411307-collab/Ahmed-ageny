@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import io
 import json
 import logging
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,14 +18,22 @@ from config import (
     CHUNK_OVERLAP,
     CHUNK_SIZE,
     DEFAULT_TOP_K,
+    MY_FILES_CANDIDATE_K,
+    MY_FILES_EMBEDDING_MODEL,
+    MY_FILES_EMBEDDING_VERSION,
+    MY_FILES_RRF_K,
     MAX_QUERY_LENGTH,
     MAX_TOP_K,
 )
+from embeddings import EmbeddingError, get_embedding_provider, vector_literal
 from persistence import (
     PersistenceError,
     find_document_by_hash,
-    search_document_chunks,
+    search_fts_document_chunks,
+    search_vector_document_chunks,
     store_document,
+    store_document_embeddings,
+    update_document_embedding_status,
 )
 
 
@@ -138,6 +148,8 @@ def build_chunks(
     document_id: str,
     filename: str,
     mime_type: str | None,
+    file_hash: str,
+    source_type: str,
     pages: list[ExtractedPage],
 ) -> list[DocumentChunk]:
     chunks: list[DocumentChunk] = []
@@ -153,6 +165,8 @@ def build_chunks(
                         "filename": filename,
                         "mime_type": mime_type,
                         "page_number": page.page_number,
+                        "source_type": source_type,
+                        "file_hash": file_hash,
                     },
                 )
             )
@@ -184,6 +198,8 @@ async def ingest_document(
             document_id=document_id,
             filename=filename,
             mime_type=mime_type,
+            file_hash=file_hash,
+            source_type="upload",
             pages=pages,
         )
         if not chunks:
@@ -223,9 +239,52 @@ async def ingest_document(
         filename=filename,
         mime_type=mime_type,
         file_hash=file_hash,
-        status="ready",
+        status="fts_ready",
         chunks=chunks,
     )
+    embedding_status = "embedding_failed"
+    embedding_metrics: dict[str, int | float | str] = {}
+    try:
+        provider = get_embedding_provider()
+        embeddings = await asyncio.to_thread(
+            provider.embed_documents,
+            [chunk.content for chunk in chunks],
+        )
+        if len(embeddings) != len(chunks) or provider.dimension <= 0:
+            raise EmbeddingError("The embedding count did not match the chunks.")
+        embedding_rows = [
+            (chunk.chunk_index, vector_literal(vector))
+            for chunk, vector in zip(chunks, embeddings, strict=True)
+        ]
+        await store_document_embeddings(
+            document_id=document_id,
+            embeddings=embedding_rows,
+            embedding_model=provider.model_name,
+            embedding_dimension=provider.dimension,
+            embedding_version=MY_FILES_EMBEDDING_VERSION,
+        )
+        embedding_status = "ready"
+        embedding_metrics = provider.last_metrics
+    except EmbeddingError as error:
+        await update_document_embedding_status(
+            document_id=document_id,
+            status="embedding_failed",
+            embedding_model=MY_FILES_EMBEDDING_MODEL,
+            embedding_dimension=None,
+            embedding_version=MY_FILES_EMBEDDING_VERSION,
+        )
+        embedding_metrics = {"embedding_status": error.status}
+    except PersistenceError:
+        raise
+    except Exception:
+        await update_document_embedding_status(
+            document_id=document_id,
+            status="embedding_failed",
+            embedding_model=MY_FILES_EMBEDDING_MODEL,
+            embedding_dimension=None,
+            embedding_version=MY_FILES_EMBEDDING_VERSION,
+        )
+        embedding_metrics = {"embedding_status": "ERROR"}
     logger.info(
         json.dumps(
             {
@@ -233,7 +292,9 @@ async def ingest_document(
                 "filename": filename,
                 "mime_type": mime_type,
                 "extraction_status": "ready",
+                "embedding_status": embedding_status,
                 "chunk_count": len(chunks),
+                **embedding_metrics,
             },
             separators=(",", ":"),
         )
@@ -242,10 +303,100 @@ async def ingest_document(
         "duplicate": False,
         "document_id": document_id,
         "filename": filename,
-        "status": "ready",
+        "status": embedding_status,
         "chunk_count": len(chunks),
         "file_hash": file_hash,
     }
+
+
+_RERANK_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "for",
+    "from",
+    "how",
+    "is",
+    "of",
+    "on",
+    "the",
+    "this",
+    "to",
+    "what",
+    "which",
+    "with",
+    "عن",
+    "في",
+    "ما",
+    "هو",
+    "هي",
+    "من",
+    "هذا",
+    "هذه",
+    "اسم",
+    "الاسم",
+}
+
+
+def _tokens(text: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"\w+", text.casefold(), flags=re.UNICODE)
+        if token not in _RERANK_STOPWORDS
+    }
+
+
+def _rerank_score(query_terms: set[str], row: dict[str, Any], rrf_score: float) -> float:
+    content_terms = _tokens(row["content"])
+    filename_terms = _tokens(row["filename"])
+    exact_term_match = len(query_terms & content_terms)
+    filename_relevance = len(query_terms & filename_terms)
+    heading_terms = _tokens(
+        "\n".join(
+            line for line in row["content"].splitlines() if line.lstrip().startswith("#")
+        )
+    )
+    heading_match = len(query_terms & heading_terms)
+    same_line_proximity = 0
+    for line in row["content"].splitlines():
+        if query_terms.issubset(_tokens(line)):
+            same_line_proximity = 1
+            break
+    return (
+        rrf_score
+        + 0.01 * exact_term_match
+        + 0.02 * filename_relevance
+        + 0.02 * heading_match
+        + 0.01 * same_line_proximity
+    )
+
+
+def _hybrid_results(
+    *,
+    query: str,
+    fts_rows: list[dict[str, Any]],
+    vector_rows: list[dict[str, Any]],
+    top_k: int,
+) -> list[dict[str, Any]]:
+    fused: dict[tuple[str, int], dict[str, Any]] = {}
+    for source_rows in (fts_rows, vector_rows):
+        for rank, row in enumerate(source_rows, start=1):
+            key = (str(row["document_id"]), int(row["chunk_index"]))
+            item = fused.setdefault(key, dict(row))
+            item["rrf_score"] = item.get("rrf_score", 0.0) + 1.0 / (MY_FILES_RRF_K + rank)
+    query_terms = _tokens(query)
+    for item in fused.values():
+        item["rerank_score"] = _rerank_score(query_terms, item, item["rrf_score"])
+    ranked = sorted(
+        fused.values(),
+        key=lambda row: (
+            -row["rerank_score"],
+            str(row["document_id"]),
+            int(row["chunk_index"]),
+        ),
+    )
+    return ranked[:top_k]
 
 
 async def search_my_files(query: str, top_k: int = DEFAULT_TOP_K) -> dict[str, Any]:
@@ -258,7 +409,37 @@ async def search_my_files(query: str, top_k: int = DEFAULT_TOP_K) -> dict[str, A
         raise ValueError("top_k is out of range")
 
     started_at = time.perf_counter()
-    rows = await search_document_chunks(normalized_query, top_k)
+    candidate_k = max(top_k, min(MY_FILES_CANDIDATE_K, max(top_k * 4, 10)))
+    fts_rows = await search_fts_document_chunks(normalized_query, candidate_k)
+    vector_rows: list[dict[str, Any]] = []
+    embedding_status = "NOT_ATTEMPTED"
+    provider = get_embedding_provider()
+    try:
+        query_embedding = await asyncio.to_thread(
+            provider.embed_query,
+            normalized_query,
+        )
+        vector_rows = await search_vector_document_chunks(
+            vector=vector_literal(query_embedding),
+            top_k=candidate_k,
+            embedding_model=provider.model_name,
+            embedding_dimension=provider.dimension,
+            embedding_version=MY_FILES_EMBEDDING_VERSION,
+        )
+        embedding_status = provider.status
+    except EmbeddingError as error:
+        embedding_status = error.status
+    except PersistenceError:
+        raise
+    except Exception:
+        embedding_status = "ERROR"
+    rows = _hybrid_results(
+        query=normalized_query,
+        fts_rows=fts_rows,
+        vector_rows=vector_rows,
+        top_k=top_k,
+    )
+    retrieval_mode = "HYBRID_RRF" if vector_rows else "FTS_FALLBACK"
     results: list[dict[str, Any]] = []
     for row in rows:
         page_number = row["page_number"]
@@ -274,6 +455,8 @@ async def search_my_files(query: str, top_k: int = DEFAULT_TOP_K) -> dict[str, A
                 "chunk_index": row["chunk_index"],
                 "page_number": page_number,
                 "mime_type": row["mime_type"],
+                "source_type": row["source_type"],
+                "file_hash": row["file_hash"],
                 "citation": citation,
             }
         )
@@ -282,6 +465,10 @@ async def search_my_files(query: str, top_k: int = DEFAULT_TOP_K) -> dict[str, A
             {
                 "retrieval_latency_ms": int((time.perf_counter() - started_at) * 1000),
                 "result_count": len(results),
+                "retrieval_mode": retrieval_mode,
+                "fts_candidate_count": len(fts_rows),
+                "vector_candidate_count": len(vector_rows),
+                "embedding_status": embedding_status,
             },
             separators=(",", ":"),
         )
@@ -290,6 +477,7 @@ async def search_my_files(query: str, top_k: int = DEFAULT_TOP_K) -> dict[str, A
         "ok": True,
         "scope": "MY_FILES",
         "privacy_mode": "PRIVATE_STANDARD",
+        "retrieval_mode": retrieval_mode,
         "results": results,
         "message": (
             "No matching information was found in the uploaded files."

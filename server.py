@@ -159,8 +159,13 @@ async def files_upload(request: Request) -> Response:
 
     if any(result.get("duplicate") for result in results):
         return JSONResponse({"files": results}, status_code=409)
-    if any(result.get("status") != "ready" for result in results):
+    if any(
+        result.get("status") not in {"ready", "embedding_failed"}
+        for result in results
+    ):
         return JSONResponse({"files": results}, status_code=422)
+    if any(result.get("status") == "embedding_failed" for result in results):
+        return JSONResponse({"files": results}, status_code=202)
     return JSONResponse({"files": results}, status_code=201)
 
 
