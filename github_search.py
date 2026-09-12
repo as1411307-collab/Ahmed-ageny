@@ -51,11 +51,13 @@ class GitHubProviderError(RuntimeError):
         status_code: int | None = None,
         provider_code: str | None = None,
         retry_after: float | None = None,
+        headers: dict[str, str] | None = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
         self.provider_code = provider_code
         self.retry_after = retry_after
+        self.headers = headers or {}
 
 
 @dataclass(frozen=True)
@@ -364,6 +366,7 @@ async def _http_json(
                     else f"HTTP_{error.code}"
                 ),
                 retry_after=_retry_after(response_headers),
+                headers=response_headers,
             ) from error
         except (OSError, URLError, TimeoutError, ValueError, json.JSONDecodeError) as error:
             if attempt < GITHUB_MAX_RETRIES:
@@ -603,7 +606,7 @@ class GitHubProvider:
         try:
             response = await _http_json(f"{GITHUB_API_URL}{path}", bucket=bucket)
         except GitHubProviderError as error:
-            self._state.failure(error, bucket=bucket)
+            self._state.failure(error, bucket=bucket, headers=error.headers)
             return None
         return response
 
@@ -842,6 +845,8 @@ class GitHubSearchService:
             return {"ok": False, "error": "invalid_max_results", "results": []}
 
         resolved_intent = _intent_from_query(query) if intent == "auto" else intent
+        if resolved_intent == "release":
+            resolved_intent = "latest_release"
         extracted_owner, extracted_repo = _extract_repo(query)
         owner = owner or extracted_owner
         repo = repo or extracted_repo
@@ -887,7 +892,7 @@ class GitHubSearchService:
                 results = [result] if result else []
             else:
                 results = await self.provider.search_issues(query, max_results)
-        elif resolved_intent == "latest_release":
+        elif resolved_intent in {"latest_release", "release"}:
             if not owner or not repo:
                 return {"ok": False, "error": "owner_and_repo_required", "results": []}
             result = await self.provider.latest_release(owner, repo)
