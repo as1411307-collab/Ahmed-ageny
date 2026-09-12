@@ -1,0 +1,312 @@
+ابدأ Phase 1D فقط: Hybrid RAG for MY_FILES.
+
+الحالة الحالية:
+- Phase 1A PASS
+- Phase 1B PASS
+- Phase 1C PASS
+- Phase 1C.1 PASS
+- Gemini provider READY
+- model selected: gemini-flash-lite-latest
+- web_search/Tavily PASS
+- MCP PASS
+- MY_FILES FTS PASS
+- restart PASS
+- privacy boundary PASS
+
+لا تغيّر أي جزء شغال.
+
+الهدف:
+ترقية MY_FILES من PostgreSQL Full Text Search فقط إلى Hybrid Retrieval:
+
+PostgreSQL FTS
++
+Vector Search via pgvector
++
+RRF Fusion
++
+Reranking
++
+Citations
+
+==================================================
+1. PGVECTOR
+==================================================
+
+فعّل pgvector داخل PostgreSQL إذا كان متاحًا:
+
+CREATE EXTENSION IF NOT EXISTS vector;
+
+لا تضف Qdrant أو أي vector database أخرى.
+
+أضف embedding column إلى document_chunks.
+
+لا تحذف FTS الحالي.
+
+==================================================
+2. EMBEDDING PROVIDER ABSTRACTION
+==================================================
+
+أنشئ interface بسيط:
+
+EmbeddingProvider
+- embed_documents(texts)
+- embed_query(text)
+- model_name
+- dimension
+- status
+
+لا تربط schema باسم نموذج ثابت.
+
+ابدأ بمزود embedding محلي خفيف ومناسب للعربية والإنجليزية.
+
+الأولوية:
+multilingual-e5-small
+
+قبل اعتماده:
+- اختبر أنه يعمل فعليًا على موارد Replit الحالية
+- سجّل memory usage التقريبي وlatency
+- لا تفترض أنه مناسب فقط لأنه صغير
+
+إذا فشل بسبب الموارد:
+- لا تنتقل تلقائيًا إلى cloud embedding
+- report RESOURCE_LIMIT
+- لا ترسل محتوى الملفات إلى Gemini/Cohere/OpenAI بدون إذن
+
+==================================================
+3. DOCUMENT INGESTION
+==================================================
+
+عند رفع ملف جديد:
+
+extract
+→ chunk
+→ FTS indexing
+→ local embeddings
+→ store embedding
+
+إذا فشل embedding:
+- احتفظ بالملف وFTS
+- document status لا يصبح fully_indexed
+- استخدم status واضح مثل:
+  fts_ready
+  embedding_failed
+  ready
+
+لا تقل إن vector indexing نجح إذا لم ينجح.
+
+==================================================
+4. VECTOR SEARCH
+==================================================
+
+أضف vector retrieval داخل search_my_files.
+
+احصل على:
+- top results من FTS
+- top results من vector search
+
+لا تعتمد على vector search وحده.
+
+==================================================
+5. RRF FUSION
+==================================================
+
+ادمج نتائج:
+
+FTS
++
+Vector
+
+باستخدام Reciprocal Rank Fusion.
+
+اجعل RRF constant configurable.
+
+لا تستخدم provider scores مباشرة كأنها على نفس المقياس.
+
+==================================================
+6. RERANKING
+==================================================
+
+أضف reranking بسيط بعد RRF.
+
+في MVP:
+- لا تضف موديل reranker ثقيل إذا كان يضغط موارد Replit
+- ابدأ بقواعد قابلة للقياس:
+  exact term match
+  filename relevance
+  title/heading match
+  chunk proximity if available
+
+جهز interface لاحقًا لـML reranker، لكن لا تضف BGE reranker الآن إلا إذا benchmark الموارد نجح.
+
+==================================================
+7. QUERY FLOW
+==================================================
+
+scope=MY_FILES:
+
+user query
+→ normalize
+→ FTS retrieval
+→ vector retrieval
+→ RRF
+→ rerank
+→ top chunks
+→ Gemini final answer
+→ citations
+
+Gemini يستقبل فقط top selected chunks.
+
+لا ترسل كامل الملف إلى Gemini.
+
+==================================================
+8. PRIVACY
+==================================================
+
+حافظ على:
+PRIVATE_STANDARD
+
+المسموح:
+- local embeddings
+- local FTS/vector retrieval
+- إرسال top retrieved chunks إلى Gemini لصياغة الجواب
+
+الممنوع:
+- إرسال chunks إلى Tavily
+- إرسال chunks إلى أي search provider
+- external embedding API
+- استخدام file content في web query
+
+لا تسمّ هذا ZERO_EGRESS.
+
+==================================================
+9. CITATIONS
+==================================================
+
+كل chunk يجب أن يحتفظ بـ:
+- document_id
+- filename
+- chunk_index
+- page_number إن توفر
+- source_type
+- file_hash
+
+والجواب النهائي يجب أن يعيد citation واضح.
+
+==================================================
+10. REINDEXING
+==================================================
+
+أضف versioning بسيط:
+
+embedding_model
+embedding_dimension
+embedding_version
+
+إذا تغير embedding model:
+- لا تخلط vectors القديمة والجديدة بصمت
+- document يحتاج reindex
+
+==================================================
+11. TEST DATASET
+==================================================
+
+أنشئ dataset صغير لاختبار retrieval.
+
+استخدم عدة ملفات تتضمن:
+- exact keyword answer
+- semantic paraphrase answer
+- Arabic question / English source
+- English question / Arabic source
+- distractor document
+- repeated term in wrong document
+
+==================================================
+12. TESTS
+==================================================
+
+TEST 1 — exact keyword
+Expected:
+FTS finds correct chunk.
+
+TEST 2 — semantic paraphrase
+اكتب السؤال بكلمات مختلفة عن النص.
+Expected:
+vector retrieval finds correct chunk.
+
+TEST 3 — hybrid improvement
+قارن:
+FTS only
+Vector only
+Hybrid RRF
+
+Expected:
+Hybrid should not perform worse on the test set overall.
+
+TEST 4 — Arabic/English
+سؤال عربي عن محتوى إنجليزي والعكس.
+Expected:
+correct retrieval if embedding model supports it.
+
+TEST 5 — citation
+Expected:
+correct filename/page/chunk.
+
+TEST 6 — privacy
+Expected:
+no Tavily/web_search/external embedding call.
+
+TEST 7 — restart
+Expected:
+vectors remain usable after server restart.
+
+TEST 8 — resource use
+Record:
+- embedding model
+- dimension
+- approximate RAM
+- indexing latency
+- retrieval latency
+
+TEST 9 — failure
+Simulate embedding failure.
+Expected:
+FTS remains operational.
+No crash.
+No false success.
+
+==================================================
+13. FINAL REPORT
+==================================================
+
+أعطني فقط:
+
+- files changed
+- pgvector status
+- embedding model actually used
+- embedding dimension
+- approximate RAM usage
+- indexing latency
+- retrieval latency
+- FTS PASS/FAIL
+- vector PASS/FAIL
+- hybrid RRF PASS/FAIL
+- multilingual PASS/FAIL
+- citation PASS/FAIL
+- privacy PASS/FAIL
+- restart PASS/FAIL
+- embedding failure fallback PASS/FAIL
+- أي خطأ متبقٍ
+
+لا تضف:
+- Qdrant
+- Redis
+- DBOS
+- n8n
+- SearXNG
+- Brave
+- Agent Reach
+- LangGraph
+- LiteLLM
+- HYBRID WEB+FILES
+- cloud embeddings
+- OCR
