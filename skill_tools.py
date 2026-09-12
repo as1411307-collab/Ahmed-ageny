@@ -31,6 +31,12 @@ DEEP_CREDIT_BUDGET = 12.0
 MAX_CONCURRENT_SEARCHES = 2
 MAX_TAVILY_RETRIES = 2
 TEMPORARY_TAVILY_STATUSES = {429, 500, 502, 503, 504}
+_tavily_health_state: dict[str, object] = {
+    "last_success": None,
+    "last_failure": None,
+    "last_failure_code": None,
+    "latency_ms": None,
+}
 TRACKING_QUERY_KEYS = {
     "fbclid",
     "gclid",
@@ -904,6 +910,10 @@ async def web_search(
     api_key = os.environ.get("TAVILY_API_KEY")
     if not api_key:
         logger.error("TAVILY_API_KEY is not configured")
+        _tavily_health_state["last_failure"] = time.strftime(
+            "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+        )
+        _tavily_health_state["last_failure_code"] = "TAVILY_NOT_CONFIGURED"
         return {
             "ok": False,
             "error": "البحث غير متاح حاليًا لأن إعداد البحث غير مكتمل.",
@@ -911,6 +921,7 @@ async def web_search(
         }
 
     query_type = _classify_query(query)
+    started_at = time.perf_counter()
     if mode == "FAST":
         candidates, credits = await _run_tavily_query(
             query,
@@ -920,6 +931,10 @@ async def web_search(
             query_type,
         )
         if not candidates:
+            _tavily_health_state["last_failure"] = time.strftime(
+                "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+            )
+            _tavily_health_state["last_failure_code"] = "TAVILY_NO_RESULTS"
             return {
                 "ok": False,
                 "error": "تعذر تنفيذ البحث الآن. حاول مرة أخرى لاحقًا.",
@@ -945,6 +960,14 @@ async def web_search(
             enriched,
             query_type,
             mode,
+        )
+        _tavily_health_state["last_success"] = time.strftime(
+            "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+        )
+        _tavily_health_state["last_failure"] = None
+        _tavily_health_state["last_failure_code"] = None
+        _tavily_health_state["latency_ms"] = int(
+            (time.perf_counter() - started_at) * 1000
         )
         return {
             "ok": True,
@@ -1016,6 +1039,10 @@ async def web_search(
     ranked, candidate_count = _rank_and_deduplicate(candidates, query_type, mode)
     ranked = ranked[:MAX_DEEP_SOURCES]
     if not ranked:
+        _tavily_health_state["last_failure"] = time.strftime(
+            "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+        )
+        _tavily_health_state["last_failure_code"] = "TAVILY_NO_RESULTS"
         return {
             "ok": False,
             "error": "تعذر تنفيذ البحث الآن. حاول مرة أخرى لاحقًا.",
@@ -1052,6 +1079,14 @@ async def web_search(
         and len(credits) == len(query_results)
         else None
     )
+    _tavily_health_state["last_success"] = time.strftime(
+        "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+    )
+    _tavily_health_state["last_failure"] = None
+    _tavily_health_state["last_failure_code"] = None
+    _tavily_health_state["latency_ms"] = int(
+        (time.perf_counter() - started_at) * 1000
+    )
     return {
         "ok": True,
         "query": query,
@@ -1069,6 +1104,25 @@ async def web_search(
         "failed_calls": failed_calls + extraction_metrics["failed_extractions"],
         "independent_domains": len({item.get("domain") for item in ranked}),
         "results": extracted_results,
+    }
+
+
+def tavily_health() -> dict[str, object]:
+    if not os.environ.get("TAVILY_API_KEY"):
+        status = "NOT_CONFIGURED"
+    else:
+        status = "READY"
+    return {
+        "status": status,
+        "last_success": _tavily_health_state["last_success"],
+        "last_failure": _tavily_health_state["last_failure"],
+        "latency_ms": _tavily_health_state["latency_ms"],
+        "safe_error_code": (
+            _tavily_health_state["last_failure_code"]
+            if status != "READY"
+            else None
+        ),
+        "fast_probe": "not_run",
     }
 
 

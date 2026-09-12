@@ -20,13 +20,19 @@ from agent_core import (
     provider_health,
     run_ahmed,
 )
+from auth import get_authenticated_user
+from doctor import get_doctor_report
 from persistence import (
     PersistenceError,
     append_new_messages,
+    approve_pending_action,
+    claim_pending_action_execution,
+    complete_pending_action,
     create_run,
     ensure_session,
     finish_run,
     load_message_history,
+    reject_pending_action,
     record_tool_event,
 )
 from config import MAX_UPLOAD_BYTES
@@ -106,6 +112,133 @@ async def chat_page(_: Request) -> Response:
 @server.custom_route("/health/provider", methods=["GET"])
 async def provider_health_route(_: Request) -> Response:
     return JSONResponse(provider_health())
+
+
+@server.custom_route("/doctor", methods=["GET"])
+async def doctor_route(request: Request) -> Response:
+    report = await get_doctor_report(
+        probe_search=request.query_params.get("probe") == "1"
+    )
+    return JSONResponse(report)
+
+
+async def _execute_approved_action(
+    *,
+    action_id: str,
+    user_id: str,
+) -> dict[str, object]:
+    claim = await claim_pending_action_execution(
+        action_id=action_id,
+        user_id=user_id,
+    )
+    status = claim.get("status")
+    if status in {"not_found", "forbidden"}:
+        return {"status": status, "executed": False}
+    if not claim.get("should_execute"):
+        return {"status": status, "executed": status == "executed"}
+    if claim.get("tool_name") != "test_sensitive_action":
+        return {"status": "unsupported_action", "executed": False}
+    # This internal test action intentionally has no external side effect.
+    completed = await complete_pending_action(
+        action_id=action_id,
+        user_id=user_id,
+    )
+    return {
+        "status": completed.get("status", "ERROR"),
+        "executed": completed.get("status") == "executed",
+        "side_effect": "none",
+    }
+
+
+@server.custom_route("/actions/{action_id}/approve", methods=["POST"])
+async def approve_action(request: Request) -> Response:
+    user = get_authenticated_user(request)
+    if user is None:
+        return JSONResponse(
+            {"error": "مصادقة المستخدم مطلوبة للموافقة."},
+            status_code=401,
+        )
+    try:
+        action_id = str(UUID(request.path_params["action_id"]))
+    except (KeyError, ValueError):
+        return JSONResponse({"error": "action_id غير صالح."}, status_code=400)
+    try:
+        approval = await approve_pending_action(
+            action_id=action_id,
+            user_id=user.user_id,
+        )
+        if approval["status"] == "not_found":
+            return JSONResponse({"error": "الإجراء غير موجود."}, status_code=404)
+        if approval["status"] == "forbidden":
+            return JSONResponse({"error": "لا تملك هذا الإجراء."}, status_code=403)
+        if approval["status"] in {"expired", "rejected"}:
+            return JSONResponse(
+                {"status": approval["status"], "executed": False},
+                status_code=409,
+            )
+        execution = await _execute_approved_action(
+            action_id=action_id,
+            user_id=user.user_id,
+        )
+    except PersistenceError:
+        logger.exception("Action approval persistence failed")
+        return JSONResponse(
+            {"error": "تعذر معالجة الموافقة الآن."},
+            status_code=503,
+        )
+    if execution["status"] == "unsupported_action":
+        return JSONResponse(
+            {"error": "الأداة غير مدعومة في مسار التنفيذ."},
+            status_code=422,
+        )
+    return JSONResponse(
+        {
+            "action_id": action_id,
+            "status": execution["status"],
+            "executed": execution["executed"],
+            **(
+                {"side_effect": execution["side_effect"]}
+                if "side_effect" in execution
+                else {}
+            ),
+        }
+    )
+
+
+@server.custom_route("/actions/{action_id}/reject", methods=["POST"])
+async def reject_action(request: Request) -> Response:
+    user = get_authenticated_user(request)
+    if user is None:
+        return JSONResponse(
+            {"error": "مصادقة المستخدم مطلوبة لرفض الإجراء."},
+            status_code=401,
+        )
+    try:
+        action_id = str(UUID(request.path_params["action_id"]))
+    except (KeyError, ValueError):
+        return JSONResponse({"error": "action_id غير صالح."}, status_code=400)
+    try:
+        rejection = await reject_pending_action(
+            action_id=action_id,
+            user_id=user.user_id,
+        )
+    except PersistenceError:
+        logger.exception("Action rejection persistence failed")
+        return JSONResponse(
+            {"error": "تعذر معالجة الرفض الآن."},
+            status_code=503,
+        )
+    if rejection["status"] == "not_found":
+        return JSONResponse({"error": "الإجراء غير موجود."}, status_code=404)
+    if rejection["status"] == "forbidden":
+        return JSONResponse({"error": "لا تملك هذا الإجراء."}, status_code=403)
+    return JSONResponse(
+        {
+            "action_id": action_id,
+            "status": rejection["status"],
+            "executed": False,
+        }
+    )
 
 
 @server.custom_route("/files/upload", methods=["POST"])
@@ -209,6 +342,7 @@ async def chat_message(request: Request) -> Response:
 
     trace_id = str(uuid4())
     started_at = time.perf_counter()
+    authenticated_user = get_authenticated_user(request)
     try:
         await ensure_session(session_id, scope=scope)
         stored_history = await load_message_history(session_id)
@@ -253,6 +387,7 @@ async def chat_message(request: Request) -> Response:
             message_history=message_history,
             conversation_id=session_id,
             run_id=run_uuid,
+            user_id=authenticated_user.user_id if authenticated_user else None,
             scope=scope,
             tool_event_recorder=save_tool_event,
         )

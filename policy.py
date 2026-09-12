@@ -24,6 +24,14 @@ class ToolPolicy:
 
 
 TOOL_POLICIES: dict[str, ToolPolicy] = {
+    "ping": ToolPolicy(
+        tool_name="ping",
+        risk_level=RiskLevel.READ_SAFE,
+        requires_approval=False,
+        reversible=True,
+        external_side_effect=False,
+        data_scope="INTERNAL",
+    ),
     "web_search": ToolPolicy(
         tool_name="web_search",
         risk_level=RiskLevel.READ_SAFE,

@@ -8,6 +8,7 @@ import time
 from dataclasses import dataclass
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Annotated, Any, Literal
+from uuid import uuid4
 
 from pydantic import Field
 from pydantic_ai import Agent, RunContext, UsageLimits
@@ -29,6 +30,8 @@ from config import (
     MAX_TOP_K,
 )
 from my_files import search_my_files as existing_my_files_search
+from persistence import create_pending_action
+from policy import data_only_boundary, get_tool_policy, tool_metadata
 from skill_tools import web_search as existing_web_search
 
 
@@ -94,6 +97,7 @@ class AgentCoreError(RuntimeError):
 class AgentDeps:
     conversation_id: str | None = None
     run_id: str | None = None
+    user_id: str | None = None
     scope: Literal["WEB", "MY_FILES"] = "WEB"
     tool_event_recorder: (
         Callable[[str, str, int, dict[str, Any] | None], Awaitable[None]] | None
@@ -111,6 +115,10 @@ class _ProviderState:
     consecutive_429: int = 0
     rate_limited_until: float = 0.0
     status: str = "READY"
+    last_success: str | None = None
+    last_failure: str | None = None
+    last_failure_code: str | None = None
+    last_latency_ms: int | None = None
 
 
 _provider_state = _ProviderState()
@@ -122,6 +130,10 @@ def provider_health() -> dict[str, object]:
             "provider": PROVIDER_NAME,
             "model": GEMINI_MODEL,
             "status": "NOT_CONFIGURED",
+            "last_success": _provider_state.last_success,
+            "last_failure": _provider_state.last_failure,
+            "last_failure_code": _provider_state.last_failure_code,
+            "latency_ms": _provider_state.last_latency_ms,
         }
     if _provider_state.status == "RATE_LIMITED":
         remaining = max(0.0, _provider_state.rate_limited_until - time.monotonic())
@@ -131,6 +143,10 @@ def provider_health() -> dict[str, object]:
                 "model": GEMINI_MODEL,
                 "status": "RATE_LIMITED",
                 "cooldown_remaining_seconds": round(remaining, 3),
+                "last_success": _provider_state.last_success,
+                "last_failure": _provider_state.last_failure,
+                "last_failure_code": _provider_state.last_failure_code,
+                "latency_ms": _provider_state.last_latency_ms,
             }
         _provider_state.status = "READY"
         _provider_state.consecutive_429 = 0
@@ -138,13 +154,21 @@ def provider_health() -> dict[str, object]:
         "provider": PROVIDER_NAME,
         "model": GEMINI_MODEL,
         "status": _provider_state.status,
+        "last_success": _provider_state.last_success,
+        "last_failure": _provider_state.last_failure,
+        "last_failure_code": _provider_state.last_failure_code,
+        "latency_ms": _provider_state.last_latency_ms,
     }
 
 
-def _mark_provider_ready() -> None:
+def _mark_provider_ready(latency_ms: int) -> None:
     _provider_state.consecutive_429 = 0
     _provider_state.rate_limited_until = 0.0
     _provider_state.status = "READY"
+    _provider_state.last_success = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    _provider_state.last_failure = None
+    _provider_state.last_failure_code = None
+    _provider_state.last_latency_ms = latency_ms
 
 
 def _mark_provider_429() -> None:
@@ -234,6 +258,7 @@ def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[Agent
                 value = result.get(key)
                 if isinstance(value, (int, float)):
                     safe_metadata[key] = value
+        safe_metadata["policy"] = tool_metadata("web_search")
         if ctx.deps.tool_event_recorder is not None:
             await ctx.deps.tool_event_recorder(
                 "web_search",
@@ -241,6 +266,11 @@ def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[Agent
                 int((time.perf_counter() - started_at) * 1000),
                 safe_metadata,
             )
+        if isinstance(result, dict):
+            return {
+                **result,
+                "data_boundary": data_only_boundary("web_search"),
+            }
         return result
 
     async def search_my_files(
@@ -268,15 +298,55 @@ def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[Agent
                 {
                     "scope": "MY_FILES",
                     "result_count": len(result.get("results", [])),
+                    "policy": tool_metadata("search_my_files"),
                 },
             )
-        return result
+        return {
+            **result,
+            "data_boundary": data_only_boundary("uploaded_files"),
+        }
+
+    async def test_sensitive_action(
+        ctx: RunContext[AgentDeps],
+        reason: Annotated[str, Field(min_length=1, max_length=500)],
+    ) -> dict[str, object]:
+        policy = get_tool_policy("test_sensitive_action")
+        if not ctx.deps.conversation_id or not ctx.deps.run_id:
+            raise RuntimeError("Sensitive actions require a persisted session and run.")
+        action_id = str(uuid4())
+        await create_pending_action(
+            action_id=action_id,
+            session_id=ctx.deps.conversation_id,
+            run_id=ctx.deps.run_id,
+            user_id=ctx.deps.user_id or "unauthenticated",
+            tool_name=policy.tool_name,
+            risk_level=policy.risk_level.value,
+            arguments={"reason": reason.strip()},
+        )
+        if ctx.deps.tool_event_recorder is not None:
+            await ctx.deps.tool_event_recorder(
+                policy.tool_name,
+                "success",
+                0,
+                {
+                    "policy": tool_metadata(policy.tool_name),
+                    "action_id": action_id,
+                    "status": "pending_approval",
+                },
+            )
+        return {
+            "ok": False,
+            "requires_approval": True,
+            "action_id": action_id,
+            "risk_level": policy.risk_level.value,
+            "message": "Approval is required before this action can execute.",
+        }
 
     if scope == "WEB":
-        tools = [web_search]
+        tools = [web_search, test_sensitive_action]
         instructions = WEB_INSTRUCTIONS
     else:
-        tools = [search_my_files]
+        tools = [search_my_files, test_sensitive_action]
         instructions = MY_FILES_INSTRUCTIONS
 
     return Agent(
@@ -343,6 +413,7 @@ async def run_ahmed(
     message_history: Sequence[ModelMessage] | None = None,
     conversation_id: str | None = None,
     run_id: str | None = None,
+    user_id: str | None = None,
     scope: Literal["WEB", "MY_FILES"] = "WEB",
     tool_event_recorder: (
         Callable[[str, str, int, dict[str, Any] | None], Awaitable[None]] | None
@@ -372,6 +443,7 @@ async def run_ahmed(
     agent = _build_agent(candidate.model, scope)
     last_error: Exception | None = None
     for attempt in range(GEMINI_429_MAX_RETRIES + 1):
+        attempt_started = time.perf_counter()
         try:
             result = await agent.run(
                 user_message,
@@ -379,6 +451,7 @@ async def run_ahmed(
                 deps=AgentDeps(
                     conversation_id=conversation_id,
                     run_id=run_id,
+                    user_id=user_id,
                     scope=scope,
                     tool_event_recorder=tool_event_recorder,
                 ),
@@ -389,7 +462,9 @@ async def run_ahmed(
                     tool_calls_limit=MAX_TOOL_CALLS,
                 ),
             )
-            _mark_provider_ready()
+            _mark_provider_ready(
+                int((time.perf_counter() - attempt_started) * 1000)
+            )
             return result
         except ModelHTTPError as error:
             last_error = error
@@ -427,6 +502,9 @@ async def run_ahmed(
     else:
         _provider_state.status = "ERROR"
         provider_status = "ERROR"
+    _provider_state.last_failure = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    _provider_state.last_failure_code = provider_code or provider_status
+    _provider_state.last_latency_ms = None
     raise AgentCoreError(
         "All configured model providers failed.",
         provider=candidate.name,

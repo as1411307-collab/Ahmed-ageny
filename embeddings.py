@@ -139,6 +139,17 @@ def get_embedding_provider() -> LocalFastEmbedProvider:
     return _provider
 
 
+def embedding_health() -> dict[str, Any]:
+    provider = get_embedding_provider()
+    return {
+        "status": provider.status,
+        "model": provider.model_name,
+        "dimension": provider.dimension or None,
+        "last_metrics": dict(provider.last_metrics),
+        "safe_error_code": None,
+    }
+
+
 def vector_literal(vector: list[float]) -> str:
     if not vector or not all(math.isfinite(value) for value in vector):
         raise EmbeddingError("The vector is invalid.")

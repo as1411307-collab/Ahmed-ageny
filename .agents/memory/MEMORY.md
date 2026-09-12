@@ -6,3 +6,4 @@
 - [Phase 1B PostgreSQL persistence](phase1b-postgres-persistence.md) — messages, runs, and safe tool events persist per row with asyncpg.
 - [Gemini rate limits](gemini-rate-limits.md) — rapid live test bursts can cause sustained 429s; use bounded backoff and report the provider blocker.
 - [Hybrid RAG embedding](hybrid-rag-embedding.md) — validate local multilingual models first; preserve FTS when vector indexing is unavailable and version vector metadata.
+- [Policy and HITL boundary](policy-hitl.md) — sensitive actions require trusted identity, persisted state transitions, and tamper-evident audit events.
