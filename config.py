@@ -124,3 +124,18 @@ SEARCH_RRF_K = _bounded_int(
     maximum=1000,
 )
 BRAVE_SEARCH_ENABLED = _bounded_bool("BRAVE_SEARCH_ENABLED", False)
+
+ACADEMIC_PROVIDER_TIMEOUT_SECONDS = _bounded_float(
+    "ACADEMIC_PROVIDER_TIMEOUT_SECONDS",
+    12.0,
+    minimum=2.0,
+    maximum=60.0,
+)
+ACADEMIC_MAX_RETRIES = _bounded_int(
+    "ACADEMIC_MAX_RETRIES",
+    2,
+    minimum=0,
+    maximum=3,
+)
+CROSSREF_MAILTO = os.environ.get("CROSSREF_MAILTO", "").strip()
+OPENALEX_API_KEY = os.environ.get("OPENALEX_API_KEY", "").strip()

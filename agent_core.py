@@ -32,6 +32,7 @@ from config import (
 from my_files import search_my_files as existing_my_files_search
 from persistence import create_pending_action
 from policy import data_only_boundary, get_tool_policy, tool_metadata
+from academic_search import academic_search as existing_academic_search
 from skill_tools import web_search as existing_web_search
 
 
@@ -60,6 +61,11 @@ Use web_search for current, factual, official, or source-based questions.
 If the user explicitly asks to use web_search, call it with the requested mode.
 Use FAST for a quick search and DEEP for official or multi-source research.
 When web_search returns sources, cite them inline as [1], [2], etc.
+
+Use academic_search for explicit DOI, paper, author, topic, citation, reference,
+or latest-research requests. Use the structured academic result for metadata and
+use web_search only when publisher or broader web context is needed. Do not use
+academic_search for generic non-academic web questions.
 """.strip()
 
 MY_FILES_INSTRUCTIONS = f"""
@@ -273,6 +279,54 @@ def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[Agent
             }
         return result
 
+    async def academic_search(
+        ctx: RunContext[AgentDeps],
+        query: Annotated[str, Field(min_length=1, max_length=2000)],
+        intent: Literal[
+            "auto",
+            "doi",
+            "exact_title",
+            "author",
+            "topic",
+            "citations",
+            "latest_research",
+        ] = "auto",
+        max_results: Annotated[int, Field(ge=1, le=5)] = 5,
+    ) -> dict[str, object]:
+        started_at = time.perf_counter()
+        try:
+            result = await existing_academic_search(
+                query=query.strip(),
+                intent=intent,
+                max_results=max_results,
+            )
+        except Exception:
+            if ctx.deps.tool_event_recorder is not None:
+                await ctx.deps.tool_event_recorder(
+                    "academic_search",
+                    "failed",
+                    int((time.perf_counter() - started_at) * 1000),
+                    {"intent": intent, "scope": "WEB"},
+                )
+            raise
+
+        if ctx.deps.tool_event_recorder is not None:
+            await ctx.deps.tool_event_recorder(
+                "academic_search",
+                "success" if result.get("ok", True) else "failed",
+                int((time.perf_counter() - started_at) * 1000),
+                {
+                    "intent": intent,
+                    "scope": "WEB",
+                    "result_count": len(result.get("results", [])),
+                    "providers_used": result.get("providers_used", []),
+                },
+            )
+        return {
+            **result,
+            "data_boundary": data_only_boundary("academic_external"),
+        }
+
     async def search_my_files(
         ctx: RunContext[AgentDeps],
         query: Annotated[str, Field(min_length=1, max_length=MAX_QUERY_LENGTH)],
@@ -343,7 +397,7 @@ def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[Agent
         }
 
     if scope == "WEB":
-        tools = [web_search, test_sensitive_action]
+        tools = [web_search, academic_search, test_sensitive_action]
         instructions = WEB_INSTRUCTIONS
     else:
         tools = [search_my_files, test_sensitive_action]

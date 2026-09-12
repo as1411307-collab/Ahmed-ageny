@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from agent_core import provider_health
+from academic_search import academic_health
 from auth import auth_health
 from embeddings import embedding_health
 from persistence import PersistenceError, doctor_storage_health, verify_audit_chain
@@ -88,6 +89,7 @@ async def _build_report(*, probe_search: bool) -> dict[str, Any]:
 
     mcp_status = "READY" if TOOL_POLICIES else "ERROR"
     search = search_fabric_health()
+    academic = academic_health()
     if probe_search and search["status"] == "READY":
         # A live search probe is intentionally opt-in because it can spend credits.
         search["fast_probe"] = "not_run"
@@ -101,6 +103,7 @@ async def _build_report(*, probe_search: bool) -> dict[str, Any]:
                     {"status": core_status},
                     {"status": storage_status},
                     audit,
+                    academic,
                 )
             )
             else "DEGRADED"
@@ -111,6 +114,7 @@ async def _build_report(*, probe_search: bool) -> dict[str, Any]:
                     {"status": storage_status},
                     provider,
                     audit,
+                    academic,
                 )
             )
             else "READY"
@@ -137,6 +141,7 @@ async def _build_report(*, probe_search: bool) -> dict[str, Any]:
             "safe_error_code": provider.get("last_failure_code"),
         },
         "search": search,
+        "academic": academic,
         "my_files": _component(
             status=storage_status if storage is not None else "ERROR",
             safe_error_code=storage_error,
