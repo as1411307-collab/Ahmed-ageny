@@ -1,0 +1,875 @@
+ابدأ Phase 2A فقط:
+Search Fabric Foundation + Brave optional independent-index adapter.
+
+الحالة الحالية المؤكدة:
+- Phase 1A PASS
+- Phase 1B PASS
+- Phase 1C PASS
+- Phase 1C.1 PASS
+- Phase 1D PASS
+- Phase 1E PASS
+- Phase 1E.2 PASS
+- Phase 1F.1 PASS
+
+الحالة الأمنية:
+- Dependency audit: 0 critical / 0 high / 0 moderate / 0 low
+- Python audit PASS
+- Node audit PASS
+- Secret scan PASS
+- Upload validation PASS
+- SQL safety PASS
+- Owner authentication PASS
+- HITL PASS
+- Audit chain PASS
+- /doctor PASS
+- /health minimal PASS
+
+الحالة الوظيفية:
+- PydanticAI live PASS
+- Gemini provider READY
+- Tavily FAST/DEEP PASS
+- MCP PASS
+- PostgreSQL persistence PASS
+- MY_FILES hybrid retrieval PASS
+- pgvector PASS
+- local multilingual embeddings PASS
+- privacy boundary PASS
+- restart PASS
+
+لا تغيّر أي جزء شغال.
+
+==================================================
+GOAL
+==================================================
+
+الهدف ليس إضافة محركات كثيرة.
+
+الهدف هو بناء Search Fabric صغير ومحايد للمزوّدين حول البحث الحالي، بحيث:
+
+1. Tavily يظل مزود البحث الأساسي الحالي.
+2. Brave يضاف كمزوّد اختياري يستخدم independent search index.
+3. النظام يستطيع دمج نتائج أكثر من provider بدون ربط المنطق الأساسي بمزوّد واحد.
+4. نقيس فعليًا هل Brave يضيف قيمة مقارنة بـTavily.
+5. لا نجعل Brave جزءًا دائمًا من البحث إلا إذا أثبت benchmark فائدته.
+
+لا تضف SearXNG أو أي search provider آخر في هذه المرحلة.
+
+==================================================
+1. SEARCH PROVIDER INTERFACE
+==================================================
+
+أنشئ abstraction بسيطة وواضحة مثل:
+
+SearchProvider
+
+ويكون لها على الأقل:
+
+- name
+- status
+- capabilities()
+- healthcheck()
+- search(query, options)
+- usage()
+
+استخدم interface/protocol مناسب لهيكل Python الحالي.
+
+لا تعيد كتابة Tavily implementation الموجود.
+
+ضع Tavily adapter رفيعًا فوق التنفيذ الحالي في skill_tools.py أو المكان الأنسب بدون كسر السلوك الحالي.
+
+Providers في Phase 2A:
+
+1. Tavily
+   - existing
+   - configured
+   - primary
+
+2. Brave
+   - optional
+   - independent-index provider
+   - may be NOT_CONFIGURED
+
+لا تضف provider ثالث.
+
+==================================================
+2. NORMALIZED SEARCH RESULT
+==================================================
+
+وحّد نتائج providers في schema داخلية واحدة.
+
+مثال للحقول:
+
+- provider
+- title
+- url
+- canonical_url
+- domain
+- snippet
+- published_at nullable
+- language nullable
+- provider_rank
+- provider_score nullable
+- retrieved_at
+- source_type
+- source_class
+- found_by
+
+source_class:
+
+- primary
+- secondary
+- community
+- unknown
+
+مهم:
+
+لا تفترض أن provider_score من Tavily قابل للمقارنة مباشرة مع provider_score من Brave.
+
+لا تعمل raw-score averaging بين providers.
+
+provider_rank أهم لمرحلة fusion.
+
+==================================================
+3. TAVILY ADAPTER
+==================================================
+
+حافظ على Tavily الحالي.
+
+FAST/DEEP الحاليان يجب ألا ينكسرا.
+
+لا تغيّر:
+- Tavily secret
+- extraction الحالي
+- MCP behavior
+- existing web_search contract إلا إذا كان التغيير backward-compatible
+
+Tavily regression test إلزامي.
+
+==================================================
+4. BRAVE OPTIONAL INDEPENDENT-INDEX ADAPTER
+==================================================
+
+أضف Brave Web Search API الرسمي فقط.
+
+استخدم environment variable:
+
+BRAVE_SEARCH_API_KEY
+
+لا hardcode المفتاح.
+
+لا تطبع المفتاح.
+
+لا تسجل Authorization headers.
+
+إذا BRAVE_SEARCH_API_KEY غير موجود:
+
+Brave status = NOT_CONFIGURED
+
+ويجب أن يظل:
+- Tavily يعمل
+- FAST يعمل
+- DEEP يعمل
+- /doctor يعمل
+
+غياب Brave لا يعتبر خطأ في النظام.
+
+استخدم Brave Web Search فقط في هذه المرحلة.
+
+لا تستخدم Brave Answers أو أي LLM answer layer من Brave.
+
+استخدم authentication الرسمي المطلوب من Brave API، مثل X-Subscription-Token حسب الوثائق الحالية.
+
+لا تشترِ خطة.
+لا تفعل billing.
+لا تضف بطاقة.
+لا تنفذ أي إجراء مالي تلقائيًا.
+
+==================================================
+5. BRAVE DATA HANDLING
+==================================================
+
+في Phase 2A:
+
+- لا تخزن Brave raw search payloads بشكل دائم.
+- لا تخزن raw snippets بشكل دائم لمجرد أنها عادت من API.
+- استخدم المحتوى المطلوب أثناء request الحالي فقط.
+- لا تخزن response body الكامل.
+
+يمكن تخزين metadata تشغيلية آمنة مثل:
+
+- provider
+- request count
+- latency
+- status
+- result count
+- canonical URLs المستخدمة في النتيجة النهائية
+- provenance
+- safe error class
+
+إذا احتجنا لاحقًا retention دائم لبيانات Brave:
+لا تنفذه تلقائيًا.
+راجع شروط الخطة والاستخدام وقتها أولًا.
+
+==================================================
+6. SEARCH MODES
+==================================================
+
+احتفظ بالواجهة الحالية:
+
+FAST
+DEEP
+
+FAST:
+
+- Tavily فقط افتراضيًا.
+- لا fan-out.
+- لا Brave تلقائيًا.
+- الهدف latency منخفضة.
+
+DEEP:
+
+لا يعني "شغّل كل providers".
+
+استخدم selective provider routing.
+
+إذا Tavily وحده كافٍ:
+استخدم Tavily فقط.
+
+إذا البحث يحتاج coverage إضافية أو independent second index،
+وBrave status=READY:
+
+شغّل:
+Tavily + Brave
+
+بشكل parallel قدر الإمكان.
+
+إذا Brave=NOT_CONFIGURED:
+DEEP يستمر عبر Tavily.
+
+إذا Brave يفشل:
+Tavily يستمر.
+
+إذا Tavily يفشل وBrave READY:
+Brave يمكنه الاستمرار.
+
+لا تجعل failure من provider واحد يسقط البحث كله إذا provider آخر صالح.
+
+==================================================
+7. PROVIDER BUDGETS
+==================================================
+
+أضف config واضح لـ:
+
+- provider timeout
+- maximum provider calls per research run
+- concurrency
+- maximum results per provider
+
+لا تعمل fan-out غير محدود.
+
+لا تطلب أكبر عدد نتائج ممكن افتراضيًا.
+
+ابدأ بعدد صغير يكفي للاختبار والـbenchmark.
+
+الهدف:
+quality per request
+وليس maximum result count.
+
+==================================================
+8. URL NORMALIZATION
+==================================================
+
+قبل deduplication:
+
+طبّق URL normalization آمن.
+
+مثال:
+
+- normalize hostname case
+- normalize obvious default ports
+- remove fragments عندما لا تغير هوية المورد
+- remove common tracking parameters مثل:
+  utm_*
+  fbclid
+  gclid
+
+لكن:
+
+لا تحذف query parameters بشكل أعمى.
+
+بعض المواقع تستخدم query parameters كجزء أساسي من هوية الصفحة.
+
+احتفظ بـ:
+
+original_url
+canonical_url
+
+==================================================
+9. DEDUPLICATION
+==================================================
+
+طبّق deduplication على مرحلتين.
+
+PASS 1:
+canonical URL exact/normalized dedupe
+
+PASS 2:
+near duplicate detection بشكل محافظ، مثل:
+- same domain
+- very similar title
+- obvious syndicated duplicate
+
+لا تعمل aggressive semantic dedupe قد يحذف مصادر مستقلة مختلفة.
+
+إذا نفس الصفحة ظهرت من Tavily وBrave:
+
+لا تعتبرها مصدرين مستقلين.
+
+أرجع مصدرًا واحدًا مع:
+
+found_by = ["tavily", "brave"]
+
+==================================================
+10. SOURCE INDEPENDENCE
+==================================================
+
+فرّق بين:
+
+provider diversity
+
+و
+
+source diversity.
+
+ظهور نفس Reuters URL من Tavily وBrave
+لا يعني independent corroboration.
+
+إذا عدة نتائج ترجع لنفس المصدر الأصلي أو نفس المقال syndicated:
+لا تحسبها كعدة أدلة مستقلة.
+
+احتفظ بالمعلومات اللازمة لمعرفة:
+
+- provider الذي وجد النتيجة
+- domain
+- canonical URL
+- source family إن أمكن بشكل محافظ
+
+==================================================
+11. FUSION
+==================================================
+
+ادمج النتائج باستخدام rank-based fusion.
+
+ابدأ بـ:
+
+RRF
+Reciprocal Rank Fusion
+
+أو equivalent rank-based method إذا كان هناك سبب تقني موثق.
+
+اجعل RRF constant configurable.
+
+لا تجمع Tavily raw score مع Brave raw score مباشرة.
+
+Flow:
+
+provider results
+→ normalize
+→ dedupe
+→ rank fusion
+→ quality adjustments
+→ final source ranking
+
+==================================================
+12. DETERMINISTIC QUALITY ADJUSTMENTS
+==================================================
+
+بعد RRF يمكن تطبيق adjustments محدودة وقابلة للتفسير:
+
+- primary/official source priority
+- direct query relevance
+- recency عندما تكون recency مهمة للسؤال
+- source diversity
+- duplicate/syndication penalty
+
+لا تضف ML reranker جديد في Phase 2A.
+
+لا تستخدم Gemini كـreranker لكل النتائج افتراضيًا.
+
+==================================================
+13. PRIMARY SOURCE CLASSIFICATION
+==================================================
+
+أضف classification بسيط:
+
+primary
+secondary
+community
+unknown
+
+أمثلة primary:
+
+- official documentation
+- official organization/company page
+- government source
+- official repository
+- original research publication
+- original standards body documentation
+
+أمثلة secondary:
+
+- news report
+- independent analysis
+- explanatory article
+
+community:
+
+- forums
+- community discussions
+- Reddit-like sources
+
+unknown:
+إذا لم نقدر نصنف بثقة.
+
+لا تدّعِ أن المصدر primary فقط لأنه ranked عاليًا عند provider.
+
+==================================================
+14. OFFICIAL-SOURCE INTENT
+==================================================
+
+إذا المستخدم طلب:
+
+- official
+- documentation
+- original source
+- government source
+- paper
+- repository
+
+يجب أن يؤثر ذلك على ranking.
+
+مثال:
+
+"Find the official Python MCP SDK documentation"
+
+يجب أن يفضل المصدر الرسمي المناسب على blog يشرح نفس الشيء.
+
+==================================================
+15. RECENCY
+==================================================
+
+لا تطبق recency boost على كل سؤال.
+
+إذا السؤال time-sensitive مثل:
+
+- latest
+- current
+- today
+- recent
+- this week
+
+استخدم publication date/recency إذا كانت متاحة وموثوقة.
+
+إذا السؤال evergreen:
+لا تعاقب مصدرًا رسميًا ممتازًا فقط لأنه أقدم.
+
+==================================================
+16. RESEARCH EVIDENCE FLOW
+==================================================
+
+في DEEP:
+
+query
+→ provider selection
+→ searches
+→ normalize
+→ dedupe
+→ fusion
+→ quality adjustments
+→ choose high-value sources
+→ extract/read selected pages عند الحاجة
+→ evidence set
+→ Gemini final synthesis
+
+لا تستخرج كل search result.
+
+لا ترسل عشرات الصفحات إلى Gemini بلا داعٍ.
+
+استخدم evidence budget.
+
+==================================================
+17. EXISTING TAVILY EXTRACTION
+==================================================
+
+احتفظ بـTavily extraction الحالي إذا كان شغالًا.
+
+لا تجعل Brave page extractor في Phase 2A.
+
+Brave في هذه المرحلة:
+
+search discovery provider
+
+وليس:
+
+page extraction provider.
+
+==================================================
+18. CITATION / PROVENANCE
+==================================================
+
+كل source يصل إلى مرحلة synthesis يجب أن يحتفظ بـ:
+
+- title
+- canonical_url
+- domain
+- found_by
+- source_class
+- published_at إذا توفر
+- provider ranks
+- retrieval timestamp
+
+الإجابة النهائية يجب أن تعتمد فقط على evidence/source set الفعلي.
+
+لا تسمح للنموذج باختراع citation أو URL غير موجود في source set.
+
+==================================================
+19. PRIVACY BOUNDARY
+==================================================
+
+حافظ على الفصل الحالي.
+
+scope=WEB:
+
+- لا ترسل MY_FILES chunks إلى Tavily
+- لا ترسل MY_FILES chunks إلى Brave
+- لا تستخدم private document content لصناعة web query
+
+scope=MY_FILES:
+
+- لا Tavily
+- لا Brave
+- لا web_search
+- local retrieval فقط
+- Gemini يستقبل فقط selected private chunks حسب السياسة الحالية
+
+لا تضف WEB+MY_FILES HYBRID الآن.
+
+==================================================
+20. PROVIDER HEALTH / DOCTOR
+==================================================
+
+وسّع /doctor بدون كشف secrets.
+
+Tavily:
+
+- READY
+- RATE_LIMITED
+- UNAUTHORIZED إذا كان مناسبًا
+- ERROR
+
+Brave:
+
+- READY
+- NOT_CONFIGURED
+- RATE_LIMITED
+- UNAUTHORIZED
+- ERROR
+
+اعرض metadata آمنة مثل:
+
+- last_success
+- last_failure
+- latency
+- request count
+- safe error code
+- circuit state إذا وجد
+
+لا تجعل /doctor يعمل expensive live search في كل request.
+
+استخدم cached/recent health state عندما يكون ذلك مناسبًا.
+
+==================================================
+21. BENCHMARK DATASET
+==================================================
+
+أنشئ benchmark ثابت وصغير داخل tests/fixtures أو المكان المناسب.
+
+يحتوي على عدة أنواع:
+
+A. official technical query
+
+مثال:
+current official Python MCP SDK documentation
+
+B. recent/current query
+
+C. general factual query
+
+D. Arabic query
+
+E. regional/non-English query
+
+F. niche query حيث قد يضيف independent index نتائج مختلفة
+
+G. query مع duplicate/syndicated results
+
+الهدف ليس إثبات أن Brave أفضل.
+
+الهدف قياس:
+
+هل Brave يضيف قيمة فعلية إلى Ahmed Agent؟
+
+==================================================
+22. BENCHMARK MODES
+==================================================
+
+إذا Brave configured:
+
+قارن لكل query:
+
+1. Tavily only
+2. Brave only
+3. Tavily + Brave fused
+
+قِس:
+
+- useful unique URLs
+- primary sources found
+- duplicate rate
+- top-k relevance
+- source diversity
+- latency
+- provider request count
+- credit/cost usage إذا كانت البيانات متاحة
+- failure/resilience behavior
+
+لا تعتمد على رأي Gemini وحده لتقييم الجودة.
+
+استخدم expected sources / deterministic checks عندما يمكن.
+
+==================================================
+23. BRAVE ACCEPTANCE RULE
+==================================================
+
+لا تجعل Brave جزءًا دائمًا من DEEP لمجرد أن API يعمل.
+
+Brave يعتبر useful إذا benchmark يثبت قيمة إضافية واضحة، مثل واحد أو أكثر من:
+
+- useful unique sources
+- additional primary sources
+- better top-k ranking
+- improved regional/non-English coverage
+- useful resilience عند تعطل Tavily
+- improved source diversity
+
+إذا لم يثبت قيمة واضحة:
+
+- احتفظ بالadapter
+- اجعله disabled by default
+- لا تحذفه
+- لا ترسل له requests بلا فائدة
+
+==================================================
+24. NO BRAVE KEY CASE
+==================================================
+
+إذا BRAVE_SEARCH_API_KEY غير موجود:
+
+لا توقف Phase 2A بالكامل.
+
+نفذ واختبر:
+
+- SearchProvider abstraction
+- Tavily adapter
+- normalized result model
+- URL normalization
+- dedupe
+- source classification
+- RRF infrastructure
+- provider isolation
+- Doctor status=NOT_CONFIGURED
+- Tavily regression
+
+Brave live benchmark يبقى:
+
+BLOCKED_BY_CONFIGURATION
+
+وليس FAIL.
+
+==================================================
+25. TESTS
+==================================================
+
+TEST A — Tavily regression
+
+web_search FAST
+
+Expected:
+نفس المسار الحالي يعمل بنجاح.
+
+TEST B — Tavily DEEP regression
+
+Expected:
+existing DEEP behavior remains functional.
+
+TEST C — Brave missing key
+
+Expected:
+Brave=NOT_CONFIGURED
+Tavily remains functional.
+
+TEST D — Brave live
+
+فقط إذا BRAVE_SEARCH_API_KEY موجود.
+
+Expected:
+valid Brave search result.
+
+TEST E — same URL from both providers
+
+Expected:
+one normalized final source
+found_by includes both providers.
+
+TEST F — tracking URL
+
+نفس الصفحة مع utm parameters مختلفة.
+
+Expected:
+deduped safely.
+
+TEST G — meaningful query parameter
+
+صفحتان تختلفان بمعامل query مهم.
+
+Expected:
+لا يتم دمجهما خطأ.
+
+TEST H — provider failure
+
+simulate Brave timeout/error.
+
+Expected:
+Tavily continues.
+
+simulate Tavily failure with Brave READY.
+
+Expected:
+Brave can continue.
+
+TEST I — official source intent
+
+Expected:
+primary official source prioritized.
+
+TEST J — recency intent
+
+Expected:
+recent trustworthy sources get appropriate priority.
+
+TEST K — Arabic query
+
+Expected:
+Unicode/query handling PASS.
+لا تفرض ترجمة إنجليزية بشكل أعمى.
+
+TEST L — privacy WEB
+
+Expected:
+no MY_FILES chunks leave to search providers.
+
+TEST M — privacy MY_FILES
+
+Expected:
+no Tavily or Brave call.
+
+TEST N — Doctor
+
+Expected:
+accurate provider statuses.
+
+TEST O — existing security
+
+Expected:
+owner auth / HITL / health behavior unchanged.
+
+==================================================
+26. DO NOT ADD YET
+==================================================
+
+لا تضف:
+
+- SearXNG
+- Exa
+- Google Custom Search
+- Bing adapter
+- OpenAlex
+- Crossref
+- PubMed
+- Semantic Scholar
+- Agent Reach
+- YouTube integration
+- Reddit integration
+- social login/cookies
+- n8n
+- DBOS
+- Redis
+- Qdrant
+- LangGraph
+- LiteLLM
+- WEB+MY_FILES HYBRID
+- cloud embeddings
+- ML search reranker
+
+ولا تغيّر deployment architecture.
+
+==================================================
+27. FINAL REPORT
+==================================================
+
+في النهاية أعطني فقط:
+
+- files changed
+- SearchProvider interface implemented PASS/FAIL
+- normalized result model PASS/FAIL
+- Tavily adapter PASS/FAIL
+- Tavily FAST regression PASS/FAIL
+- Tavily DEEP regression PASS/FAIL
+- Brave status
+- Brave live PASS/FAIL/BLOCKED_BY_CONFIGURATION
+- URL normalization PASS/FAIL
+- dedupe PASS/FAIL
+- found_by provenance PASS/FAIL
+- RRF fusion PASS/FAIL
+- primary-source classification PASS/FAIL
+- official-source ranking PASS/FAIL
+- provider failure isolation PASS/FAIL
+- privacy boundary PASS/FAIL
+- Doctor PASS/FAIL
+
+إذا Brave configured:
+- Tavily benchmark results
+- Brave benchmark results
+- fused benchmark results
+- additional useful unique sources
+- additional primary sources
+- duplicate rate
+- latency difference
+- request/credit usage
+- recommendation:
+  ENABLE_BRAVE_FOR_DEEP
+  أو
+  KEEP_BRAVE_DISABLED_BY_DEFAULT
+
+- any remaining blocker
+
+لا تعتبر Phase 2A ناجحة إلا إذا:
+- Tavily regression PASS
+- provider isolation PASS
+- normalization PASS
+- dedupe PASS
+- fusion infrastructure PASS
+- privacy boundary PASS
+
+عدم وجود BRAVE_SEARCH_API_KEY لا يفشل Phase 2A الأساسية.
+يسجل Brave live test فقط كـ BLOCKED_BY_CONFIGURATION.
