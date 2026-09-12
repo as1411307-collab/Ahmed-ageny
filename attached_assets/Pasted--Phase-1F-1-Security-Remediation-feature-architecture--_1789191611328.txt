@@ -1,0 +1,249 @@
+ابدأ Phase 1F.1 فقط: Security Remediation.
+
+لا تضف أي feature جديد.
+لا تغيّر architecture.
+لا تغيّر Gemini أو Tavily أو MCP أو MY_FILES أو Policy/HITL.
+
+الحالة الحالية:
+- Python dependency audit: PASS
+- Secret scan: PASS
+- Logging review: PASS
+- Endpoint protection: PASS
+- SQL safety: PASS
+- Node dependency audit: FAIL
+- Upload MIME validation: FAIL جزئيًا
+
+الهدف:
+إزالة الـsecurity blockers فقط، مع أقل تغيير ممكن.
+
+==================================================
+1. NODE DEPENDENCIES
+==================================================
+
+أولًا حدد dependency tree الفعلي لكل package vulnerable.
+
+أريد معرفة:
+- direct أم transitive
+- dev dependency أم runtime dependency
+- هل يدخل في production bundle/runtime أم لا
+
+المشاكل الحالية:
+
+brace-expansion 5.0.8
+→ fixed 5.0.9
+
+fast-uri 3.1.4
+→ fixed 3.1.6
+
+js-yaml 4.3.0
+→ fixed 4.3.2
+
+esbuild 0.27.3
+→ fixed 0.28.1
+
+nanoid 3.3.16
+→ fixed 3.3.18
+
+qs 6.15.3
+→ fixed 6.16.0
+
+لا تستخدم:
+npm audit fix --force
+ولا أي major upgrade عشوائي.
+
+استخدم package manager الحالي للمشروع فقط.
+
+نفذ أولًا dry-run / dependency inspection،
+ثم upgrades محددة إلى أقل إصدار آمن متوافق.
+
+إذا package transitive:
+- حدّث الـparent package إذا كان ذلك يحل المشكلة بأمان
+أو
+- استخدم overrides/resolutions فقط إذا ثبت التوافق
+
+لا تكسر lockfile.
+
+==================================================
+2. QS PRIORITY
+==================================================
+
+ابدأ بـ qs لأنه داخل express production path حسب التقرير.
+
+بعد ترقيته:
+شغل server tests قبل متابعة بقية upgrades.
+
+==================================================
+3. RE-AUDIT
+==================================================
+
+بعد كل مجموعة upgrades:
+
+- dependency install/check
+- Node audit
+- application startup
+- /health
+- /chat/message smoke test
+- MY_FILES smoke test
+
+الهدف:
+0 critical
+0 high
+
+إذا بقيت moderate/low بلا fix آمن:
+اعرضها ولا تستخدم breaking upgrade من نفسك.
+
+==================================================
+4. MIME / FILE VALIDATION
+==================================================
+
+لا تثق بـContent-Type القادم من العميل.
+
+لأن الملفات المدعومة فقط:
+.txt
+.md
+.pdf
+.docx
+
+استخدم validation بسيطة ومباشرة:
+
+PDF:
+- extension=.pdf
+- تحقق من PDF signature/header
+- ثم parser الحالي يجب أن يفتحه بنجاح
+
+DOCX:
+- extension=.docx
+- تحقق أنه ZIP صالح
+- تحقق من وجود ملفات DOCX الأساسية مثل:
+  [Content_Types].xml
+  word/document.xml
+- ثم python-docx parsing يجب أن ينجح
+
+TXT / MD:
+- extension صحيحة
+- تحقق أن المحتوى text-decodable
+- ارفض binary payload الواضح
+
+لا تعتمد على اسم الملف أو MIME header وحدهما.
+
+لا تضف antivirus أو sandbox أو libmagic إذا لم نحتجه.
+
+==================================================
+5. MIME MISMATCH
+==================================================
+
+إذا المستخدم رفع:
+
+evil.pdf
+لكن المحتوى ليس PDF
+
+Expected:
+HTTP 415 أو 400 واضح
+status=invalid_file_content
+
+لا تحفظ الملف كـready.
+لا تفهرسه.
+لا تعمل embeddings له.
+
+==================================================
+6. ZIP SAFETY FOR DOCX
+==================================================
+
+قبل قراءة DOCX:
+- تحقق من عدد entries وحجمها بشكل bounded
+- لا extract ZIP إلى filesystem
+- اقرأ فقط ما تحتاجه عبر parser/zip inspection
+
+الهدف منع zip-bomb behavior غير الضروري.
+
+==================================================
+7. PACKAGE HYGIENE
+==================================================
+
+تحقق من:
+
+pydantic-ai-slim
+openai
+docx 0.2.4
+replit 1.2.11
+
+لا تحذف أي شيء عشوائيًا.
+
+خصوصًا:
+- تأكد أن package باسم `docx` لا يتعارض مع `python-docx`
+- إذا `docx 0.2.4` غير مستخدم وغير مطلوب، أزله من البيئة أو أدخله تحت إدارة uv بعد إثبات الحاجة
+- إذا `replit` غير مستخدم فعليًا، لا تحتفظ بحزمة unmanaged بلا سبب
+- إذا `pydantic-ai-slim` مجرد dependency transitively provided by pydantic-ai، لا نحتاجه direct dependency إلا إذا المشروع يستورده/يثبته صراحة لسبب واضح
+- `openai` لا تحذفه إذا كان مطلوبًا transitively بواسطة provider stack
+
+استخدم:
+dependency tree
++
+actual imports
+قبل أي حذف.
+
+==================================================
+8. LOCK CONSISTENCY
+==================================================
+
+بعد التنظيف:
+- البيئة المثبتة يجب أن تتطابق مع lockfiles
+- لا تبقَ packages unmanaged بدون سبب موثق
+
+شغّل:
+uv pip check
+وما يعادله للـNode package manager.
+
+==================================================
+9. REGRESSION TESTS
+==================================================
+
+اختبر:
+
+A. Gemini MODEL_OK
+B. web_search FAST
+C. MY_FILES retrieval
+D. upload valid TXT
+E. upload valid PDF
+F. upload valid DOCX
+G. fake PDF content
+H. fake DOCX content
+I. oversized upload
+J. duplicate file
+K. HITL approve
+L. /doctor
+M. /health
+
+كل الميزات الحالية يجب أن تظل PASS.
+
+==================================================
+10. FINAL REPORT
+==================================================
+
+أعطني فقط:
+
+- Node vulnerabilities before/after
+- critical/high/moderate/low counts
+- packages upgraded
+- whether each was direct/transitive
+- MIME validation PASS/FAIL
+- fake PDF rejection PASS/FAIL
+- fake DOCX rejection PASS/FAIL
+- DOCX zip safety PASS/FAIL
+- package hygiene findings
+- unmanaged packages remaining
+- uv pip check PASS/FAIL
+- Node package check PASS/FAIL
+- regression tests PASS/FAIL
+- remaining blocker before Phase 2
+
+لا تضف:
+- Brave
+- SearXNG
+- n8n
+- Agent Reach
+- DBOS
+- Redis
+- Qdrant
+- LangGraph
+- LiteLLM
