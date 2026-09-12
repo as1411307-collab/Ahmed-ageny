@@ -1,0 +1,111 @@
+ابدأ Phase 1C.1 فقط: Gemini provider resilience.
+
+لا تعدل:
+- MY_FILES
+- PostgreSQL schema
+- FTS
+- Tavily
+- MCP
+- web_search
+- search_my_files
+- upload/extraction
+- citations
+
+المشكلة الوحيدة الحالية:
+Gemini يعيد 429 Too Many Requests بشكل مستمر بعد أن نجحت بقية طبقات Phase 1C.
+
+المطلوب:
+
+1. لا تفترض اسم نموذج بديل من عندك.
+
+2. استخدم GEMINI_API_KEY الحالي لاستدعاء قائمة النماذج المتاحة فعليًا لهذا الحساب/المشروع.
+
+3. سجّل فقط:
+- model id
+- availability
+- capabilities المطلوبة
+ولا تسجل أي مفتاح أو محتوى خاص.
+
+4. اختر نموذج Gemini مستقر مناسب لـ:
+- text generation
+- function/tool calling
+- PydanticAI
+ويفضل ألا يكون preview إذا كان هناك بديل مستقر متاح فعليًا.
+
+5. اجعل اسم النموذج من environment/config:
+AHMED_PRIMARY_MODEL
+
+ولا hardcode اسم النموذج داخل agent_core.py.
+
+6. احتفظ بالنموذج الحالي فقط إذا أثبت الاختبار أنه متاح وغير محدود بالـ429.
+
+7. حسّن معالجة 429:
+
+إذا وصل Retry-After:
+- احترمه
+- لا تتجاوزه
+
+إذا لم يصل:
+- bounded exponential backoff
+- retries من config فقط
+
+بعد انتهاء retries:
+- لا تعمل infinite retry
+- أرجع provider status=RATE_LIMITED
+- أرجع HTTP عام آمن للمستخدم
+
+8. أضف circuit breaker بسيط داخل العملية:
+بعد عدة 429 متتالية:
+- لا تكرر طلبات Gemini فورًا
+- اعتبر provider مؤقتًا RATE_LIMITED
+- cooldown configurable
+- لا تستخدم أرقام ثابتة مدفونة داخل الكود
+
+9. أضف healthcheck يميز بين:
+READY
+RATE_LIMITED
+UNAUTHORIZED
+NOT_CONFIGURED
+ERROR
+
+10. لا تضف مزودًا جديدًا الآن.
+لا تضف OpenAI API.
+لا تضف Groq.
+لا تضف LiteLLM.
+
+11. أعد الاختبارات:
+
+TEST A — MODEL_OK
+Reply with exactly: MODEL_OK
+
+TEST B — live web tool
+Use web_search FAST to find the current official Python MCP SDK documentation.
+
+TEST C — MY_FILES
+اسأل عن ORBIT-913 في scope=MY_FILES.
+
+TEST D — restart
+- restart server
+- reuse same session
+- ask about uploaded file
+Expected:
+retrieval + final answer both PASS
+
+TEST E — rate limit
+إذا عاد 429:
+- retries bounded
+- status becomes RATE_LIMITED
+- no infinite loop
+- no false success
+
+في التقرير أعطني فقط:
+- models discovered
+- model selected
+- هل هو stable أم preview
+- provider health
+- MODEL_OK PASS/FAIL
+- web tool PASS/FAIL
+- MY_FILES live PASS/FAIL
+- restart live PASS/FAIL
+- 429 handling PASS/FAIL
+- أي خطأ متبقٍ
