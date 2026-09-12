@@ -1,0 +1,283 @@
+قبل بدء Phase 2B، نفّذ فحصًا فقط:
+
+SEARCH CAPABILITY INVENTORY
+
+لا تعدّل أي كود.
+لا تضف أي dependency.
+لا تضف أي provider.
+لا تضف API keys.
+لا تحذف أي شيء.
+هذه مرحلة inspection فقط.
+
+الهدف:
+معرفة كل قدرات وأدوات البحث والوصول للمصادر الموجودة أصلًا في المشروع قبل أن نضيف Crossref أو Semantic Scholar أو PubMed أو GitHub أو SearXNG أو غيرها.
+
+==================================================
+1. افحص الكود كاملًا
+==================================================
+
+ابحث في repository عن أي implementation أو wrapper أو adapter أو tool متعلق بـ:
+
+- search
+- web search
+- deep search
+- research
+- browse
+- fetch
+- crawl
+- extract
+- reader
+- URL/page reading
+- HTTP retrieval
+- news
+- academic search
+- papers
+- code/repository search
+- social/platform search
+- RSS
+- YouTube
+- GitHub
+- Google
+- Bing
+- DuckDuckGo
+- Tavily
+- Brave
+- Exa
+- SearXNG
+- SerpAPI
+- Jina
+- Firecrawl
+- Apify
+- arXiv
+- Crossref
+- OpenAlex
+- Semantic Scholar
+- PubMed/NCBI
+
+لا تفترض أن اسم الأداة يحتوي كلمة search.
+
+==================================================
+2. افحص الأدوات المسجلة فعليًا
+==================================================
+
+اعرض كل tools المتاحة حاليًا للـagent.
+
+لكل tool:
+- name
+- implementation location
+- purpose
+- scope
+- whether currently registered
+- whether actually callable
+- dependencies
+- required secret/API key
+- current status
+
+افحص خصوصًا:
+- PydanticAI tools
+- MCP tools
+- skill_tools
+- any dynamically registered tools
+
+==================================================
+3. افحص MCP
+==================================================
+
+اعمل inventory لكل MCP capability الموجودة حاليًا.
+
+أريد معرفة:
+- MCP servers/configuration الموجودة
+- tools exposed
+- resources إن وجدت
+- search/retrieval capabilities
+- whether enabled or dormant
+- whether they duplicate existing Tavily/Search Fabric functionality
+
+لا تضف MCP server جديد.
+
+==================================================
+4. افحص dependencies
+==================================================
+
+راجع Python وNode dependencies والـlockfiles بحثًا عن packages قد توفر أصلًا:
+
+- search APIs
+- crawling
+- scraping
+- web/page retrieval
+- feeds
+- GitHub
+- academic APIs
+- browser automation
+- document/web extraction
+
+فرّق بين:
+DIRECT
+TRANSITIVE
+
+ولا تعتبر مجرد وجود package دليلًا أن capability مستخدمة.
+
+==================================================
+5. افحص configuration
+==================================================
+
+راجع أسماء environment variables/configuration فقط.
+
+لا تعرض قيم أي secret.
+
+ابحث عن configuration تشير إلى providers أو integrations موجودة سابقًا مثل:
+
+*_API_KEY
+*_TOKEN
+*_BASE_URL
+*_SEARCH_*
+*_MCP_*
+
+اذكر أسماء المتغيرات فقط وحالتها:
+CONFIGURED / NOT_CONFIGURED
+إذا كان بالإمكان تحديد ذلك بأمان.
+
+لا تطبع أي secret value.
+
+==================================================
+6. افحص الأدوات القديمة أو غير المستخدمة
+==================================================
+
+ابحث عن:
+- dead code
+- disabled adapters
+- previous experiments
+- unused search wrappers
+- dormant integrations
+- duplicate search implementations
+- tools موجودة ولكن غير مسجلة للagent
+
+لا تحذفها.
+
+==================================================
+7. افحص قدرات Tavily الحالية بدقة
+==================================================
+
+حدد ماذا نملك حاليًا فعلًا من Tavily، وليس فقط اسم web_search:
+
+- FAST
+- DEEP
+- search
+- extraction/page reading
+- filtering
+- result count controls
+- domains
+- recency/date support إن وجد
+- أي capabilities أخرى مستخدمة أو موجودة
+
+حدد الفرق بين:
+IMPLEMENTED
+و
+SUPPORTED_BY_PROVIDER_BUT_NOT_IMPLEMENTED
+
+==================================================
+8. افحص Search Fabric الجديد
+==================================================
+
+حدد:
+
+- ماذا يضيف search_fabric.py فوق الأدوات القديمة؟
+- ماذا يعيد استخدامه؟
+- هل توجد duplication؟
+- هل أنشأنا parallel search path غير ضروري؟
+- هل web_search القديم ما زال entry point الأساسي؟
+- كيف يصل agent فعليًا إلى Search Fabric؟
+
+إذا وجدت duplication:
+لا تصلحه الآن.
+فقط وثقه.
+
+==================================================
+9. افحص القدرات المتخصصة الموجودة أصلًا
+==================================================
+
+قبل اقتراح Phase 2B، تحقق هل عندنا أصلًا طريقة مباشرة أو غير مباشرة للوصول إلى:
+
+- academic papers
+- DOI metadata
+- biomedical literature
+- GitHub repositories/issues/code
+- official documentation
+- news
+- RSS
+- video/YouTube
+- social sources
+
+لكل capability صنفها:
+
+READY
+PARTIAL
+DORMANT
+NOT_CONFIGURED
+NOT_PRESENT
+
+==================================================
+10. لا تعتمد على أسماء الملفات فقط
+==================================================
+
+تتبع call paths الفعلية:
+
+Agent
+→ registered tool
+→ wrapper/adapter
+→ provider/library
+→ external source
+
+الهدف معرفة ما يستطيع Ahmed Agent استخدامه فعليًا الآن.
+
+==================================================
+11. لا تنفذ تغييرات
+==================================================
+
+ممنوع في هذه المرحلة:
+
+- refactor
+- cleanup
+- dependency changes
+- API signup
+- adding secrets
+- enabling Brave
+- adding Crossref
+- adding Semantic Scholar
+- adding PubMed
+- adding GitHub integration
+- adding SearXNG
+- adding Agent Reach
+
+Inspection/report only.
+
+==================================================
+12. FINAL REPORT
+==================================================
+
+أعطني جدولًا مختصرًا:
+
+Capability | Existing implementation | Registered/Callable | Provider/Source | Config status | Actually tested | Duplicate/Unique | Recommendation
+
+ثم أعطني:
+
+1. جميع أدوات البحث الموجودة حاليًا.
+2. جميع أدوات extraction/page reading الموجودة.
+3. جميع MCP search/retrieval capabilities.
+4. integrations موجودة ولكن dormant أو غير configured.
+5. search-related dependencies الموجودة.
+6. أي duplicate implementations.
+7. قدرات البحث المتخصصة الموجودة أصلًا.
+8. ما الذي نفتقده فعلًا بعد هذا الفحص.
+
+وأخيرًا:
+
+RECOMMENDED NEXT STEP
+
+لكن لا تنفذها.
+
+مهم:
+لا تقترح إضافة provider جديد إذا capability المطلوبة موجودة أصلًا ويمكن إعادة استخدامها بأمان.
+
+لا تعتبر Phase 2B محددة مسبقًا.
+قرار Phase 2B سيُتخذ بعد مراجعة هذا inventory.
