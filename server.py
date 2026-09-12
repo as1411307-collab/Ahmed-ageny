@@ -20,7 +20,7 @@ from agent_core import (
     provider_health,
     run_ahmed,
 )
-from auth import get_authenticated_user
+from auth import authorize_owner
 from doctor import get_doctor_report
 from persistence import (
     PersistenceError,
@@ -116,6 +116,15 @@ async def provider_health_route(_: Request) -> Response:
 
 @server.custom_route("/doctor", methods=["GET"])
 async def doctor_route(request: Request) -> Response:
+    user, status_code, error_code = await authorize_owner(
+        request,
+        endpoint="/doctor",
+    )
+    if user is None:
+        return JSONResponse(
+            {"error": "owner authentication required", "code": error_code},
+            status_code=status_code,
+        )
     report = await get_doctor_report(
         probe_search=request.query_params.get("probe") == "1"
     )
@@ -152,11 +161,14 @@ async def _execute_approved_action(
 
 @server.custom_route("/actions/{action_id}/approve", methods=["POST"])
 async def approve_action(request: Request) -> Response:
-    user = get_authenticated_user(request)
+    user, status_code, error_code = await authorize_owner(
+        request,
+        endpoint="/actions/approve",
+    )
     if user is None:
         return JSONResponse(
-            {"error": "مصادقة المستخدم مطلوبة للموافقة."},
-            status_code=401,
+            {"error": "owner authentication required", "code": error_code},
+            status_code=status_code,
         )
     try:
         action_id = str(UUID(request.path_params["action_id"]))
@@ -207,11 +219,14 @@ async def approve_action(request: Request) -> Response:
 
 @server.custom_route("/actions/{action_id}/reject", methods=["POST"])
 async def reject_action(request: Request) -> Response:
-    user = get_authenticated_user(request)
+    user, status_code, error_code = await authorize_owner(
+        request,
+        endpoint="/actions/reject",
+    )
     if user is None:
         return JSONResponse(
-            {"error": "مصادقة المستخدم مطلوبة لرفض الإجراء."},
-            status_code=401,
+            {"error": "owner authentication required", "code": error_code},
+            status_code=status_code,
         )
     try:
         action_id = str(UUID(request.path_params["action_id"]))
@@ -243,6 +258,15 @@ async def reject_action(request: Request) -> Response:
 
 @server.custom_route("/files/upload", methods=["POST"])
 async def files_upload(request: Request) -> Response:
+    owner, status_code, error_code = await authorize_owner(
+        request,
+        endpoint="/files/upload",
+    )
+    if owner is None:
+        return JSONResponse(
+            {"error": "owner authentication required", "code": error_code},
+            status_code=status_code,
+        )
     try:
         form = await request.form()
     except Exception:
@@ -304,6 +328,15 @@ async def files_upload(request: Request) -> Response:
 
 @server.custom_route("/chat/message", methods=["POST"])
 async def chat_message(request: Request) -> Response:
+    authenticated_user, status_code, error_code = await authorize_owner(
+        request,
+        endpoint="/chat/message",
+    )
+    if authenticated_user is None:
+        return JSONResponse(
+            {"error": "owner authentication required", "code": error_code},
+            status_code=status_code,
+        )
     try:
         payload = await request.json()
     except ValueError:
@@ -342,7 +375,6 @@ async def chat_message(request: Request) -> Response:
 
     trace_id = str(uuid4())
     started_at = time.perf_counter()
-    authenticated_user = get_authenticated_user(request)
     try:
         await ensure_session(session_id, scope=scope)
         stored_history = await load_message_history(session_id)

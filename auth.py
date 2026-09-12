@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import asyncio
+import importlib
+import inspect
 import re
 from dataclasses import dataclass
 from hashlib import sha256
-from typing import Any
 
 from starlette.requests import Request
 
@@ -19,22 +21,77 @@ class AuthenticatedUser:
     display_name: str | None = None
 
 
-def get_authenticated_user(request: Request) -> AuthenticatedUser | None:
+def _user_from_verified_value(value: object) -> AuthenticatedUser | None:
+    if isinstance(value, AuthenticatedUser):
+        return value
+    if isinstance(value, dict):
+        user_id = str(
+            value.get("user_id")
+            or value.get("id")
+            or value.get("sub")
+            or ""
+        ).strip()
+        display_name = str(
+            value.get("display_name")
+            or value.get("name")
+            or value.get("username")
+            or ""
+        ).strip() or None
+    else:
+        user_id = str(
+            getattr(value, "user_id", None)
+            or getattr(value, "id", None)
+            or getattr(value, "sub", None)
+            or ""
+        ).strip()
+        display_name = str(
+            getattr(value, "display_name", None)
+            or getattr(value, "name", None)
+            or getattr(value, "username", None)
+            or ""
+        ).strip() or None
+    if not user_id or not _SAFE_USER_ID.fullmatch(user_id):
+        return None
+    return AuthenticatedUser(user_id=user_id, display_name=display_name)
+
+
+async def get_authenticated_user(request: Request) -> AuthenticatedUser | None:
     """Return only identity verified by an installed authentication middleware.
 
     Request headers are intentionally ignored. Replit's documentation does not
     treat X-Replit-User-Id as a security-critical identity source.
     """
 
-    verified = getattr(request.state, "authenticated_user", None)
-    if isinstance(verified, AuthenticatedUser):
+    verified = _user_from_verified_value(
+        getattr(request.state, "authenticated_user", None)
+    )
+    if verified is not None:
         return verified
-    if isinstance(verified, dict):
-        user_id = str(verified.get("user_id") or "").strip()
-        if user_id and _SAFE_USER_ID.fullmatch(user_id):
-            display_name = str(verified.get("display_name") or "").strip() or None
-            return AuthenticatedUser(user_id=user_id, display_name=display_name)
-    return None
+
+    authorization = (request.headers.get("authorization") or "").strip()
+    if not authorization.lower().startswith("bearer "):
+        return None
+    session_token = authorization[7:].strip()
+    if not session_token:
+        return None
+    try:
+        auth_module = importlib.import_module("replit.auth")
+        verify_session = getattr(auth_module, "verify_session")
+        verified_value = await asyncio.to_thread(verify_session, session_token)
+        if inspect.isawaitable(verified_value):
+            verified_value = await verified_value
+        return _user_from_verified_value(verified_value)
+    except Exception:
+        # Invalid, missing, or unverifiable sessions are all unauthenticated.
+        return None
+
+
+def session_verifier_available() -> bool:
+    try:
+        auth_module = importlib.import_module("replit.auth")
+        return callable(getattr(auth_module, "verify_session", None))
+    except (ImportError, AttributeError):
+        return False
 
 
 async def authorize_owner(
@@ -42,7 +99,7 @@ async def authorize_owner(
     *,
     endpoint: str,
 ) -> tuple[AuthenticatedUser | None, int, str | None]:
-    user = get_authenticated_user(request)
+    user = await get_authenticated_user(request)
     if user is None:
         await _record_auth_attempt(endpoint=endpoint, user=None, result="unauthenticated")
         return None, 401, "AUTHENTICATION_REQUIRED"
@@ -78,9 +135,17 @@ async def _record_auth_attempt(
 
 
 def auth_health() -> dict[str, object]:
+    verifier_ready = session_verifier_available()
     return {
-        "status": "READY" if AHMED_OWNER_USER_ID else "NOT_CONFIGURED",
-        "mode": "verified_auth_middleware_only",
+        "status": "READY" if AHMED_OWNER_USER_ID and verifier_ready else "NOT_CONFIGURED",
+        "mode": "verified_session_token_or_auth_middleware",
         "owner_configured": bool(AHMED_OWNER_USER_ID),
-        "safe_error_code": None if AHMED_OWNER_USER_ID else "OWNER_NOT_CONFIGURED",
+        "session_verifier_available": verifier_ready,
+        "safe_error_code": (
+            None
+            if AHMED_OWNER_USER_ID and verifier_ready
+            else "REPLIT_AUTH_VERIFIER_NOT_CONFIGURED"
+            if not verifier_ready
+            else "OWNER_NOT_CONFIGURED"
+        ),
     }
