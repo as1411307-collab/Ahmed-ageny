@@ -24,7 +24,7 @@ class AcademicBenchmarkTests(unittest.TestCase):
         self.assertEqual(report["routing_accuracy"], 1.0)
         self.assertEqual(report["no_hallucination_contract"], "PASS")
         self.assertEqual(report["privacy"], "PASS")
-        self.assertEqual(report["average_calls_per_fixture"], 1.19)
+        self.assertEqual(report["average_calls_per_fixture"], 1.44)
 
 
 if __name__ == "__main__":

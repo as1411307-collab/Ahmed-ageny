@@ -14,6 +14,8 @@ from academic_search import (
     DataCiteProvider,
     DOIResolver,
     OpenAlexProvider,
+    _crossref_result,
+    _openalex_result,
     _http_json,
     merge_academic_results,
     normalize_doi,
@@ -307,6 +309,84 @@ class AcademicSearchTests(unittest.TestCase):
             result = asyncio.run(provider.lookup_doi("10.1000/example"))
         self.assertIsNone(result)
         self.assertEqual(provider.health()["status"], "ERROR")
+
+    def test_datacite_timeout_is_isolated(self) -> None:
+        provider = DataCiteProvider()
+        with patch(
+            "academic_search._http_json",
+            new=AsyncMock(
+                side_effect=AcademicProviderError(
+                    "timeout",
+                    provider_code="REQUEST_ERROR",
+                )
+            ),
+        ):
+            result = asyncio.run(provider.lookup_doi("10.5438/0012"))
+        self.assertIsNone(result)
+        self.assertEqual(provider.health()["status"], "ERROR")
+
+    def test_openalex_timeout_is_isolated(self) -> None:
+        provider = OpenAlexProvider()
+        with patch(
+            "academic_search._http_json",
+            new=AsyncMock(
+                side_effect=AcademicProviderError(
+                    "timeout",
+                    provider_code="REQUEST_ERROR",
+                )
+            ),
+        ):
+            result = asyncio.run(provider.search_topic("machine learning", 2))
+        self.assertEqual(result, [])
+        self.assertEqual(provider.health()["status"], "ERROR")
+
+    def test_malformed_provider_payload_is_not_false_success(self) -> None:
+        provider = CrossrefProvider()
+        with patch(
+            "academic_search._http_json",
+            new=AsyncMock(
+                return_value=type(
+                    "Response",
+                    (),
+                    {
+                        "payload": {"unexpected": "shape"},
+                        "status_code": 200,
+                        "headers": {},
+                        "retries": 0,
+                        "latency_ms": 1,
+                    },
+                )(),
+            ),
+        ):
+            result = asyncio.run(provider.lookup_doi("10.1000/example"))
+        self.assertIsNone(result)
+        self.assertEqual(provider.health()["status"], "ERROR")
+
+    def test_incomplete_metadata_does_not_invent_identifiers_or_status(self) -> None:
+        result = _crossref_result({"title": ["Only a title"]})
+        self.assertEqual(result.title, "Only a title")
+        self.assertIsNone(result.normalized_doi)
+        self.assertIsNone(result.citation_count)
+        self.assertIsNone(result.landing_url)
+        self.assertIsNone(result.update_status)
+
+    def test_retraction_status_is_unknown_until_provider_confirms_it(self) -> None:
+        unknown = _openalex_result(
+            {
+                "id": "https://openalex.org/W1",
+                "title": "Unconfirmed paper",
+            }
+        )
+        confirmed = _openalex_result(
+            {
+                "id": "https://openalex.org/W2",
+                "title": "Retracted paper",
+                "is_retracted": True,
+            }
+        )
+        self.assertIsNone(unknown.update_status)
+        self.assertEqual(confirmed.update_status, {"retracted": True})
+        self.assertTrue(confirmed.source_provenance)
 
     def test_rate_limit_backoff_is_bounded(self) -> None:
         error = HTTPError(

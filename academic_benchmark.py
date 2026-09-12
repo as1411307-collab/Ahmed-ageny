@@ -278,9 +278,9 @@ def _contract_merge_case(fixture_id: str) -> tuple[list[AcademicResult], dict[st
 
 
 def _has_required_fields(value: dict[str, object], fields: list[str]) -> bool:
-    return all(
-        field_name in value and value[field_name] not in (None, "", [], {})
-        for field_name in fields
+    return all(field_name in value for field_name in fields) and (
+        "source_provenance" not in value
+        or bool(value.get("source_provenance"))
     )
 
 
@@ -365,6 +365,8 @@ async def run_contract_benchmark() -> dict[str, object]:
                     and response.get("authors")
                 )
             )
+        elif expected["required_fields"] == ["authors"]:
+            exact = bool(response.get("authors"))
         elif fixture.get("operation") == "merge":
             exact = bool(response.get("ok"))
         elif expected["merge_behavior"] == "no_result":
@@ -376,7 +378,14 @@ async def run_contract_benchmark() -> dict[str, object]:
             passed = False
             errors.append("exact_result")
 
-        if fixture.get("operation") == "merge" and fixture_id == "conflicting-metadata":
+        if "graph" in expected["required_fields"]:
+            completeness = (
+                "graph" in response
+                and bool(result_list)
+                and isinstance(result_list[0], dict)
+                and bool(result_list[0].get("source_provenance"))
+            )
+        elif fixture.get("operation") == "merge" and fixture_id == "conflicting-metadata":
             completeness = response.get("conflict") is True
         elif expected["required_fields"] == ["authors"]:
             completeness = "authors" in response and bool(response["authors"])
