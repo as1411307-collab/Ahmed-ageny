@@ -1,0 +1,268 @@
+ابدأ Phase 2B Planning فقط.
+
+لا تعدّل أي كود.
+لا تضف dependency.
+لا تضف API key.
+لا تضف provider.
+لا تعمل refactor.
+
+بناءً على SEARCH CAPABILITY INVENTORY:
+اختر capability التالية فقط للتخطيط:
+
+STRUCTURED ACADEMIC + DOI RETRIEVAL
+
+الهدف:
+تحديد ما الذي ينقص Ahmed Agent فعليًا في البحث الأكاديمي،
+وما إذا كنا نحتاج:
+- Crossref
+- OpenAlex
+- Semantic Scholar
+- arXiv
+- أو combination صغير منها
+
+لا تفترض مسبقًا أننا نحتاج أكثر من مصدر.
+
+==================================================
+1. CURRENT GAP
+==================================================
+
+قارن Tavily الحالي مع احتياجات academic/DOI structured retrieval.
+
+حدد ما يستطيع Tavily الحالي فعله بالفعل وما لا يستطيع:
+
+- paper discovery
+- exact title lookup
+- DOI lookup
+- DOI normalization
+- author lookup
+- publication metadata
+- journal/venue
+- publication date
+- citation relationships
+- reference relationships
+- abstract availability
+- open-access/full-text links
+- retractions/corrections إن توفرت
+- identifier resolution
+
+صنف كل capability:
+
+READY
+PARTIAL
+MISSING
+
+==================================================
+2. CANDIDATE SOURCES
+==================================================
+
+قيّم فقط:
+
+- Crossref
+- OpenAlex
+- Semantic Scholar
+- arXiv
+
+لكل واحد حدد:
+
+- unique capability
+- overlap with Tavily
+- overlap with other candidates
+- structured metadata quality
+- identifiers
+- citation/reference data
+- abstract/full-text availability
+- authentication requirement
+- rate limits
+- licensing/data-retention considerations
+- operational complexity
+- Python SDK required or direct HTTP sufficient
+- expected value specifically for Ahmed Agent
+
+استخدم الوثائق الرسمية الحالية للمصادر عند التحقق من هذه المعلومات.
+
+==================================================
+3. MINIMUM USEFUL SET
+==================================================
+
+لا تختَر كل المصادر.
+
+حدد أقل مجموعة تحقق أكبر قيمة.
+
+قارن على الأقل:
+
+A. Crossref only
+B. OpenAlex only
+C. Semantic Scholar only
+D. Crossref + OpenAlex
+E. Crossref + Semantic Scholar
+
+وأضف arXiv فقط إذا كان له دور فريد مثبت.
+
+==================================================
+4. ROUTING
+==================================================
+
+صمم فقط، لا تنفذ.
+
+حدد متى يستخدم Ahmed Agent academic retrieval بدل Tavily العام.
+
+أمثلة intent:
+
+- find paper by DOI
+- find exact paper
+- papers by author
+- papers about topic
+- citations/references
+- publication metadata
+- latest research
+
+حدد أيضًا متى نحتاج Tavily مع academic source،
+ومتى structured source وحده يكفي.
+
+لا تجعل كل web query يذهب للمصادر الأكاديمية.
+
+==================================================
+5. NORMALIZED ACADEMIC RESULT
+==================================================
+
+اقترح schema فقط.
+
+يجب التفكير في:
+
+- title
+- authors
+- DOI
+- normalized DOI
+- publication date
+- venue
+- publisher
+- abstract
+- identifiers
+- citation count
+- references
+- source/provider
+- landing URL
+- full-text URL if legitimately available
+- open-access status if known
+- retraction/correction status if reliably available
+
+لا تجبر هذه البيانات داخل NormalizedSearchResult إذا كان ذلك سيشوّه Search Fabric.
+
+قرر هل الأفضل:
+AcademicResult مستقل
+ثم evidence normalization لاحقًا.
+
+==================================================
+6. EXISTING SEARCH FABRIC
+==================================================
+
+حدد كيف نضيف academic capability بدون زيادة duplication الحالية.
+
+مهم:
+لا تنقل Tavily legacy code الآن.
+لا تنظف `_fetch_page()`.
+لا تعمل refactor واسع.
+
+لكن ضع boundary واضحة تمنع provider الجديد من إضافة:
+- URL normalization ثالثة
+- dedupe ثالث
+- ranking pipeline ثالث
+
+حدد ownership لكل وظيفة:
+provider-specific
+vs
+Search Fabric shared
+vs
+academic-specific.
+
+==================================================
+7. ACCEPTANCE MATRIX
+==================================================
+
+أنشئ matrix للمرحلة المستقبلية.
+
+يجب أن تشمل fixtures مثل:
+
+1. exact DOI lookup
+2. DOI with https://doi.org/ prefix
+3. exact paper title
+4. author search
+5. topic search
+6. Arabic natural-language query about research
+7. duplicate paper returned by multiple sources
+8. missing DOI
+9. conflicting metadata
+10. retracted/corrected work if supported
+11. provider timeout
+12. provider rate limit
+13. no-result query
+
+لكل fixture:
+- expected behavior
+- required fields
+- acceptable fallback
+- failure condition
+
+==================================================
+8. PRIVACY
+==================================================
+
+أكد أن academic external providers يتبعون WEB privacy boundary.
+
+ممنوع إرسال:
+- MY_FILES chunks
+- private document content
+- private prompts/content used as external query
+
+إلا إذا صممنا لاحقًا explicit authorized hybrid mode.
+
+==================================================
+9. DO NOT IMPLEMENT
+==================================================
+
+لا تضف الآن:
+
+- Crossref
+- OpenAlex
+- Semantic Scholar
+- arXiv
+- PubMed
+- GitHub
+- Brave key
+- SearXNG
+- RSS
+- YouTube
+- Agent Reach
+
+Planning and evidence only.
+
+==================================================
+10. FINAL REPORT
+==================================================
+
+أعطني:
+
+- Current academic capability matrix
+- Candidate comparison
+- Minimum useful provider set
+- Why each selected provider is necessary
+- Why rejected/deferred providers are not necessary yet
+- Proposed routing rules
+- Proposed AcademicResult schema
+- ownership boundaries to avoid duplication
+- acceptance matrix
+- API keys required/not required
+- rate-limit considerations
+- licensing/retention considerations
+- expected operational complexity
+
+وفي النهاية اختر واحدًا فقط:
+
+RECOMMEND_CROSSREF_ONLY
+RECOMMEND_OPENALEX_ONLY
+RECOMMEND_SEMANTIC_SCHOLAR_ONLY
+RECOMMEND_CROSSREF_OPENALEX
+RECOMMEND_CROSSREF_SEMANTIC_SCHOLAR
+RECOMMEND_OTHER_MINIMAL_SET
+
+ولا تنفذ التوصية.
