@@ -2,3 +2,4 @@
 - [Artifact workflow working directory](artifact-workflow-cwd.md) — artifact development commands start inside the artifact folder, not the workspace root.
 - [Replit model gateway authorization](model-gateway-auth.md) — managed AI variables can exist while the gateway still requires UI approval or reconnect.
 - [PydanticAI gateway path](pydanticai-gateway-path.md) — PydanticAI uses chat completions through the same managed provider authorization.
+- [Gemini agent provider](gemini-agent-provider.md) — live agent uses Gemini with GEMINI_API_KEY; Replit-managed OpenAI is inactive.

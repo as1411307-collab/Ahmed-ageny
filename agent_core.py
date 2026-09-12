@@ -6,20 +6,20 @@ import os
 from dataclasses import dataclass
 from typing import Annotated, Literal, Sequence
 
-from openai import AsyncOpenAI
 from pydantic import Field
 from pydantic_ai import Agent, RunContext, UsageLimits
 from pydantic_ai.exceptions import ModelHTTPError
 from pydantic_ai.messages import ModelMessage, ModelMessagesTypeAdapter
-from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.models import Model
+from pydantic_ai.models.google import GoogleModel
+from pydantic_ai.providers.google import GoogleProvider
 
 from skill_tools import web_search as existing_web_search
 
 
 logger = logging.getLogger("ahmed_agent.core")
 
-OPENAI_MODEL = "gpt-5.6-terra"
+GEMINI_MODEL = "gemini-3-flash-preview"
 MAX_MESSAGE_HISTORY_ITEMS = 50
 MAX_MESSAGE_HISTORY_BYTES = 1_000_000
 MAX_TOOL_CALLS = 3
@@ -63,54 +63,26 @@ class AgentDeps:
 @dataclass(frozen=True)
 class ProviderCandidate:
     name: str
-    model: OpenAIChatModel
+    model: Model
 
 
-def _openai_model(
-    *,
-    name: str,
-    api_key: str,
-    base_url: str | None,
-    model_name: str,
-) -> OpenAIChatModel:
-    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
-    provider = OpenAIProvider(openai_client=client)
-    return OpenAIChatModel(model_name, provider=provider)
+def _gemini_model(api_key: str) -> GoogleModel:
+    return GoogleModel(
+        GEMINI_MODEL,
+        provider=GoogleProvider(api_key=api_key),
+    )
 
 
 def _configured_providers() -> list[ProviderCandidate]:
-    candidates: list[ProviderCandidate] = []
-
-    replit_key = os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY")
-    replit_base_url = os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL")
-    if replit_key and replit_base_url:
-        candidates.append(
-            ProviderCandidate(
-                name="replit-managed-openai",
-                model=_openai_model(
-                    name="replit-managed-openai",
-                    api_key=replit_key,
-                    base_url=replit_base_url,
-                    model_name=OPENAI_MODEL,
-                ),
-            )
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    if not gemini_key:
+        return []
+    return [
+        ProviderCandidate(
+            name="gemini",
+            model=_gemini_model(gemini_key),
         )
-
-    direct_key = os.environ.get("OPENAI_API_KEY")
-    if direct_key:
-        candidates.append(
-            ProviderCandidate(
-                name="direct-openai",
-                model=_openai_model(
-                    name="direct-openai",
-                    api_key=direct_key,
-                    base_url=os.environ.get("OPENAI_BASE_URL"),
-                    model_name=os.environ.get("OPENAI_MODEL", OPENAI_MODEL),
-                ),
-            )
-        )
-
-    return candidates
+    ]
 
 
 def _provider_error_code(error: Exception) -> str | None:
@@ -130,13 +102,7 @@ def _provider_error_code(error: Exception) -> str | None:
     return None
 
 
-def _is_authorization_failure(error: Exception) -> bool:
-    if isinstance(error, ModelHTTPError) and error.status_code in {401, 403}:
-        return True
-    return _provider_error_code(error) == "oauth.v2.ApiKeyNotApproved"
-
-
-def _build_agent(model: OpenAIChatModel) -> Agent[AgentDeps, str]:
+def _build_agent(model: Model) -> Agent[AgentDeps, str]:
     async def web_search(
         ctx: RunContext[AgentDeps],
         query: Annotated[str, Field(min_length=1, max_length=2000)],
@@ -206,39 +172,30 @@ async def run_ahmed(
             "No authorized model provider is configured.",
         )
 
-    last_error: Exception | None = None
-    for index, candidate in enumerate(providers):
-        agent = _build_agent(candidate.model)
-        try:
-            return await agent.run(
-                user_message,
-                message_history=message_history,
-                deps=AgentDeps(
-                    conversation_id=conversation_id,
-                    run_id=run_id,
-                ),
+    candidate = providers[0]
+    agent = _build_agent(candidate.model)
+    try:
+        return await agent.run(
+            user_message,
+            message_history=message_history,
+            deps=AgentDeps(
                 conversation_id=conversation_id,
                 run_id=run_id,
-                usage_limits=UsageLimits(
-                    request_limit=MAX_MODEL_REQUESTS,
-                    tool_calls_limit=MAX_TOOL_CALLS,
-                ),
-            )
-        except Exception as error:
-            last_error = error
-            can_fallback = (
-                index == 0
-                and len(providers) > 1
-                and _is_authorization_failure(error)
-            )
-            logger.warning(
-                "Agent provider failed provider=%s authorization_failure=%s fallback=%s",
-                candidate.name,
-                _is_authorization_failure(error),
-                can_fallback,
-            )
-            if not can_fallback:
-                break
+            ),
+            conversation_id=conversation_id,
+            run_id=run_id,
+            usage_limits=UsageLimits(
+                request_limit=MAX_MODEL_REQUESTS,
+                tool_calls_limit=MAX_TOOL_CALLS,
+            ),
+        )
+    except Exception as error:
+        logger.warning(
+            "Agent provider failed provider=%s error_type=%s",
+            candidate.name,
+            type(error).__name__,
+        )
+        last_error = error
 
     provider_code = _provider_error_code(last_error) if last_error else None
     status_code = (
@@ -248,7 +205,7 @@ async def run_ahmed(
     )
     raise AgentCoreError(
         "All configured model providers failed.",
-        provider=providers[-1].name if providers else None,
+        provider=candidate.name,
         status_code=status_code,
         provider_code=provider_code,
     ) from last_error
