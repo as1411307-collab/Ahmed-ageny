@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from dataclasses import dataclass
-from typing import Annotated, Literal, Sequence
+from collections.abc import Awaitable, Callable, Sequence
+from typing import Annotated, Any, Literal
 
 from pydantic import Field
 from pydantic_ai import Agent, RunContext, UsageLimits
@@ -20,6 +22,7 @@ from skill_tools import web_search as existing_web_search
 logger = logging.getLogger("ahmed_agent.core")
 
 GEMINI_MODEL = "gemini-3-flash-preview"
+PROVIDER_NAME = "gemini"
 MAX_MESSAGE_HISTORY_ITEMS = 50
 MAX_MESSAGE_HISTORY_BYTES = 1_000_000
 MAX_TOOL_CALLS = 3
@@ -58,6 +61,9 @@ class AgentCoreError(RuntimeError):
 class AgentDeps:
     conversation_id: str | None = None
     run_id: str | None = None
+    tool_event_recorder: (
+        Callable[[str, str, int, dict[str, Any] | None], Awaitable[None]] | None
+    ) = None
 
 
 @dataclass(frozen=True)
@@ -109,12 +115,45 @@ def _build_agent(model: Model) -> Agent[AgentDeps, str]:
         mode: Literal["FAST", "DEEP"],
         max_results: Annotated[int, Field(ge=1, le=5)] = 5,
     ) -> dict[str, object]:
-        del ctx
-        return await existing_web_search(
-            query=query.strip(),
-            mode=mode,
-            max_results=max_results,
-        )
+        started_at = time.perf_counter()
+        try:
+            result = await existing_web_search(
+                query=query.strip(),
+                mode=mode,
+                max_results=max_results,
+            )
+        except Exception:
+            if ctx.deps.tool_event_recorder is not None:
+                await ctx.deps.tool_event_recorder(
+                    "web_search",
+                    "failed",
+                    int((time.perf_counter() - started_at) * 1000),
+                    {"mode": mode},
+                )
+            raise
+
+        safe_metadata: dict[str, Any] = {"mode": mode}
+        if isinstance(result, dict):
+            for key in (
+                "search_calls",
+                "extract_calls",
+                "credits_used",
+                "urls_extracted",
+                "candidate_count",
+                "deduplicated_count",
+                "failed_calls",
+            ):
+                value = result.get(key)
+                if isinstance(value, (int, float)):
+                    safe_metadata[key] = value
+        if ctx.deps.tool_event_recorder is not None:
+            await ctx.deps.tool_event_recorder(
+                "web_search",
+                "success" if result.get("ok", True) else "failed",
+                int((time.perf_counter() - started_at) * 1000),
+                safe_metadata,
+            )
+        return result
 
     return Agent(
         model=model,
@@ -165,6 +204,9 @@ async def run_ahmed(
     message_history: Sequence[ModelMessage] | None = None,
     conversation_id: str | None = None,
     run_id: str | None = None,
+    tool_event_recorder: (
+        Callable[[str, str, int, dict[str, Any] | None], Awaitable[None]] | None
+    ) = None,
 ):
     providers = _configured_providers()
     if not providers:
@@ -181,6 +223,7 @@ async def run_ahmed(
             deps=AgentDeps(
                 conversation_id=conversation_id,
                 run_id=run_id,
+                    tool_event_recorder=tool_event_recorder,
             ),
             conversation_id=conversation_id,
             run_id=run_id,
