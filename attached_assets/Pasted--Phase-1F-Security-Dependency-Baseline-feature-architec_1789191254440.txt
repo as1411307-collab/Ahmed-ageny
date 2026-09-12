@@ -1,0 +1,110 @@
+ابدأ Phase 1F فقط: Security & Dependency Baseline.
+
+لا تضف أي feature جديد.
+لا تغيّر architecture.
+لا تغيّر Gemini أو Tavily أو MCP أو MY_FILES.
+
+الهدف:
+فحص dependencies والكود الحالي قبل توسيع قدرات Ahmed Agent.
+
+1. DEPENDENCY AUDIT
+
+افحص جميع Python dependencies الحالية باستخدام أداة vulnerability audit موثوقة ومتاحة للبيئة
+مثل pip-audit أو equivalent.
+
+افحص:
+- pyproject.toml
+- uv.lock
+- الحزم المثبتة فعليًا
+
+لا تعمل upgrade عشوائي.
+
+لكل vulnerability:
+- package
+- installed version
+- advisory/CVE
+- severity إذا متاحة
+- fixed version إذا متاحة
+- هل الترقية breaking أم لا
+
+2. PACKAGE HYGIENE
+
+حدد:
+- dependencies غير مستخدمة
+- duplicates
+- direct vs transitive dependencies
+- packages قديمة بشكل واضح
+- أي package غير ضرورية في runtime
+
+لا تحذف أي package قبل إثبات أنها غير مستخدمة.
+
+3. SECRET SCAN
+
+افحص repository فقط بحثًا عن:
+- API keys
+- tokens
+- passwords
+- private keys
+- Authorization headers محفوظة
+- .env committed accidentally
+
+لا تطبع أي secret كامل.
+إذا وجدت قيمة حساسة:
+اعرض فقط file + line + secret type + REDACTED.
+
+4. LOGGING REVIEW
+
+تحقق أن logs لا تحتوي:
+- prompts الخاصة
+- document chunks
+- Authorization header
+- AHMED_OWNER_TOKEN
+- GEMINI_API_KEY
+- TAVILY_API_KEY
+
+5. ENDPOINT REVIEW
+
+أكد أن:
+- /chat/message protected
+- /files/upload protected
+- /doctor protected
+- /actions/* protected
+- /health public لكنه minimal فقط
+
+6. FILE UPLOAD SAFETY
+
+تحقق من:
+- extension allowlist
+- MIME validation
+- size limit
+- filename sanitization
+- duplicate hashing
+- parser errors لا تسبب crash
+
+لا تضف antivirus أو sandbox ثقيل الآن.
+
+7. DATABASE SAFETY
+
+تحقق من:
+- parameterized SQL
+- no SQL string interpolation from user input
+- row locking في HITL
+- migrations idempotent
+- database errors لا تكشف credentials
+
+8. FINAL RESULT
+
+إذا توجد vulnerability عالية/حرجة لها fix آمن:
+اقترح الترقية فقط.
+لا تنفذ breaking upgrade بدون تقرير أولًا.
+
+في النهاية أعطني:
+- dependency audit PASS/FAIL
+- vulnerabilities by severity
+- safe upgrades available
+- secret scan PASS/FAIL
+- logging review PASS/FAIL
+- endpoint protection PASS/FAIL
+- upload safety PASS/FAIL
+- SQL safety PASS/FAIL
+- أي blocker قبل Phase 2
