@@ -300,9 +300,10 @@ async def record_tool_event(
 
 async def record_auth_event(
     *,
+    principal: str,
+    authenticated: bool,
     endpoint: str,
-    authenticated_owner: bool,
-    safe_user_hash: str | None,
+    action_id: str | None,
     result: str,
 ) -> None:
     pool = await _get_pool()
@@ -313,14 +314,16 @@ async def record_auth_event(
                     connection,
                     session_id=None,
                     run_id=None,
-                    action_id=None,
+                    action_id=action_id,
                     event_type="auth.authorization",
                     tool_name=None,
                     status=result,
                     safe_metadata={
+                        "principal": principal,
+                        "authenticated": authenticated,
                         "endpoint": endpoint,
-                        "authenticated_owner": authenticated_owner,
-                        "safe_user_hash": safe_user_hash,
+                        "action_id": action_id,
+                        "result": result,
                     },
                 )
     except Exception as error:

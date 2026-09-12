@@ -87,6 +87,16 @@ def _request_uuid(value: object, field_name: str) -> str:
         raise ValueError(f"{field_name} غير صالح.") from error
 
 
+def _action_id_for_auth_audit(request: Request) -> str | None:
+    raw_action_id = request.path_params.get("action_id")
+    if not isinstance(raw_action_id, str):
+        return None
+    try:
+        return str(UUID(raw_action_id))
+    except ValueError:
+        return None
+
+
 @server.tool(
     description="Safely echoes a message for connectivity testing.",
     annotations=ToolAnnotations(
@@ -109,8 +119,22 @@ async def chat_page(_: Request) -> Response:
     return FileResponse(WEB_DIR / "index.html")
 
 
+@server.custom_route("/health", methods=["GET"])
+async def health_route(_: Request) -> Response:
+    return JSONResponse({"ok": True})
+
+
 @server.custom_route("/health/provider", methods=["GET"])
-async def provider_health_route(_: Request) -> Response:
+async def provider_health_route(request: Request) -> Response:
+    user, status_code, error_code = await authorize_owner(
+        request,
+        endpoint="/health/provider",
+    )
+    if user is None:
+        return JSONResponse(
+            {"error": "owner authentication required", "code": error_code},
+            status_code=status_code,
+        )
     return JSONResponse(provider_health())
 
 
@@ -164,6 +188,7 @@ async def approve_action(request: Request) -> Response:
     user, status_code, error_code = await authorize_owner(
         request,
         endpoint="/actions/approve",
+        action_id=_action_id_for_auth_audit(request),
     )
     if user is None:
         return JSONResponse(
@@ -222,6 +247,7 @@ async def reject_action(request: Request) -> Response:
     user, status_code, error_code = await authorize_owner(
         request,
         endpoint="/actions/reject",
+        action_id=_action_id_for_auth_audit(request),
     )
     if user is None:
         return JSONResponse(
