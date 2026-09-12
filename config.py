@@ -7,6 +7,7 @@ AHMED_PRIMARY_MODEL = (
     os.environ.get("AHMED_PRIMARY_MODEL", "gemini-flash-lite-latest").strip()
     or "gemini-flash-lite-latest"
 )
+AHMED_OWNER_USER_ID = os.environ.get("AHMED_OWNER_USER_ID", "").strip()
 MY_FILES_EMBEDDING_MODEL = os.environ.get(
     "MY_FILES_EMBEDDING_MODEL",
     "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",

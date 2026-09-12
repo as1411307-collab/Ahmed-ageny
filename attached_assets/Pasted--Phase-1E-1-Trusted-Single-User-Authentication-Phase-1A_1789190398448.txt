@@ -1,0 +1,139 @@
+ابدأ Phase 1E.1 فقط: Trusted Single-User Authentication.
+
+الحالة الحالية:
+- Phase 1A PASS
+- Phase 1B PASS
+- Phase 1C PASS
+- Phase 1C.1 PASS
+- Phase 1D PASS
+- Phase 1E PASS
+- Policy Engine PASS
+- HITL PASS
+- Audit chain PASS
+- Ahmed Doctor PASS
+
+الـblocker الوحيد:
+الخدمة تعتمد على X-Replit-User-Id ويجب إثبات أن هذا الـheader موثوق فقط عندما يأتي من Replit authentication proxy.
+
+الهدف:
+تثبيت مصادقة مستخدم واحد فقط — أحمد — بدون بناء نظام multi-user أو RBAC.
+
+1) افحص طريقة Replit authentication الحالية فعليًا.
+
+أريد تقريرًا عن:
+- هل التطبيق يعمل خلف Replit Auth؟
+- من أين يأتي X-Replit-User-Id؟
+- هل يستطيع request مباشر إلى backend تجاوز proxy وحقن header مزيف؟
+- هل backend port مكشوف مباشرة أم فقط عبر Replit proxy؟
+
+لا تفترض.
+
+2) TRUST BOUNDARY
+
+اعتبر X-Replit-User-Id موثوقًا فقط إذا ثبت أنه يأتي من Replit proxy الموثوق.
+
+إذا كان backend يمكن الوصول له مباشرة:
+- لا تعتمد على header وحده.
+- امنع direct unauthenticated backend access أو أضف server-side verification.
+
+3) SINGLE OWNER
+
+لا تبنِ user system.
+
+استخدم Owner واحد فقط.
+
+أضف config مثل:
+AHMED_OWNER_USER_ID
+
+المستخدم الموثق يجب أن يطابق هذه الهوية.
+
+إذا الهوية لا تطابق:
+403
+
+إذا لا توجد هوية موثوقة:
+401
+
+4) DO NOT TRUST CLIENT HEADERS
+
+أي client-supplied identity header يجب ألا يكون كافيًا وحده.
+
+اختبر spoofing صراحة.
+
+5) PROTECT THESE ENDPOINTS
+
+يجب أن تحتاج owner authentication:
+
+/chat/message
+/files/upload
+/actions/*
+/doctor إذا كان يعرض معلومات تشغيل حساسة
+وأي endpoint خاص لاحقًا
+
+يمكن إبقاء health endpoint بسيط جدًا بدون بيانات حساسة إذا احتجناه.
+
+6) AUDIT
+
+سجّل فقط:
+- authenticated owner yes/no
+- safe user identifier/hash إذا احتجنا
+- endpoint
+- result
+
+لا تسجل cookies أو tokens أو authorization headers.
+
+7) TESTS
+
+TEST A — authenticated owner
+Expected:
+200
+
+TEST B — no authentication
+Expected:
+401
+
+TEST C — wrong user
+Expected:
+403
+
+TEST D — spoofed X-Replit-User-Id direct request
+Expected:
+must NOT gain owner access
+
+TEST E — HITL approve by owner
+Expected:
+PASS
+
+TEST F — HITL approve by unauthenticated/wrong user
+Expected:
+blocked
+
+TEST G — restart
+Expected:
+auth policy remains intact
+
+8) DO NOT ADD
+
+- multi-user accounts
+- roles
+- organizations
+- OAuth provider of our own
+- DBOS
+- n8n
+- SearXNG
+- Brave
+- Agent Reach
+- Gmail
+- Drive
+- Redis
+- Qdrant
+- LangGraph
+- LiteLLM
+
+في النهاية أعطني فقط:
+- actual Replit auth mechanism
+- backend direct-access status
+- trusted identity source
+- spoof test PASS/FAIL
+- owner-only enforcement PASS/FAIL
+- HITL authorization PASS/FAIL
+- remaining blocker

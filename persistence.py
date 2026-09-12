@@ -298,6 +298,35 @@ async def record_tool_event(
         raise PersistenceError("Could not persist the tool event.") from error
 
 
+async def record_auth_event(
+    *,
+    endpoint: str,
+    authenticated_owner: bool,
+    safe_user_hash: str | None,
+    result: str,
+) -> None:
+    pool = await _get_pool()
+    try:
+        async with pool.acquire() as connection:
+            async with connection.transaction():
+                await _append_audit_event(
+                    connection,
+                    session_id=None,
+                    run_id=None,
+                    action_id=None,
+                    event_type="auth.authorization",
+                    tool_name=None,
+                    status=result,
+                    safe_metadata={
+                        "endpoint": endpoint,
+                        "authenticated_owner": authenticated_owner,
+                        "safe_user_hash": safe_user_hash,
+                    },
+                )
+    except Exception as error:
+        raise PersistenceError("Could not persist the authorization event.") from error
+
+
 async def _append_audit_event(
     connection: asyncpg.Connection,
     *,
