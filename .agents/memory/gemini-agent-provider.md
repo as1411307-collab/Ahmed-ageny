@@ -7,4 +7,4 @@ Gemini is the primary live agent provider. The application passes the `GEMINI_AP
 
 **Why:** The Replit-managed OpenAI gateway remained unauthorized, while the user explicitly chose Gemini and the direct Gemini key successfully supported both plain responses and tool calls.
 
-**How to apply:** Keep Tavily and MCP provider-neutral. For live smoke tests use the configured Gemini model, verify a plain MODEL_OK response, then verify a model-originated `web_search` call in the server logs.
+**How to apply:** Keep Tavily and MCP provider-neutral. Discover candidate Gemini models through the live API, prefer a non-preview model that passes both MODEL_OK and a real PydanticAI tool call, then verify `web_search` in the server logs.

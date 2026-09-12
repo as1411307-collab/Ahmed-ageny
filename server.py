@@ -17,6 +17,7 @@ from agent_core import (
     PROVIDER_NAME,
     AgentCoreError,
     parse_message_history,
+    provider_health,
     run_ahmed,
 )
 from persistence import (
@@ -100,6 +101,11 @@ register_skill_tools(server)
 @server.custom_route("/", methods=["GET"])
 async def chat_page(_: Request) -> Response:
     return FileResponse(WEB_DIR / "index.html")
+
+
+@server.custom_route("/health/provider", methods=["GET"])
+async def provider_health_route(_: Request) -> Response:
+    return JSONResponse(provider_health())
 
 
 @server.custom_route("/files/upload", methods=["POST"])
@@ -246,11 +252,12 @@ async def chat_message(request: Request) -> Response:
             tool_event_recorder=save_tool_event,
         )
     except AgentCoreError as error:
+        provider_status = error.provider_status or error.provider_code or type(error).__name__
         try:
             await finish_run(
                 run_id=run_uuid,
                 status="failed",
-                error_code=error.provider_code or type(error).__name__,
+                error_code=provider_status,
             )
         except PersistenceError:
             logger.error("Failed to persist agent failure status")
@@ -260,17 +267,21 @@ async def chat_message(request: Request) -> Response:
             run_id=run_uuid,
             status="failed",
             latency_ms=int((time.perf_counter() - started_at) * 1000),
-            error_code=error.provider_code or type(error).__name__,
+            error_code=provider_status,
         )
         logger.warning(
-            "Agent core failed provider=%s status_code=%s provider_code=%s",
+            "Agent core failed provider=%s status_code=%s provider_status=%s",
             error.provider,
             error.status_code,
-            error.provider_code,
+            provider_status,
         )
         return JSONResponse(
-            {"error": "تعذر الحصول على رد من الوكيل الآن. حاول مرة أخرى."},
-            status_code=502,
+            (
+                {"error": "الخدمة غير متاحة مؤقتًا. حاول لاحقًا."}
+                if provider_status == "RATE_LIMITED"
+                else {"error": "تعذر الحصول على رد من الوكيل الآن. حاول مرة أخرى."}
+            ),
+            status_code=503 if provider_status == "RATE_LIMITED" else 502,
         )
     except Exception as error:
         try:

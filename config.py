@@ -3,9 +3,23 @@ from __future__ import annotations
 import os
 
 
+AHMED_PRIMARY_MODEL = (
+    os.environ.get("AHMED_PRIMARY_MODEL", "gemini-flash-lite-latest").strip()
+    or "gemini-flash-lite-latest"
+)
+
+
 def _bounded_int(name: str, default: int, *, minimum: int, maximum: int) -> int:
     try:
         value = int(os.environ.get(name, str(default)))
+    except ValueError:
+        value = default
+    return max(minimum, min(value, maximum))
+
+
+def _bounded_float(name: str, default: float, *, minimum: float, maximum: float) -> float:
+    try:
+        value = float(os.environ.get(name, str(default)))
     except ValueError:
         value = default
     return max(minimum, min(value, maximum))
@@ -30,4 +44,28 @@ GEMINI_429_MAX_RETRIES = _bounded_int(
     2,
     minimum=0,
     maximum=3,
+)
+GEMINI_429_CIRCUIT_THRESHOLD = _bounded_int(
+    "GEMINI_429_CIRCUIT_THRESHOLD",
+    3,
+    minimum=1,
+    maximum=10,
+)
+GEMINI_429_COOLDOWN_SECONDS = _bounded_int(
+    "GEMINI_429_COOLDOWN_SECONDS",
+    30,
+    minimum=1,
+    maximum=3600,
+)
+GEMINI_429_BACKOFF_BASE_SECONDS = _bounded_float(
+    "GEMINI_429_BACKOFF_BASE_SECONDS",
+    1.0,
+    minimum=0.1,
+    maximum=30.0,
+)
+GEMINI_429_BACKOFF_MAX_SECONDS = _bounded_float(
+    "GEMINI_429_BACKOFF_MAX_SECONDS",
+    30.0,
+    minimum=0.1,
+    maximum=300.0,
 )

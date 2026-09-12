@@ -17,14 +17,24 @@ from pydantic_ai.models import Model
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.providers.google import GoogleProvider
 
-from config import DEFAULT_TOP_K, GEMINI_429_MAX_RETRIES, MAX_QUERY_LENGTH, MAX_TOP_K
+from config import (
+    AHMED_PRIMARY_MODEL,
+    DEFAULT_TOP_K,
+    GEMINI_429_BACKOFF_BASE_SECONDS,
+    GEMINI_429_BACKOFF_MAX_SECONDS,
+    GEMINI_429_CIRCUIT_THRESHOLD,
+    GEMINI_429_COOLDOWN_SECONDS,
+    GEMINI_429_MAX_RETRIES,
+    MAX_QUERY_LENGTH,
+    MAX_TOP_K,
+)
 from my_files import search_my_files as existing_my_files_search
 from skill_tools import web_search as existing_web_search
 
 
 logger = logging.getLogger("ahmed_agent.core")
 
-GEMINI_MODEL = "gemini-3-flash-preview"
+GEMINI_MODEL = AHMED_PRIMARY_MODEL
 PROVIDER_NAME = "gemini"
 MAX_MESSAGE_HISTORY_ITEMS = 50
 MAX_MESSAGE_HISTORY_BYTES = 1_000_000
@@ -71,11 +81,13 @@ class AgentCoreError(RuntimeError):
         provider: str | None = None,
         status_code: int | None = None,
         provider_code: str | None = None,
+        provider_status: str | None = None,
     ) -> None:
         super().__init__(message)
         self.provider = provider
         self.status_code = status_code
         self.provider_code = provider_code
+        self.provider_status = provider_status
 
 
 @dataclass(frozen=True)
@@ -92,6 +104,60 @@ class AgentDeps:
 class ProviderCandidate:
     name: str
     model: Model
+
+
+@dataclass
+class _ProviderState:
+    consecutive_429: int = 0
+    rate_limited_until: float = 0.0
+    status: str = "READY"
+
+
+_provider_state = _ProviderState()
+
+
+def provider_health() -> dict[str, object]:
+    if not os.environ.get("GEMINI_API_KEY"):
+        return {
+            "provider": PROVIDER_NAME,
+            "model": GEMINI_MODEL,
+            "status": "NOT_CONFIGURED",
+        }
+    if _provider_state.status == "RATE_LIMITED":
+        remaining = max(0.0, _provider_state.rate_limited_until - time.monotonic())
+        if remaining > 0:
+            return {
+                "provider": PROVIDER_NAME,
+                "model": GEMINI_MODEL,
+                "status": "RATE_LIMITED",
+                "cooldown_remaining_seconds": round(remaining, 3),
+            }
+        _provider_state.status = "READY"
+        _provider_state.consecutive_429 = 0
+    return {
+        "provider": PROVIDER_NAME,
+        "model": GEMINI_MODEL,
+        "status": _provider_state.status,
+    }
+
+
+def _mark_provider_ready() -> None:
+    _provider_state.consecutive_429 = 0
+    _provider_state.rate_limited_until = 0.0
+    _provider_state.status = "READY"
+
+
+def _mark_provider_429() -> None:
+    _provider_state.consecutive_429 += 1
+    if _provider_state.consecutive_429 >= GEMINI_429_CIRCUIT_THRESHOLD:
+        _open_rate_limit()
+
+
+def _open_rate_limit() -> None:
+    _provider_state.status = "RATE_LIMITED"
+    _provider_state.rate_limited_until = (
+        time.monotonic() + GEMINI_429_COOLDOWN_SECONDS
+    )
 
 
 def _gemini_model(api_key: str) -> GoogleModel:
@@ -229,10 +295,13 @@ def _retry_after_seconds(error: ModelHTTPError, attempt: int) -> float:
         retry_after = headers.get("retry-after") or headers.get("Retry-After")
         if retry_after is not None:
             try:
-                return max(0.0, min(float(retry_after), 30.0))
+                return max(0.0, float(retry_after))
             except (TypeError, ValueError):
                 pass
-    return min(30.0, 2.0**attempt)
+    return min(
+        GEMINI_429_BACKOFF_MAX_SECONDS,
+        GEMINI_429_BACKOFF_BASE_SECONDS * (2.0**attempt),
+    )
 
 
 def parse_message_history(raw_history: object) -> Sequence[ModelMessage] | None:
@@ -283,17 +352,28 @@ async def run_ahmed(
     if not providers:
         raise AgentCoreError(
             "No authorized model provider is configured.",
+            provider=PROVIDER_NAME,
+            provider_status="NOT_CONFIGURED",
         )
 
     if scope not in {"WEB", "MY_FILES"}:
         raise ValueError("invalid agent scope")
 
     candidate = providers[0]
+    health = provider_health()
+    if health["status"] == "RATE_LIMITED":
+        raise AgentCoreError(
+            "Gemini is temporarily rate limited.",
+            provider=candidate.name,
+            status_code=429,
+            provider_code="RATE_LIMITED",
+            provider_status="RATE_LIMITED",
+        )
     agent = _build_agent(candidate.model, scope)
     last_error: Exception | None = None
     for attempt in range(GEMINI_429_MAX_RETRIES + 1):
         try:
-            return await agent.run(
+            result = await agent.run(
                 user_message,
                 message_history=message_history,
                 deps=AgentDeps(
@@ -309,11 +389,17 @@ async def run_ahmed(
                     tool_calls_limit=MAX_TOOL_CALLS,
                 ),
             )
+            _mark_provider_ready()
+            return result
         except ModelHTTPError as error:
             last_error = error
-            if error.status_code == 429 and attempt < GEMINI_429_MAX_RETRIES:
-                await asyncio.sleep(_retry_after_seconds(error, attempt))
-                continue
+            if error.status_code == 429:
+                _mark_provider_429()
+                if _provider_state.status == "RATE_LIMITED":
+                    break
+                if attempt < GEMINI_429_MAX_RETRIES:
+                    await asyncio.sleep(_retry_after_seconds(error, attempt))
+                    continue
             break
         except Exception as error:
             last_error = error
@@ -331,9 +417,20 @@ async def run_ahmed(
         if isinstance(last_error, ModelHTTPError)
         else None
     )
+    if status_code == 429:
+        _open_rate_limit()
+        provider_status = "RATE_LIMITED"
+        provider_code = "RATE_LIMITED"
+    elif status_code in {401, 403} or provider_code == "oauth.v2.ApiKeyNotApproved":
+        _provider_state.status = "UNAUTHORIZED"
+        provider_status = "UNAUTHORIZED"
+    else:
+        _provider_state.status = "ERROR"
+        provider_status = "ERROR"
     raise AgentCoreError(
         "All configured model providers failed.",
         provider=candidate.name,
         status_code=status_code,
         provider_code=provider_code,
+        provider_status=provider_status,
     ) from last_error
