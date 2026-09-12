@@ -1,45 +1,68 @@
-# [Project name]
+# Ahmed Agent
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Ahmed Agent is a single-owner AI assistant with Gemini chat, web search, academic
+search, GitHub structured search, and private `MY_FILES` retrieval.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `uv run server.py` — start the Python API and MCP server on `PORT` (default 8000)
+- `python -m unittest discover -s tests -p 'test_*.py'` — run the regression suite
+- `python -m compileall -q server.py my_files.py tests` — compile check
+- `git diff --check` — whitespace check
+
+The active Replit workflow is `artifacts/api-server: API Server`. The Node/TypeScript
+artifact under `artifacts/api-server` is a scaffold and is not the Ahmed runtime.
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Python 3.13
+- Starlette + Uvicorn
+- MCP SDK streamable HTTP transport
+- PydanticAI + Google Gemini
+- PostgreSQL via asyncpg
+- PostgreSQL FTS with optional local FastEmbed hybrid retrieval
+- Crossref, DataCite, OpenAlex, GitHub REST API, and Tavily
 
-## Where things live
+## Capabilities
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `WEB` scope: `web_search`, `academic_search`, `github_search`, and the
+  test-only HITL action.
+- `MY_FILES` scope: private file search and the test-only HITL action.
+- MCP-public tools: `ping` and `web_search`.
+- Supported uploads: TXT, Markdown, PDF text layers, and DOCX.
 
-## Architecture decisions
+## Security decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- HTTP routes and MCP transport require the single-owner bearer token.
+- Uploaded filenames are canonicalized and never treated as filesystem paths.
+- File content, archive entries, request bodies, provider responses, and model
+  outputs are treated as untrusted input.
+- SQL uses parameterized queries.
+- Search results and tool returns can be retained inside persisted agent message
+  history; raw provider payloads are not stored as a separate record.
+- Gemini and owner authentication fail closed when their secrets are missing or
+  invalid.
 
-## Product
+## Required configuration
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- `DATABASE_URL` — managed PostgreSQL connection
+- `GEMINI_API_KEY` — valid Google Gemini API key
+- `AHMED_OWNER_TOKEN` — owner bearer token
 
-## User preferences
+Optional:
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- `TAVILY_API_KEY`
+- `GITHUB_TOKEN`
+- `BRAVE_SEARCH_API_KEY`
+- `MY_FILES_EMBEDDING_MODEL`
+
+Never place secret values in source files, logs, browser code, or chat.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- Gemini is the model provider; web search is a separate Tavily/Search Fabric
+  capability. Google Search grounding is not enabled by default.
+- Brave is optional and disabled unless configured and selected by routing.
+- FastEmbed is lazy-loaded and falls back to FTS when unavailable.
+- PostgreSQL schema tables must exist before persistence health checks can pass.
+- `AHMED_OWNER_TOKEN` must be restored before authenticated route or MCP E2E tests.

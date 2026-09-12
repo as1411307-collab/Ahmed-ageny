@@ -1514,6 +1514,7 @@ dependencies = [
     { name = "pypdf" },
     { name = "python-docx" },
     { name = "starlette" },
+    { name = "uvicorn" },
 ]
 
 [package.metadata]
@@ -1526,6 +1527,7 @@ requires-dist = [
     { name = "pypdf", specifier = ">=6.18.1" },
     { name = "python-docx", specifier = ">=1.2.0" },
     { name = "starlette", specifier = ">=1.6.0" },
+    { name = "uvicorn", specifier = ">=0.52.4" },
 ]
 
 [[package]]

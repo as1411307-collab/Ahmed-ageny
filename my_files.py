@@ -9,7 +9,6 @@ import re
 import time
 import zipfile
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 from docx import Document
@@ -65,7 +64,25 @@ class DocumentChunk:
 
 
 def extension_for(filename: str) -> str:
-    return Path(filename).suffix.lower()
+    name = filename.replace("\\", "/").rsplit("/", 1)[-1]
+    dot_index = name.rfind(".")
+    return name[dot_index:].lower() if dot_index > 0 else ""
+
+
+def sanitize_filename(value: object) -> str:
+    """Return a safe display/storage name without treating it as a filesystem path."""
+    if not isinstance(value, str):
+        return ""
+    normalized = value.replace("\\", "/")
+    filename = normalized.rsplit("/", 1)[-1]
+    if (
+        not filename
+        or filename in {".", ".."}
+        or "\x00" in filename
+        or len(filename) > 255
+    ):
+        return ""
+    return filename
 
 
 def _normalize_text(text: str) -> str:
@@ -148,6 +165,11 @@ def _validate_docx_archive(data: bytes) -> None:
 
 
 def validate_file_content(filename: str, data: bytes) -> None:
+    if sanitize_filename(filename) != filename:
+        raise FileProcessingError(
+            "The filename is invalid.",
+            status="invalid_filename",
+        )
     extension = extension_for(filename)
     if extension in {".txt", ".md"}:
         _validate_text_payload(data)
@@ -272,6 +294,14 @@ async def ingest_document(
     mime_type: str | None,
     data: bytes,
 ) -> dict[str, Any]:
+    filename = sanitize_filename(filename)
+    if not filename:
+        return {
+            "duplicate": False,
+            "document_id": document_id,
+            "filename": None,
+            "status": "invalid_filename",
+        }
     file_hash = hashlib.sha256(data).hexdigest()
     duplicate = await find_document_by_hash(file_hash)
     if duplicate is not None:

@@ -11,6 +11,7 @@ from mcp.types import ToolAnnotations
 from starlette.datastructures import UploadFile
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse, Response
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from agent_core import (
     GEMINI_MODEL,
@@ -36,7 +37,7 @@ from persistence import (
     record_tool_event,
 )
 from config import MAX_UPLOAD_BYTES
-from my_files import SUPPORTED_EXTENSIONS, extension_for, ingest_document
+from my_files import SUPPORTED_EXTENSIONS, extension_for, ingest_document, sanitize_filename
 from skill_tools import register_skill_tools
 
 
@@ -48,6 +49,41 @@ class PingResult(TypedDict):
 server = MCPServer("Ahmed Agent")
 WEB_DIR = Path(__file__).parent / "web"
 logger = logging.getLogger("ahmed_agent")
+
+
+class OwnerMCPAuthMiddleware:
+    """Require Ahmed's single-owner bearer token for every MCP HTTP request."""
+
+    def __init__(self, app: ASGIApp, *, path: str = "/mcp") -> None:
+        self.app = app
+        self.path = path.rstrip("/") or "/"
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        request_path = str(scope.get("path", ""))
+        is_mcp_request = request_path == self.path or request_path.startswith(
+            f"{self.path}/"
+        )
+        if scope.get("type") != "http" or not is_mcp_request:
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope, receive)
+        user, status_code, error_code = await authorize_owner(
+            request,
+            endpoint="/mcp",
+        )
+        if user is None:
+            response = JSONResponse(
+                {
+                    "error": "owner authentication required",
+                    "code": error_code,
+                },
+                status_code=status_code,
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+            await response(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
 
 
 def _structured_log(
@@ -304,7 +340,7 @@ async def files_upload(request: Request) -> Response:
 
     prepared: list[tuple[UploadFile, str, str | None, bytes]] = []
     for upload in uploads:
-        filename = Path(upload.filename or "").name
+        filename = sanitize_filename(upload.filename)
         extension = extension_for(filename)
         if not filename or extension not in SUPPORTED_EXTENSIONS:
             return JSONResponse(
@@ -559,9 +595,19 @@ async def chat_message(request: Request) -> Response:
 
 
 if __name__ == "__main__":
-    server.run(
-        "streamable-http",
+    import uvicorn
+
+    mcp_path = "/mcp"
+    app = OwnerMCPAuthMiddleware(
+        server.streamable_http_app(
+            streamable_http_path=mcp_path,
+            host="0.0.0.0",
+        ),
+        path=mcp_path,
+    )
+    uvicorn.run(
+        app,
         host="0.0.0.0",
         port=int(os.environ.get("PORT", "8000")),
-        streamable_http_path="/mcp",
+        log_level="info",
     )
