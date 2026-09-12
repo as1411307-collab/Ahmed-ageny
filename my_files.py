@@ -7,6 +7,7 @@ import json
 import logging
 import re
 import time
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -39,6 +40,8 @@ from persistence import (
 
 logger = logging.getLogger("ahmed_agent.my_files")
 SUPPORTED_EXTENSIONS = {".txt", ".md", ".pdf", ".docx"}
+MAX_DOCX_ZIP_ENTRIES = 1000
+MAX_DOCX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024
 
 
 class FileProcessingError(RuntimeError):
@@ -73,8 +76,96 @@ def _extract_text_or_markdown(data: bytes) -> list[ExtractedPage]:
     try:
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError as error:
-        raise FileProcessingError("The text file must use UTF-8 encoding.", status="invalid_encoding") from error
+        raise FileProcessingError(
+            "The text file must use UTF-8 encoding.",
+            status="invalid_file_content",
+        ) from error
     return [ExtractedPage(page_number=None, content=_normalize_text(text))]
+
+
+def _validate_text_payload(data: bytes) -> None:
+    try:
+        text = data.decode("utf-8-sig")
+    except UnicodeDecodeError as error:
+        raise FileProcessingError(
+            "The text file must use UTF-8 encoding.",
+            status="invalid_file_content",
+        ) from error
+    if any(
+        ord(character) < 32 and character not in "\n\r\t"
+        for character in text
+    ):
+        raise FileProcessingError(
+            "The text file contains binary control data.",
+            status="invalid_file_content",
+        )
+
+
+def _validate_docx_archive(data: bytes) -> None:
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            entries = archive.infolist()
+            if len(entries) > MAX_DOCX_ZIP_ENTRIES:
+                raise FileProcessingError(
+                    "The DOCX archive contains too many entries.",
+                    status="invalid_file_content",
+                )
+
+            names: set[str] = set()
+            uncompressed_bytes = 0
+            for entry in entries:
+                name = entry.filename.replace("\\", "/")
+                path_parts = name.split("/")
+                if (
+                    not name
+                    or name.startswith("/")
+                    or any(part == ".." for part in path_parts)
+                    or name in names
+                ):
+                    raise FileProcessingError(
+                        "The DOCX archive contains an unsafe entry.",
+                        status="invalid_file_content",
+                    )
+                names.add(name)
+                uncompressed_bytes += entry.file_size
+                if uncompressed_bytes > MAX_DOCX_UNCOMPRESSED_BYTES:
+                    raise FileProcessingError(
+                        "The DOCX archive is too large when unpacked.",
+                        status="invalid_file_content",
+                    )
+
+            required_entries = {"[Content_Types].xml", "word/document.xml"}
+            if not required_entries.issubset(names):
+                raise FileProcessingError(
+                    "The DOCX archive is missing required parts.",
+                    status="invalid_file_content",
+                )
+    except (zipfile.BadZipFile, OSError, ValueError) as error:
+        raise FileProcessingError(
+            "The DOCX file is not a valid ZIP archive.",
+            status="invalid_file_content",
+        ) from error
+
+
+def validate_file_content(filename: str, data: bytes) -> None:
+    extension = extension_for(filename)
+    if extension in {".txt", ".md"}:
+        _validate_text_payload(data)
+        return
+    if extension == ".pdf":
+        if not data.startswith(b"%PDF-"):
+            raise FileProcessingError(
+                "The file content is not a PDF.",
+                status="invalid_file_content",
+            )
+        return
+    if extension == ".docx":
+        _validate_docx_archive(data)
+        return
+    raise FileProcessingError(
+        "This file type is not supported.",
+        status="unsupported_extension",
+    )
 
 
 def _extract_pdf(data: bytes) -> list[ExtractedPage]:
@@ -112,6 +203,7 @@ def _extract_docx(data: bytes) -> list[ExtractedPage]:
 
 def extract_document(filename: str, mime_type: str | None, data: bytes) -> list[ExtractedPage]:
     del mime_type
+    validate_file_content(filename, data)
     extension = extension_for(filename)
     if extension in {".txt", ".md"}:
         return _extract_text_or_markdown(data)

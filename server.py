@@ -340,6 +340,8 @@ async def files_upload(request: Request) -> Response:
             status_code=503,
         )
 
+    if any(result.get("status") == "invalid_file_content" for result in results):
+        return JSONResponse({"files": results}, status_code=415)
     if any(result.get("duplicate") for result in results):
         return JSONResponse({"files": results}, status_code=409)
     if any(
