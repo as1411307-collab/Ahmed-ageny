@@ -1,0 +1,429 @@
+ابدأ Phase 2C فقط:
+GitHub Structured Search MVP.
+
+لا تغيّر:
+- Tavily
+- Search Fabric
+- Academic Layer
+- MY_FILES
+- MCP الحالي
+- Gemini
+- Auth
+- Policy/HITL
+- Doctor
+- PostgreSQL schema الحالي إلا إذا كان هناك سبب موثق
+
+الهدف:
+إضافة قدرة GitHub structured مستقلة للبحث التقني في:
+- repositories
+- issues
+- releases
+- repository metadata
+
+بدون إضافة GitHub code search في المرحلة الأولى إلا إذا ثبت أنه ضروري ومتاح ضمن limits الحالية.
+
+==================================================
+1. GITHUB CAPABILITY LAYER
+==================================================
+
+أنشئ module مستقل مثل:
+
+github_search.py
+
+ويحتوي على:
+
+GitHubProvider
+GitHubResult
+
+لا تجعل GitHub مجرد NormalizedSearchResult من البداية.
+
+GitHubResult يجب أن يدعم أنواعًا مختلفة:
+
+REPOSITORY
+ISSUE
+RELEASE
+
+==================================================
+2. AUTHENTICATION
+==================================================
+
+ادعم:
+
+GITHUB_TOKEN
+
+كـ optional secret.
+
+إذا غير موجود:
+- public unauthenticated access يبقى متاحًا حيث تسمح GitHub API بذلك.
+- status لا يصبح ERROR لمجرد غياب token.
+
+إذا موجود:
+- استخدمه لرفع rate limits.
+- لا تطبع token.
+- لا تسجل Authorization header.
+
+لا تنشئ GitHub App أو OAuth flow الآن.
+
+==================================================
+3. API VERSION
+==================================================
+
+استخدم GitHub REST API الرسمية مع version header الحالي المناسب.
+
+لا hardcode سلوك قديم إذا الوثائق الحالية توصي بإصدار API محدد.
+
+==================================================
+4. REPOSITORY SEARCH
+==================================================
+
+نفذ repository search structured.
+
+أرجع حقولًا مثل:
+
+- owner
+- repo
+- full_name
+- description
+- html_url
+- default_branch
+- stars
+- forks
+- language
+- topics إذا متاحة
+- archived
+- updated_at
+- pushed_at
+- license إذا متاحة
+- visibility/public status
+- provider
+- retrieved_at
+
+لا تخزن raw response كامل.
+
+==================================================
+5. ISSUE SEARCH / LOOKUP
+==================================================
+
+ادعم:
+
+- search public issues
+- list issues for specific repo
+- exact issue lookup by repo + number
+
+أرجع:
+
+- repo
+- issue_number
+- title
+- state
+- labels
+- author
+- created_at
+- updated_at
+- comments_count
+- html_url
+- body_text truncated/normalized if needed
+- provider
+- retrieved_at
+
+مهم:
+GitHub Issues API قد يعيد pull requests أيضًا.
+
+إذا response يحتوي pull_request field:
+صنفه بشكل واضح:
+PULL_REQUEST
+ولا تقدمه للمستخدم كissue عادي.
+
+==================================================
+6. RELEASES
+==================================================
+
+ادعم:
+
+- latest release
+- list recent releases
+
+أرجع:
+
+- repo
+- tag_name
+- release_name
+- published_at
+- prerelease
+- draft
+- html_url
+- body_text
+- assets metadata فقط إذا مفيد
+
+لا تحمل release assets.
+
+==================================================
+7. ROUTING
+==================================================
+
+أضف intent routing بسيط.
+
+أمثلة:
+
+"Find official MCP Python repository"
+→ GitHub repository search / exact repo
+
+"latest release of modelcontextprotocol/python-sdk"
+→ GitHub releases
+
+"open issues about Streamable HTTP"
+→ GitHub issue search
+
+"documentation about MCP"
+→ Tavily/official web search قد يبقى أفضل
+
+لا تجعل كل technical query يذهب إلى GitHub.
+
+==================================================
+8. TAVILY COOPERATION
+==================================================
+
+GitHub structured search لا يستبدل Tavily.
+
+استخدم:
+
+GitHub
+→ structured repository/issues/releases
+
+Tavily
+→ official documentation / broader web context
+
+إذا السؤال يحتاج الاثنين:
+استخدمهما selectively.
+
+لا fan-out تلقائي لكل سؤال تقني.
+
+==================================================
+9. GITHUB RESULT IDENTITY
+==================================================
+
+لا تستخدم URL dedupe العام فقط.
+
+Identity:
+
+Repository:
+owner/repo
+
+Issue:
+owner/repo#issue_number
+
+Pull Request:
+owner/repo#pr_number
+
+Release:
+owner/repo@tag
+
+احتفظ بـhtml_url للعرض فقط.
+
+==================================================
+10. PRIVACY
+==================================================
+
+GitHub provider جزء من WEB scope.
+
+ممنوع إرسال:
+
+- MY_FILES chunks
+- private uploaded documents
+- private conversation history
+- hidden instructions
+
+إلى GitHub API.
+
+أرسل فقط query العامة اللازمة.
+
+==================================================
+11. RATE LIMITS
+==================================================
+
+احترم:
+
+- X-RateLimit-Limit
+- X-RateLimit-Remaining
+- X-RateLimit-Reset
+- Retry-After إذا وجد
+
+لا تعمل tight retry loop.
+
+استخدم bounded retry.
+
+إذا unauthenticated:
+اعمل بوعي أن core limit أقل.
+
+إذا search endpoint له rate limit منفصل:
+تعامل معه كbucket مستقل.
+
+لا تفترض أن 5000/hour ينطبق على كل search endpoint.
+
+==================================================
+12. PROVIDER HEALTH
+==================================================
+
+أضف GitHub إلى /doctor:
+
+READY
+RATE_LIMITED
+UNAUTHORIZED
+NOT_CONFIGURED
+ERROR
+
+غياب GITHUB_TOKEN مع public access شغال:
+READY_UNAUTHENTICATED
+أو equivalent status واضح.
+
+اعرض:
+
+- auth mode
+- last_success
+- last_failure
+- core remaining
+- search remaining
+- safe error status
+
+لا تعرض token.
+
+==================================================
+13. RESULT MODEL
+==================================================
+
+أنشئ GitHubResult مستقل.
+
+لا تجبر repo/issues/releases داخل AcademicResult
+ولا داخل MY_FILES schema.
+
+يمكن تحويل GitHubResult لاحقًا إلى evidence layer مشترك.
+
+==================================================
+14. TEST FIXTURES
+==================================================
+
+أنشئ fixtures ثابتة لـ:
+
+A. exact public repository
+B. repository search
+C. latest release
+D. list releases
+E. exact issue
+F. issue search
+G. pull request returned by issues endpoint
+H. archived repository
+I. no-result query
+J. rate-limit response
+K. malformed response
+L. timeout
+M. Arabic technical query
+N. privacy test
+
+==================================================
+15. LIVE SMOKE
+==================================================
+
+اختبر live فقط على public resources معروفة.
+
+مثال مناسب:
+modelcontextprotocol/python-sdk
+
+اختبر:
+
+- repository metadata
+- latest release
+- one issue/list query
+
+لا تعمل benchmark كبير.
+
+==================================================
+16. CODE SEARCH
+==================================================
+
+لا تضف GitHub code search في Phase 2C إلا إذا:
+
+- repository/issues/releases لا تكفي للحالات الحالية
+- endpoint الحالي وشروط auth/rate-limit تم التحقق منها
+- لدينا acceptance fixture واضح يثبت الحاجة
+
+إذا لم توجد حاجة مثبتة:
+DEFER_CODE_SEARCH
+
+==================================================
+17. NO GITHUB TOKEN CASE
+==================================================
+
+إذا GITHUB_TOKEN غير موجود:
+
+- نفذ public unauthenticated smoke tests ضمن limits.
+- لا تفشل Phase 2C فقط بسبب غياب token.
+- سجّل auth mode بوضوح.
+- لا تحاول إنشاء token تلقائيًا.
+
+==================================================
+18. DO NOT ADD
+==================================================
+
+لا تضف:
+
+- GitHub App
+- OAuth
+- GraphQL
+- code search إلا إذا أثبتت الحاجة
+- private repository access
+- write actions
+- issue creation/editing
+- PR creation
+- commits
+- clone/download
+- PubMed
+- YouTube
+- RSS
+- Agent Reach
+- SearXNG
+- n8n
+
+هذه المرحلة READ-ONLY فقط.
+
+==================================================
+19. ACCEPTANCE CRITERIA
+==================================================
+
+Phase 2C PASS إذا:
+
+- repository lookup PASS
+- issue lookup/search PASS
+- PR distinction PASS
+- releases PASS
+- provider isolation PASS
+- privacy PASS
+- rate-limit handling PASS
+- no write capability exists
+- Doctor status accurate
+- Tavily regression unchanged
+
+==================================================
+20. FINAL REPORT
+==================================================
+
+أعطني فقط:
+
+- files changed
+- GitHubResult implemented PASS/FAIL
+- auth mode
+- repository lookup PASS/FAIL
+- repository search PASS/FAIL
+- issue lookup PASS/FAIL
+- issue search PASS/FAIL
+- pull-request distinction PASS/FAIL
+- releases PASS/FAIL
+- live smoke PASS/DEGRADED/FAIL
+- rate-limit handling PASS/FAIL
+- privacy PASS/FAIL
+- Doctor PASS/FAIL
+- Tavily regression PASS/FAIL
+- code search recommendation:
+  KEEP_DEFERRED
+  أو
+  ADD_IN_NEXT_PHASE
+- remaining blocker

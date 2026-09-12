@@ -33,6 +33,7 @@ from my_files import search_my_files as existing_my_files_search
 from persistence import create_pending_action
 from policy import data_only_boundary, get_tool_policy, tool_metadata
 from academic_search import academic_search as existing_academic_search
+from github_search import github_search as existing_github_search
 from skill_tools import web_search as existing_web_search
 
 
@@ -66,6 +67,11 @@ Use academic_search for explicit DOI, paper, author, topic, citation, reference,
 or latest-research requests. Use the structured academic result for metadata and
 use web_search only when publisher or broader web context is needed. Do not use
 academic_search for generic non-academic web questions.
+
+Use github_search only for explicit structured GitHub requests: repositories,
+issues, pull requests, releases, or repository metadata. Use it for public
+GitHub records, not for general technical documentation or every technical
+question. Use web_search for documentation and broader web context.
 """.strip()
 
 MY_FILES_INSTRUCTIONS = f"""
@@ -327,6 +333,61 @@ def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[Agent
             "data_boundary": data_only_boundary("academic_external"),
         }
 
+    async def github_search(
+        ctx: RunContext[AgentDeps],
+        query: Annotated[str, Field(min_length=1, max_length=256)],
+        intent: Literal[
+            "auto",
+            "repository",
+            "repository_lookup",
+            "issue",
+            "issue_lookup",
+            "release",
+            "releases",
+            "latest_release",
+        ] = "auto",
+        owner: Annotated[str | None, Field(max_length=100)] = None,
+        repo: Annotated[str | None, Field(max_length=100)] = None,
+        issue_number: Annotated[int | None, Field(ge=1)] = None,
+        max_results: Annotated[int, Field(ge=1, le=5)] = 5,
+    ) -> dict[str, object]:
+        started_at = time.perf_counter()
+        try:
+            result = await existing_github_search(
+                query=query.strip(),
+                intent=intent,
+                owner=owner.strip() if owner else None,
+                repo=repo.strip() if repo else None,
+                issue_number=issue_number,
+                max_results=max_results,
+            )
+        except Exception:
+            if ctx.deps.tool_event_recorder is not None:
+                await ctx.deps.tool_event_recorder(
+                    "github_search",
+                    "failed",
+                    int((time.perf_counter() - started_at) * 1000),
+                    {"intent": intent, "scope": "WEB"},
+                )
+            raise
+
+        if ctx.deps.tool_event_recorder is not None:
+            await ctx.deps.tool_event_recorder(
+                "github_search",
+                "success" if result.get("ok", True) else "failed",
+                int((time.perf_counter() - started_at) * 1000),
+                {
+                    "intent": intent,
+                    "scope": "WEB",
+                    "result_count": len(result.get("results", [])),
+                    "providers_used": result.get("providers_used", []),
+                },
+            )
+        return {
+            **result,
+            "data_boundary": data_only_boundary("github_public_api"),
+        }
+
     async def search_my_files(
         ctx: RunContext[AgentDeps],
         query: Annotated[str, Field(min_length=1, max_length=MAX_QUERY_LENGTH)],
@@ -397,7 +458,7 @@ def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[Agent
         }
 
     if scope == "WEB":
-        tools = [web_search, academic_search, test_sensitive_action]
+        tools = [web_search, academic_search, github_search, test_sensitive_action]
         instructions = WEB_INSTRUCTIONS
     else:
         tools = [search_my_files, test_sensitive_action]

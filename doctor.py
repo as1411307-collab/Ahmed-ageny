@@ -9,6 +9,7 @@ from agent_core import provider_health
 from academic_search import academic_health
 from auth import auth_health
 from embeddings import embedding_health
+from github_search import github_health
 from persistence import PersistenceError, doctor_storage_health, verify_audit_chain
 from policy import TOOL_POLICIES
 from skill_tools import search_fabric_health
@@ -90,6 +91,12 @@ async def _build_report(*, probe_search: bool) -> dict[str, Any]:
     mcp_status = "READY" if TOOL_POLICIES else "ERROR"
     search = search_fabric_health()
     academic = academic_health()
+    github = github_health()
+    github_overall_status = (
+        "READY"
+        if github.get("status") == "READY_UNAUTHENTICATED"
+        else github.get("status")
+    )
     if probe_search and search["status"] == "READY":
         # A live search probe is intentionally opt-in because it can spend credits.
         search["fast_probe"] = "not_run"
@@ -104,6 +111,7 @@ async def _build_report(*, probe_search: bool) -> dict[str, Any]:
                     {"status": storage_status},
                     audit,
                     academic,
+                    {"status": github_overall_status},
                 )
             )
             else "DEGRADED"
@@ -115,6 +123,7 @@ async def _build_report(*, probe_search: bool) -> dict[str, Any]:
                     provider,
                     audit,
                     academic,
+                    {"status": github_overall_status},
                 )
             )
             else "READY"
@@ -142,6 +151,7 @@ async def _build_report(*, probe_search: bool) -> dict[str, Any]:
         },
         "search": search,
         "academic": academic,
+        "github": github,
         "my_files": _component(
             status=storage_status if storage is not None else "ERROR",
             safe_error_code=storage_error,
