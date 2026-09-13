@@ -16,6 +16,7 @@ from evaluation_baseline import (
     load_case_document,
     load_evaluation_cases,
     resolve_tool_expectation,
+    resolve_case_tool_expectation,
     redact_evaluation_text,
     validate_evaluation_trace,
     validate_evaluation_cases,
@@ -42,6 +43,29 @@ class EvaluationBaselineTests(unittest.TestCase):
     def test_semantic_tool_mapping_preserves_case_meaning(self) -> None:
         self.assertEqual(resolve_tool_expectation("my_files")["actual"], "search_my_files")
         self.assertEqual(resolve_tool_expectation("project_file_access")["status"], "unavailable")
+        self.assertEqual(
+            resolve_case_tool_expectation(
+                "AA-RC-016",
+                "project_file_access",
+            )["actual"],
+            "inspect_runtime_evidence",
+        )
+        real_cases = load_case_document(
+            Path("tests/fixtures/evaluation_baseline/real_cases.json"),
+            require_baseline_size=True,
+        )[1]
+        gap_case_ids = {
+            case["id"]
+            for case in real_cases
+            if not case_execution_capability(case)[
+                "executable_by_current_agent_tools"
+            ]
+        }
+        self.assertNotIn("AA-RC-016", gap_case_ids)
+        self.assertEqual(
+            gap_case_ids,
+            {"AA-RC-002", "AA-RC-007", "AA-RC-011", "AA-RC-014"},
+        )
         case = next(
             case for case in load_evaluation_cases()
             if case["id"] == "web-current-official"

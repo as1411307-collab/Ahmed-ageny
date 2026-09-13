@@ -70,6 +70,11 @@ TOOL_NAME_MAPPING = {
         "status": "unavailable",
         "note": "Project workspace inspection is not an AgentCore tool.",
     },
+    "runtime_evidence": {
+        "actual": "inspect_runtime_evidence",
+        "status": "available",
+        "note": "Bounded runtime evidence inspection is available only for the current-runtime case.",
+    },
     "deploy": {
         "actual": None,
         "status": "boundary_only",
@@ -80,6 +85,15 @@ TOOL_NAME_MAPPING = {
         "status": "boundary_only",
         "note": "Publishing is a platform action, not an AgentCore tool.",
     },
+}
+CASE_CAPABILITY_OVERRIDES = {
+    "AA-RC-016": {
+        "project_file_access": {
+            "actual": "inspect_runtime_evidence",
+            "status": "available",
+            "note": "AA-RC-016 uses bounded runtime evidence, not general project access.",
+        }
+    }
 }
 REQUIRED_CHECK_KEYS = {
     "citations_required",
@@ -261,21 +275,33 @@ def resolve_tool_expectation(semantic_name: str) -> dict[str, Any]:
     )
 
 
+def resolve_case_tool_expectation(
+    case_id: str,
+    semantic_name: str,
+) -> dict[str, Any]:
+    return CASE_CAPABILITY_OVERRIDES.get(case_id, {}).get(
+        semantic_name,
+        resolve_tool_expectation(semantic_name),
+    )
+
+
 def case_execution_capability(case: dict[str, Any]) -> dict[str, Any]:
     unavailable_required = [
         tool
         for tool in case["required_tools"]
-        if resolve_tool_expectation(tool)["status"] == "unavailable"
+        if resolve_case_tool_expectation(case["id"], tool)["status"]
+        == "unavailable"
     ]
     unmapped_required = [
         tool
         for tool in case["required_tools"]
-        if resolve_tool_expectation(tool)["status"] == "unmapped"
+        if resolve_case_tool_expectation(case["id"], tool)["status"] == "unmapped"
     ]
     boundary_required = [
         tool
         for tool in case["required_tools"]
-        if resolve_tool_expectation(tool)["status"] == "boundary_only"
+        if resolve_case_tool_expectation(case["id"], tool)["status"]
+        == "boundary_only"
     ]
     return {
         "executable_by_current_agent_tools": not (
@@ -284,6 +310,10 @@ def case_execution_capability(case: dict[str, Any]) -> dict[str, Any]:
         "unavailable_required_tools": unavailable_required,
         "unmapped_required_tools": unmapped_required,
         "boundary_required_tools": boundary_required,
+        "resolved_required_tools": {
+            tool: resolve_case_tool_expectation(case["id"], tool)
+            for tool in case["required_tools"]
+        },
     }
 
 
@@ -1265,6 +1295,7 @@ def freeze_baseline_manifest(
             sorted(Counter(case["category"] for case in cases).items())
         ),
         "tool_name_mapping": TOOL_NAME_MAPPING,
+        "case_capability_overrides": CASE_CAPABILITY_OVERRIDES,
         "dataset_provenance": (
             "real_case"
             if provenance_counts.get("real_case", 0)

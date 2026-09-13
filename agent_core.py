@@ -38,6 +38,9 @@ from persistence import create_pending_action
 from policy import data_only_boundary, get_tool_policy, tool_metadata
 from academic_search import academic_search as existing_academic_search
 from github_search import github_search as existing_github_search
+from runtime_evidence import (
+    inspect_runtime_evidence as inspect_existing_runtime_evidence,
+)
 from skill_tools import web_search as existing_web_search
 
 
@@ -524,8 +527,61 @@ def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[Agent
             "message": "Approval is required before this action can execute.",
         }
 
+    async def inspect_runtime_evidence(
+        ctx: RunContext[AgentDeps],
+    ) -> dict[str, object]:
+        """Read fixed project files to identify the active runtime.
+
+        This is a bounded, read-only evidence lookup. It never accepts a path,
+        executes commands, reads secrets, or changes project files.
+        """
+
+        started_at = time.perf_counter()
+        try:
+            result = await asyncio.to_thread(inspect_existing_runtime_evidence)
+        except Exception:
+            if ctx.deps.tool_event_recorder is not None:
+                await ctx.deps.tool_event_recorder(
+                    "inspect_runtime_evidence",
+                    "failed",
+                    int((time.perf_counter() - started_at) * 1000),
+                    {"scope": "PROJECT_RUNTIME_EVIDENCE"},
+                )
+            raise
+
+        policy = tool_metadata("inspect_runtime_evidence")
+        safe_metadata = {
+            "scope": "PROJECT_RUNTIME_EVIDENCE",
+            "status": result.get("status"),
+            "evidence_files": result.get("evidence_files", []),
+            "claim_statuses": {
+                name: claim.get("status")
+                for name, claim in result.get("runtime_evidence", {}).items()
+                if isinstance(claim, dict)
+            },
+            "policy": policy,
+        }
+        if ctx.deps.tool_event_recorder is not None:
+            await ctx.deps.tool_event_recorder(
+                "inspect_runtime_evidence",
+                "success",
+                int((time.perf_counter() - started_at) * 1000),
+                safe_metadata,
+            )
+        return {
+            **result,
+            "policy": policy,
+            "data_boundary": data_only_boundary("project_runtime_evidence"),
+        }
+
     if scope == "WEB":
-        tools = [web_search, academic_search, github_search, test_sensitive_action]
+        tools = [
+            web_search,
+            academic_search,
+            github_search,
+            inspect_runtime_evidence,
+            test_sensitive_action,
+        ]
         instructions = WEB_INSTRUCTIONS
     else:
         tools = [search_my_files, test_sensitive_action]
