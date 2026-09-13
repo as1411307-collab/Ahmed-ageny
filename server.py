@@ -23,6 +23,7 @@ from agent_core import (
     provider_health,
     run_ahmed,
 )
+from alerting import evaluate_runtime_rules
 from auth import authorize_owner
 from doctor import get_doctor_report
 from persistence import (
@@ -45,11 +46,14 @@ from persistence import (
     record_tool_event,
     record_run_checkpoint,
     cleanup_retention,
+    persist_runtime_alert_evaluations,
+    record_recovery_event,
     retention_preview,
     release_orphaned_run,
     renew_run_lease,
     run_message_count,
     runtime_metrics,
+    verify_audit_chain,
 )
 from config import MAX_UPLOAD_BYTES
 from my_files import SUPPORTED_EXTENSIONS, extension_for, ingest_document, sanitize_filename
@@ -288,6 +292,71 @@ async def runtime_metrics_route(request: Request) -> Response:
     )
 
 
+def _serialize_alert_state(alert: dict[str, object]) -> dict[str, object]:
+    serialized = dict(alert)
+    for field in ("last_triggered_at", "recovered_at", "evaluated_at"):
+        value = serialized.get(field)
+        if hasattr(value, "isoformat"):
+            serialized[field] = value.isoformat()
+    return serialized
+
+
+@server.custom_route("/alerts/runtime", methods=["GET"])
+async def runtime_alerts_route(request: Request) -> Response:
+    user, status_code, error_code = await authorize_owner(
+        request,
+        endpoint="/alerts/runtime",
+    )
+    if user is None:
+        return JSONResponse(
+            {"error": "owner authentication required", "code": error_code},
+            status_code=status_code,
+        )
+    try:
+        metrics = await runtime_metrics(window_hours=24)
+        service_healthy = True
+    except PersistenceError:
+        metrics = {}
+        service_healthy = False
+    try:
+        audit = await verify_audit_chain()
+        audit_healthy = bool(audit.get("verified"))
+    except PersistenceError:
+        audit = {
+            "status": "ERROR",
+            "verified": False,
+            "safe_error_code": "AUDIT_STORAGE_UNAVAILABLE",
+        }
+        audit_healthy = False
+    evaluations = evaluate_runtime_rules(
+        metrics=metrics,
+        service_healthy=service_healthy,
+        audit_healthy=audit_healthy,
+    )
+    try:
+        states = await persist_runtime_alert_evaluations(evaluations)
+    except PersistenceError:
+        return JSONResponse(
+            {
+                "error": "تعذر حفظ حالة التنبيهات التشغيلية.",
+                "service_healthy": service_healthy,
+                "audit": audit,
+            },
+            status_code=502,
+        )
+    return JSONResponse(
+        {
+            "alerts": [_serialize_alert_state(state) for state in states],
+            "delivery": "not_configured",
+            "metrics_window_hours": 24,
+            "audit": {
+                "verified": audit.get("verified"),
+                "safe_error_code": audit.get("safe_error_code"),
+            },
+        }
+    )
+
+
 @server.custom_route("/retention/preview", methods=["GET"])
 async def retention_preview_route(request: Request) -> Response:
     user, status_code, error_code = await authorize_owner(
@@ -503,6 +572,16 @@ async def run_resume_route(request: Request) -> Response:
             await release_orphaned_run(run_id=run_id, worker_id=worker_id)
         except PersistenceError:
             logger.error("Failed to release run after recovery failure")
+        try:
+            await record_recovery_event(
+                session_id=str(claimed["session_id"]),
+                run_id=run_id,
+                event_type="recovery.failed",
+                status="failed",
+                safe_metadata={"code": "RECOVERY_PERSISTENCE_ERROR"},
+            )
+        except PersistenceError:
+            logger.error("Failed to record recovery failure event run_id=%s", run_id)
         return JSONResponse(
             {"status": "recovery_failed", "code": "RECOVERY_PERSISTENCE_ERROR"},
             status_code=502,

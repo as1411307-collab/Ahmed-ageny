@@ -1078,6 +1078,34 @@ async def record_auth_event(
         raise PersistenceError("Could not persist the authorization event.") from error
 
 
+async def record_recovery_event(
+    *,
+    session_id: str,
+    run_id: str,
+    event_type: str,
+    status: str,
+    safe_metadata: dict[str, Any] | None = None,
+) -> None:
+    if event_type not in {"recovery.failed", "recovery.completed"}:
+        raise ValueError("invalid recovery event type")
+    pool = await _get_pool()
+    try:
+        async with pool.acquire() as connection:
+            async with connection.transaction():
+                await _append_audit_event(
+                    connection,
+                    session_id=session_id,
+                    run_id=run_id,
+                    action_id=None,
+                    event_type=event_type,
+                    tool_name=None,
+                    status=status,
+                    safe_metadata=safe_metadata or {},
+                )
+    except Exception as error:
+        raise PersistenceError("Could not persist the recovery event.") from error
+
+
 async def _append_audit_event(
     connection: asyncpg.Connection,
     *,
