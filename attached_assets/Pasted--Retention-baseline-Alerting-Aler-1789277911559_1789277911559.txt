@@ -1,0 +1,122 @@
+الـRetention اتقفل صح، والـbaseline بقى نظيف. الخطوة التالية عندي ليست نظام Alerting كبير؛ اعمل Alerting تشغيلي صغير وحاسم، وبعده مباشرة انتقل إلى Evaluation Baseline.
+
+في نقطة مهمة: الأرقام بعد التنظيف تبدو منطقية، لكن total_runs: 11 لا يُقارن مباشرة بإجمالي WEB/MY_FILES/chat إلا لو نفس النافذة الزمنية ونفس تعريف الـrun. لا أعتبرها مشكلة حاليًا، لكن لازم توثّق إن /metrics/runtime?hours=24 نافذة زمنية، بينما أرقام التخزين قد تكون تاريخية كاملة، حتى لا يظهر لاحقًا تعارض وهمي.
+
+الخيار	الميزة	العيب / المخاطرة	الوقت والجهد	الترشيح والسبب
+Minimal Operational Alerts	يكشف الأعطال الحقيقية مبكرًا	لو توسعنا فيه الآن سنضيع وقت	منخفض	نفذه أولًا وبحدود واضحة
+Evaluation Baseline	يقيس هل الوكيل نفسه جيد	يحتاج إعداد dataset حقيقي	متوسط	المشروع الرئيسي التالي
+Memory Architecture	يحسن الاستمرارية	لا نستطيع قياس أثره بدون evals	متوسط	بعد Evals
+Retrieval Improvements	يحسن دقة المصادر	قد نحسن أو نسوء بدون benchmark	متوسط	بعد Evals
+Dashboard متقدم	جميل للتشغيل	قيمة محدودة الآن	متوسط	مؤجل
+
+التنبيهات التي أوافق عليها الآن فقط
+
+1. Service health failure
+    /health أو PostgreSQL غير متاح.
+2. Audit integrity failure
+    verified=false هنا التنبيه فوري ولا يحتاج sample size.
+3. Orphan / lease anomaly
+    ارتفاع orphaned أو lease expirations بعد baseline نظيف.
+4. Recovery failure
+    محاولة recovery فشلت أو تكررت لنفس run.
+5. Sustained failure-rate increase
+    وليس فشلًا واحدًا منفردًا.
+
+ولا أنصح حاليًا بتنبيه على idempotency_hits وحده؛ الـhit قد يكون دليل أن الحماية اشتغلت كما ينبغي، وليس حادثة. يصبح مثيرًا للاهتمام فقط إذا ارتفع بصورة غير معتادة أو ترافق مع retries/failures.
+
+تصميم Alerting الصحيح
+
+لا تجعل thresholds مجرد أرقام hard-coded موزعة في الكود. خليها Policy واحدة تقريبًا بهذا المفهوم:
+
+rule
+metric
+condition
+minimum_sample_size
+evaluation_window
+severity
+cooldown
+last_triggered_at
+
+وأضيف recovery condition أيضًا، حتى يعرف النظام متى تعتبر المشكلة انتهت.
+
+مثلًا:
+
+healthy → warning → critical → recovered
+
+وبكده لا يرسل نفس المشكلة كل دورة.
+
+مهم: افصل detection عن delivery
+
+هذه نقطة معمارية أراها ضرورية.
+
+Metrics
+   ↓
+Alert Evaluator
+   ↓
+Alert Event
+   ↓
+Notifier
+
+الـEvaluator لا يرسل بريدًا أو إشعارًا بنفسه.
+
+ليه؟ لأنك لاحقًا ممكن تريد:
+
+* واجهة المالك
+* Email
+* Push
+* Routine
+* webhook
+
+بدون تعديل منطق اكتشاف المشكلة.
+
+وكل alert_opened / alert_suppressed / alert_recovered يدخل audit، لكن لا تسجل alert في كل polling cycle وإلا هتملأ الـaudit بضوضاء.
+
+وبعد إغلاق Alerting مباشرة
+
+هنا أغيّر نوع الشغل تمامًا.
+
+البنية التشغيلية أصبحت بالفعل قوية:
+
+Persistence → checkpoints → leases → recovery → idempotency → audit → metrics → retention → alerts.
+
+الاستمرار بعدها في infrastructure سيكون diminishing returns.
+
+المرحلة الكبرى التالية تصبح:
+
+Ahmed Agent Evaluation Baseline
+
+نأخذ استخداماتك الحقيقية ونبني benchmark قبل تعديل Memory أو Retrieval.
+
+وأقترح أن يغطي على الأقل هذه الفئات:
+
+* WEB research
+* MY_FILES retrieval
+* سؤال له معلومات قديمة وحديثة متعارضة
+* استعادة قرار سابق في المشروع
+* اختيار الأداة الصحيحة
+* رفض أداة غير لازمة
+* action يحتاج HITL
+* مصادر ناقصة
+* سؤال طويل متعدد الخطوات
+* تصحيح المستخدم لمعلومة سابقة
+* citation/source grounding
+* عدم اختراع معلومة عند غياب الدليل
+
+ثم نسجل baseline مثل:
+
+task_success
+retrieval_relevance
+groundedness
+source_correctness
+tool_selection
+instruction_adherence
+latency
+tool_calls
+cost
+
+الخطوة الآن: Minimal Alerting فقط.
+المتطلبات: evaluator + rules + cooldown + recovery state + audit events.
+الوقت المتوقع: منخفض إلى متوسط.
+النتيجة: إغلاق طبقة Operational Reliability بالكامل تقريبًا.
+
+ثم توقف عن إضافة infrastructure ونبدأ مباشرة في Evals → Context/Memory → Retrieval → Skills. هذا هو المسار الذي أراه الأقوى الآن.

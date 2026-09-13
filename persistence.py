@@ -77,6 +77,19 @@ async def _ensure_policy_schema(pool: asyncpg.Pool) -> None:
                 CREATE INDEX IF NOT EXISTS audit_events_created_idx
                     ON audit_events (created_at, event_id);
 
+                CREATE TABLE IF NOT EXISTS runtime_alerts (
+                    rule TEXT PRIMARY KEY,
+                    status TEXT NOT NULL DEFAULT 'healthy',
+                    severity TEXT NOT NULL DEFAULT 'healthy',
+                    last_triggered_at TIMESTAMPTZ,
+                    recovered_at TIMESTAMPTZ,
+                    suppressed_count INTEGER NOT NULL DEFAULT 0,
+                    last_evidence JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    last_value DOUBLE PRECISION,
+                    sample_size INTEGER NOT NULL DEFAULT 0,
+                    last_evaluated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
+
                 CREATE TABLE IF NOT EXISTS agent_run_checkpoints (
                     checkpoint_id BIGSERIAL PRIMARY KEY,
                     session_id UUID NOT NULL,
@@ -330,6 +343,17 @@ async def runtime_metrics(*, window_hours: int = 24) -> dict[str, Any]:
                  WHERE event_type = 'pending_action.idempotency_hit'
                    AND created_at >= NOW() - ($1::integer * INTERVAL '1 hour')
                 ) AS idempotency_hits,
+                (SELECT COUNT(*)::integer
+                 FROM audit_events
+                 WHERE event_type = 'recovery.failed'
+                   AND created_at >= NOW() - ($1::integer * INTERVAL '1 hour')
+                ) AS recovery_failures,
+                (SELECT COUNT(DISTINCT run_id)::integer
+                 FROM audit_events
+                 WHERE event_type = 'recovery.failed'
+                   AND run_id IS NOT NULL
+                   AND created_at >= NOW() - ($1::integer * INTERVAL '1 hour')
+                ) AS recovery_failed_runs,
                 COALESCE(
                     (SELECT jsonb_object_agg(stage, count) FROM stage_summary),
                     '{}'::jsonb
@@ -358,8 +382,97 @@ async def runtime_metrics(*, window_hours: int = 24) -> dict[str, Any]:
         "recovery_attempts": int(row["recovery_attempts"] or 0),
         "average_duration_ms": round(float(row["average_duration_ms"] or 0), 2),
         "idempotency_hits": int(row["idempotency_hits"] or 0),
+        "recovery_failures": int(row["recovery_failures"] or 0),
+        "recovery_failed_runs": int(row["recovery_failed_runs"] or 0),
         "stage_counts": stage_counts,
     }
+
+
+async def persist_runtime_alert_evaluations(
+    evaluations: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    from alerting import transition_alert
+
+    pool = await _get_pool()
+    persisted: list[dict[str, Any]] = []
+    try:
+        async with pool.acquire() as connection:
+            async with connection.transaction():
+                for evaluation in evaluations:
+                    row = await connection.fetchrow(
+                        """
+                        SELECT rule, status, severity, last_triggered_at,
+                               recovered_at, suppressed_count, last_evidence,
+                               last_value, sample_size, last_evaluated_at
+                        FROM runtime_alerts
+                        WHERE rule = $1
+                        FOR UPDATE
+                        """,
+                        evaluation["rule"],
+                    )
+                    current = dict(row) if row else None
+                    transition = transition_alert(
+                        evaluation=evaluation,
+                        current=current,
+                    )
+                    await connection.execute(
+                        """
+                        INSERT INTO runtime_alerts (
+                            rule, status, severity, last_triggered_at,
+                            recovered_at, suppressed_count, last_evidence,
+                            last_value, sample_size, last_evaluated_at
+                        )
+                        VALUES (
+                            $1, $2, $3, $4, $5, $6, $7::jsonb,
+                            $8, $9, $10
+                        )
+                        ON CONFLICT (rule) DO UPDATE SET
+                            status = EXCLUDED.status,
+                            severity = EXCLUDED.severity,
+                            last_triggered_at = EXCLUDED.last_triggered_at,
+                            recovered_at = EXCLUDED.recovered_at,
+                            suppressed_count = EXCLUDED.suppressed_count,
+                            last_evidence = EXCLUDED.last_evidence,
+                            last_value = EXCLUDED.last_value,
+                            sample_size = EXCLUDED.sample_size,
+                            last_evaluated_at = EXCLUDED.last_evaluated_at
+                        """,
+                        transition["rule"],
+                        transition["status"],
+                        transition["severity"],
+                        transition["last_triggered_at"],
+                        transition["recovered_at"],
+                        transition["suppressed_count"],
+                        json.dumps(
+                            transition["last_evidence"],
+                            separators=(",", ":"),
+                        ),
+                        float(transition["last_value"]),
+                        int(transition["sample_size"]),
+                        transition["evaluated_at"],
+                    )
+                    if transition["event_type"]:
+                        await _append_audit_event(
+                            connection,
+                            session_id=None,
+                            run_id=None,
+                            action_id=None,
+                            event_type=str(transition["event_type"]),
+                            tool_name=None,
+                            status=str(transition["status"]),
+                            safe_metadata={
+                                "rule": transition["rule"],
+                                "severity": transition["severity"],
+                                "suppressed_count": transition["suppressed_count"],
+                                "evidence": transition["last_evidence"],
+                            },
+                        )
+                    persisted.append(transition)
+    except PersistenceError:
+        raise
+    except Exception as error:
+        raise PersistenceError("Could not persist runtime alert state.") from error
+    return persisted
 
 
 async def retention_preview() -> dict[str, Any]:
