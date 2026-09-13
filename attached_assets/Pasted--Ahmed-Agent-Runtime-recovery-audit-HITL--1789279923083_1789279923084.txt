@@ -1,0 +1,296 @@
+واصل بناء Ahmed Agent من الحالة الحالية.
+
+الحالة المؤكدة الآن:
+- Runtime / recovery / audit / HITL مستقرة.
+- Metrics / retention / cleanup مكتملة.
+- Minimal alerting مكتمل.
+- Evaluation Harness مكتمل بنيويًا.
+- contract_seed = 22 ومنفصلة عن real cases.
+- real_case = 26 ومتحقق منها.
+- real-cases-v1.json صالح.
+- real-cases-validated.json صالح.
+- provenance موجودة لكل الحالات.
+- semantic grading لم يتم تشغيله.
+- Memory / Retrieval / routing / prompts لم يتم تعديلها.
+- آخر تحقق: 71 اختبارًا ناجحًا.
+- العائق الحالي:
+  LIVE_EVAL_EXECUTION_PATH_REQUIRED
+
+الهدف:
+بناء Execution Adapter صغير ومحدد يربط real cases بمسار تنفيذ Ahmed Agent الفعلي، ويولد traces قابلة للـdeterministic grading.
+
+مهم:
+لا تنشئ runtime جديدًا.
+لا تنشئ agent ثانيًا.
+لا تنسخ منطق run_ahmed.
+لا تضف LangGraph أو Multi-Agent أو MCTS.
+لا تعدل Memory أو Retrieval أو prompts لتحسين النتيجة.
+استخدم مسار التنفيذ الحالي نفسه كمصدر الحقيقة.
+
+نفّذ بالترتيب التالي:
+
+1. افحص أولًا مسار التنفيذ الحقيقي الحالي:
+   - أين يوجد run_ahmed أو equivalent execution entrypoint؟
+   - كيف يتم تمرير input؟
+   - كيف يتم اختيار scope مثل WEB / MY_FILES / chat؟
+   - كيف تسجل tool calls؟
+   - أين توجد citations؟
+   - أين تحفظ run metadata؟
+   - هل توجد token/cost/latency/retry metadata بالفعل؟
+   - كيف يتم التعامل مع HITL/pending actions؟
+
+2. صمم Execution Adapter رفيعًا فقط حول المسار الحالي.
+
+   الهدف المنطقي:
+
+   real_case
+      ↓
+   execution adapter
+      ↓
+   existing Ahmed execution path
+      ↓
+   actual run
+      ↓
+   normalized evaluation trace
+      ↓
+   existing deterministic graders
+
+3. لا تجعل الـadapter يغير سلوك الوكيل.
+   دوره فقط:
+   - إعداد input.
+   - تشغيل المسار الفعلي.
+   - مراقبة النتيجة.
+   - جمع trace.
+   - normalization.
+   - إعادة trace للـEvaluation Harness.
+
+4. عرّف Evaluation Trace واضحًا.
+
+   استخدم البنية الحالية إن كانت موجودة.
+   لا تنشئ schema ثانية إن لم تكن ضرورية.
+
+   يجب أن يستطيع trace تمثيل ما يتوفر فعليًا من:
+   - case_id
+   - run_id
+   - input
+   - scope
+   - final_output
+   - tool_calls
+   - tool names
+   - tool inputs بشكل منقح وآمن
+   - tool results metadata الضرورية للتقييم
+   - citations
+   - source references
+   - HITL / pending-action events
+   - abstention indicator
+   - start/end timestamps
+   - latency_ms
+   - retries
+   - model name
+   - token usage إذا كان متاحًا
+   - cost إذا كان متاحًا
+   - execution status
+   - failure reason إن وجد
+
+5. الخصوصية:
+   - لا تسجل owner token.
+   - لا تسجل secrets.
+   - لا تحفظ provider payload الخام إذا لم يحتجه التقييم.
+   - لا تحفظ credentials.
+   - اعمل redaction للحقول الحساسة.
+   - لا تغير audit policy الحالية.
+
+6. Tool mapping:
+   استخدم mapping الحالي:
+   - web_search -> web_search
+   - my_files -> search_my_files
+
+   الحالات التالية غير قابلة حاليًا للتنفيذ الكامل بسبب capability غير موجودة:
+   - AA-RC-002
+   - AA-RC-007
+   - AA-RC-011
+   - AA-RC-014
+   - AA-RC-016
+
+   لا تعتبرها quality failures.
+
+   يجب أن تحمل حالة مثل:
+   NOT_EXECUTABLE_CAPABILITY_GAP
+
+   وسبب واضح.
+
+7. بالنسبة لـ deploy / publish:
+   هي platform boundaries وليست AgentCore tools.
+   لا تحاول إنشاء tools مزيفة لها.
+   قيّم فقط عدم استدعاء/تنفيذ شيء غير موجود إذا كان ذلك قابلًا للملاحظة.
+
+8. قبل تشغيل جميع الـreal cases:
+   نفذ dry-run أو probe على 1-3 حالات قابلة للتنفيذ للتأكد من:
+   - adapter يستخدم runtime الحقيقي.
+   - trace يلتقط tool calls فعلية.
+   - output حقيقي.
+   - citations حقيقية عند وجودها.
+   - grader يستهلك trace بدون conversion يدوي.
+
+9. بعد نجاح probe:
+   أضف CLI واضحًا للـbaseline الحقيقي، مثل مفهوم:
+
+   python evaluation_baseline.py \
+     --run-real real-cases-validated.json \
+     --output baseline-real-v1.json
+
+   لا تستخدم هذا الاسم حرفيًا إذا كان CLI الحالي له تصميم أفضل.
+   حافظ على consistency مع البنية الحالية.
+
+10. أثناء تشغيل real cases:
+    - لا تغير expected_behavior.
+    - لا تغير prompts.
+    - لا تصلح failures أثناء التشغيل.
+    - لا تعِد تشغيل case فقط للحصول على نتيجة أفضل إلا إذا كان هناك execution error تقني واضح.
+    - سجل execution errors منفصلة عن quality failures.
+
+11. صنف كل case إلى واحدة من الحالات:
+    - EXECUTED
+    - EXECUTION_FAILED
+    - NOT_EXECUTABLE_CAPABILITY_GAP
+    - HITL_BLOCKED
+    - INVALID_CASE
+
+12. لا تدخل الحالات غير القابلة للتنفيذ ضمن denominator الخاص بـquality score لنفس metric.
+
+13. شغّل deterministic grading فقط في هذه المرحلة.
+
+   يجب أن نستطيع استخراج:
+   - task completion
+   - tool selection
+   - forbidden-tool violations
+   - citation presence/correctness القابلة للتحقق
+   - expected-source matching
+   - HITL boundary compliance
+   - abstention behavior
+   - instruction adherence القابل للفحص حتميًا
+   - latency
+   - retries
+   - tool-call count
+   - tokens/cost إن كانت البيانات متاحة
+
+14. لا تشغّل semantic grading بعد.
+   grounding/relevance/completeness التي تحتاج judge تبقى:
+   NOT_RUN
+
+15. أضف اختبارات للـExecution Adapter تشمل:
+   - successful execution trace
+   - tool-call capture
+   - citation capture
+   - failed execution
+   - HITL-blocked case
+   - capability-gap case
+   - secrets redaction
+   - malformed trace rejection
+   - missing optional token/cost metadata
+   - deterministic grader consumes adapter trace
+
+16. لا تستخدم mock فقط كدليل أن live adapter يعمل.
+   unit tests يمكن أن تستخدم mocks، لكن يلزم probe حقيقي واحد على الأقل ضد execution path الحالي.
+
+17. لا تشغّل الحالات التي قد تسبب external side effects غير آمنة.
+   إذا case قد يتطلب action خارجي:
+   - حافظ على HITL boundary.
+   - لا توافق نيابة عن المالك.
+   - صنفها HITL_BLOCKED إن كان هذا هو السلوك الصحيح.
+
+18. لا تسمح للـevaluation run بتجاوز:
+   - tool call limits
+   - retry limits
+   - security policy
+   - owner/HITL policy
+   - idempotency policy
+
+19. أضف معرفًا واضحًا لتشغيل baseline:
+   - baseline_run_id
+   - dataset SHA-256
+   - execution config
+   - model/config
+   - tool limits
+   - timestamp
+   - code/build identifier إن كان متاحًا
+
+20. baseline artifact النهائي يجب أن يكون reproducible بما يكفي للمقارنة المستقبلية، مع فهم أن live provider outputs قد لا تكون byte-identical.
+
+21. بعد تشغيل baseline الأول:
+   لا تعدّل أي architecture.
+
+   فقط حلل النتائج حسب:
+   - category
+   - metric
+   - executable vs non-executable
+   - execution failures vs quality failures
+
+22. في التقرير النهائي أعطني تحديدًا:
+
+   A. التنفيذ
+   - اسم/مكان Execution Adapter.
+   - الـruntime entrypoint الذي يعيد استخدامه.
+   - الملفات التي تغيرت.
+   - هل تم نسخ أي منطق execution أم لا.
+
+   B. التغطية
+   - total real cases = 26
+   - executed count
+   - execution_failed count
+   - capability_gap count
+   - HITL_blocked count
+
+   C. الحالات غير القابلة للتنفيذ
+   - IDs
+   - السبب الدقيق لكل حالة.
+
+   D. Baseline
+   - deterministic results حسب category.
+   - tool-selection failures.
+   - forbidden-tool violations.
+   - citation/source failures.
+   - HITL failures.
+   - abstention failures.
+   - task-completion failures القابلة للقياس حتميًا.
+   - latency distribution.
+   - retry counts.
+   - tool-call counts.
+   - token/cost availability.
+
+   E. Integrity
+   - dataset SHA-256.
+   - baseline artifact SHA-256 إن تم إنشاؤه.
+   - baseline_run_id.
+   - model/config.
+   - code/build identifier.
+
+   F. Verification
+   - عدد الاختبارات.
+   - compile check.
+   - git diff --check.
+   - workflow/health.
+   - audit integrity.
+   - alerts status.
+
+   G. Limits
+   - ما الذي لا يمكن قياسه بدون semantic grading.
+   - أي trace fields غير متاحة من runtime الحالي.
+   - أي provider nondeterminism.
+
+23. توقف بعد التقرير.
+
+لا تبدأ:
+- Memory Architecture
+- Retrieval improvements
+- Reranking
+- Skills
+- Semantic grading
+- Prompt optimization
+- Tool-routing optimization
+
+حتى نراجع baseline الحقيقي أولًا.
+
+المعيار النهائي للنجاح في هذه المهمة:
+ليس أن تحصل الحالات على درجات عالية.
+النجاح هو أن يصبح لدينا أول تشغيل حقيقي موثق وقابل للمقارنة لـAhmed Agent، حتى لو كشف عن نتائج سيئة.
