@@ -7,12 +7,14 @@ from tempfile import TemporaryDirectory
 from evaluation_baseline import (
     build_scoreboard,
     build_quality_scoreboard,
+    case_execution_capability,
     compare_scoreboards,
     deterministic_grade,
     freeze_baseline_manifest,
     import_real_cases,
     load_case_document,
     load_evaluation_cases,
+    resolve_tool_expectation,
     validate_evaluation_cases,
 )
 
@@ -23,6 +25,25 @@ class EvaluationBaselineTests(unittest.TestCase):
         self.assertGreaterEqual(len(cases), 20)
         self.assertEqual(len({case["id"] for case in cases}), len(cases))
         self.assertTrue(all(case["provenance"] == "contract_seed" for case in cases))
+
+    def test_imported_real_dataset_has_qualified_provenance(self) -> None:
+        version, cases = load_case_document(
+            Path("tests/fixtures/evaluation_baseline/real_cases.json"),
+            require_baseline_size=True,
+        )
+        self.assertEqual(version, "ahmed-agent-real-cases-v1")
+        self.assertEqual(len(cases), 26)
+        self.assertTrue(all(case["provenance"] == "real_case" for case in cases))
+        self.assertTrue(all(case["source_reference"] for case in cases))
+
+    def test_semantic_tool_mapping_preserves_case_meaning(self) -> None:
+        self.assertEqual(resolve_tool_expectation("my_files")["actual"], "search_my_files")
+        self.assertEqual(resolve_tool_expectation("project_file_access")["status"], "unavailable")
+        case = next(
+            case for case in load_evaluation_cases()
+            if case["id"] == "web-current-official"
+        )
+        self.assertTrue(case_execution_capability(case)["executable_by_current_agent_tools"])
 
     def test_deterministic_grader_checks_tools_sources_and_schema(self) -> None:
         case = next(case for case in load_evaluation_cases() if case["id"] == "web-current-official")

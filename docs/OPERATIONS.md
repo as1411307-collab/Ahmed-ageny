@@ -147,6 +147,13 @@ qualified `real_case` entries. Contract seeds and real cases are counted and
 reported separately. Regression comparison is case- and category-level; it
 does not reduce a mixed dataset to one unqualified average.
 
+Case tool names are semantic expectations and are mapped without rewriting the
+case. `my_files` maps to the actual `search_my_files` AgentCore tool;
+`web_search` maps directly. `file_access` and `project_file_access` currently
+have no AgentCore execution tool, while `deploy` and `publish` are platform
+boundaries rather than model tools. Such cases cannot be live-executed by the
+current harness until an execution adapter exists.
+
 For a persisted run, inspect its owner-only state trace with:
 
 ```text

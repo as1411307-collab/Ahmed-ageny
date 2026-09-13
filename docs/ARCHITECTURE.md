@@ -89,4 +89,7 @@ server.py
 - Real-case ingestion requires a documented source reference, rejects duplicate
   IDs and conflicting tool expectations, and produces a versioned dataset with
   a content hash. Quality reports exclude `contract_seed` cases by construction.
+- Tool expectations remain semantic case data. A separate mapping records which
+  names resolve to AgentCore tools and which require an unavailable execution
+  adapter; the mapping never changes the expected behavior.
 - The registered Node artifact is not imported by the Python runtime.

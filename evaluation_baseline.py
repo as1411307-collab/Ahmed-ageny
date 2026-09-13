@@ -40,6 +40,38 @@ SEMANTIC_RUBRIC = {
     "completeness": "All required parts of the task are addressed.",
     "source_correctness": "The cited source actually supports the claim.",
 }
+TOOL_NAME_MAPPING = {
+    "web_search": {
+        "actual": "web_search",
+        "status": "available",
+        "note": "AgentCore tool name matches.",
+    },
+    "my_files": {
+        "actual": "search_my_files",
+        "status": "available",
+        "note": "Semantic MY_FILES capability maps to the scoped retrieval tool.",
+    },
+    "file_access": {
+        "actual": None,
+        "status": "unavailable",
+        "note": "No general file-access AgentCore tool exists.",
+    },
+    "project_file_access": {
+        "actual": None,
+        "status": "unavailable",
+        "note": "Project workspace inspection is not an AgentCore tool.",
+    },
+    "deploy": {
+        "actual": None,
+        "status": "boundary_only",
+        "note": "Deployment is a platform action, not an AgentCore tool.",
+    },
+    "publish": {
+        "actual": None,
+        "status": "boundary_only",
+        "note": "Publishing is a platform action, not an AgentCore tool.",
+    },
+}
 REQUIRED_CHECK_KEYS = {
     "citations_required",
     "schema_fields",
@@ -124,6 +156,13 @@ def load_case_document(
     require_baseline_size: bool = False,
 ) -> tuple[str, list[dict[str, Any]]]:
     version, raw_cases = _read_dataset_document(path)
+    if any(
+        isinstance(case, dict)
+        and case.get("case_type") == "real_case"
+        and "id" not in case
+        for case in raw_cases
+    ):
+        raw_cases = [_normalize_real_case(case) for case in raw_cases]
     return version, validate_evaluation_cases(
         raw_cases,
         require_baseline_size=require_baseline_size,
@@ -174,11 +213,11 @@ def _normalize_real_case(raw_case: dict[str, Any]) -> dict[str, Any]:
 
 
 def import_real_cases(source_path: Path, output_path: Path) -> dict[str, Any]:
-    _, raw_cases = _read_dataset_document(source_path)
+    dataset_version, raw_cases = _read_dataset_document(source_path)
     normalized = [_normalize_real_case(case) for case in raw_cases]
     validate_evaluation_cases(normalized)
     output = {
-        "dataset_version": f"real-cases-{datetime.now(timezone.utc):%Y%m%d}",
+        "dataset_version": dataset_version,
         "cases": normalized,
     }
     output_path.write_text(
@@ -200,6 +239,37 @@ def _tool_names(trace: dict[str, Any]) -> set[str]:
         elif isinstance(call, dict) and isinstance(call.get("name"), str):
             names.add(call["name"])
     return names
+
+
+def resolve_tool_expectation(semantic_name: str) -> dict[str, Any]:
+    return TOOL_NAME_MAPPING.get(
+        semantic_name,
+        {
+            "actual": semantic_name,
+            "status": "unmapped",
+            "note": "No semantic-to-runtime mapping has been declared.",
+        },
+    )
+
+
+def case_execution_capability(case: dict[str, Any]) -> dict[str, Any]:
+    unavailable_required = [
+        tool
+        for tool in case["required_tools"]
+        if resolve_tool_expectation(tool)["status"] == "unavailable"
+    ]
+    unmapped_required = [
+        tool
+        for tool in case["required_tools"]
+        if resolve_tool_expectation(tool)["status"] == "unmapped"
+    ]
+    return {
+        "executable_by_current_agent_tools": not (
+            unavailable_required or unmapped_required
+        ),
+        "unavailable_required_tools": unavailable_required,
+        "unmapped_required_tools": unmapped_required,
+    }
 
 
 def _observed_sources(trace: dict[str, Any]) -> list[str]:
@@ -421,6 +491,7 @@ def freeze_baseline_manifest(
         "category_counts": dict(
             sorted(Counter(case["category"] for case in cases).items())
         ),
+        "tool_name_mapping": TOOL_NAME_MAPPING,
         "dataset_provenance": (
             "real_case"
             if provenance_counts.get("real_case", 0)
