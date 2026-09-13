@@ -1,0 +1,40 @@
+المرحلة الحالية جاهزة للانتقال إلى Retention + Alerting، وبالترتيب هذا تحديدًا: نظّف بيانات التشغيل أولًا، ثم فعّل التنبيهات.
+
+السبب: أرقام مثل orphaned_runs=12 وlease_expirations=12 صحيحة تقنيًا لكنها ملوثة بآثار fault injection. لو بنيت alerts الآن فوق هذه القاعدة، ستبدأ من baseline غير نظيف وقد تنتج إنذارات مضللة.
+
+الخيار	الميزة	العيب / المخاطرة	الوقت والجهد	الترشيح والسبب
+Retention + cleanup	ينظف قاعدة التطوير ويمنع التضخم	حذف مبكر قد يقلل القدرة على التحقيق	منخفض	الأولوية 1
+Alert thresholds	يكشف تدهور recovery مبكرًا	يحتاج baseline نظيف أولًا	منخفض-متوسط	الأولوية 2
+Dashboard	يجعل المقاييس أسهل للقراءة	قيمة محدودة قبل وجود alerts	متوسط	لاحقًا
+Memory/orchestration	يحسن قدرات الوكيل	ليس عنق الزجاجة الحالي	متوسط-مرتفع	مؤجل
+
+أرشح أن تكون سياسة الاحتفاظ مبدئيًا بهذا المنطق، لا بأرقام جامدة فقط:
+
+* completed القديمة: تحذف checkpoints التفصيلية بعد مدة، مع إبقاء run summary وaudit الضروري.
+* failed وorphaned: تحتفظ بها مدة أطول لأنها أهم للتحقيق.
+* audit_events: لا تنظف بنفس سياسة checkpoints؛ لأنها تمثل سلسلة النزاهة.
+* بيانات الاختبارات: تميز بوضوح عن بيانات التشغيل الحقيقي، والأفضل فصلها منطقيًا أو بوسم مثل environment=test/dev.
+* cleanup نفسه يجب أن يكون auditable ولا يكسر hash chain.
+
+النقطة الحساسة هنا: لا تجعل retention يحذف عنصرًا داخل audit chain بطريقة تكسر التحقق من التسلسل. لو الـ audit الحالي hash-linked، فالحذف الانتقائي يحتاج تصميم واضح: إما الاحتفاظ الكامل، أو archive sealed segments، أو checkpoint root/hash anchor قبل الحذف.
+
+بعد ذلك يأتي Alerting. وأفضل ما تبدأ به ليس عددًا مطلقًا، بل مؤشرات نسبية مثل:
+
+* ارتفاع failed_runs / total_runs
+* ارتفاع orphaned_runs / total_runs
+* تكرار lease_expirations
+* recovery attempts بدون نجاح
+* idempotency hits بشكل غير معتاد
+* runs عالقة في stage أكثر من حد زمني
+
+وأضيف شرطين مهمين:
+
+* cooldown حتى لا يرسل نفس التنبيه باستمرار.
+* minimum sample size حتى لا تتعامل مع 1 فشل من 2 runs ككارثة.
+
+الخطوة: Retention + cleanup policy
+المتطلبات: تصنيف البيانات حسب الحالة والبيئة، سياسة archive/delete، حماية audit integrity
+الوقت المتوقع: منخفض إلى متوسط
+النتيجة: baseline نظيف ومستقر يمكن بناء التنبيهات عليه بثقة
+
+بعد إغلاق هذه المرحلة، أعتبر طبقة التشغيل الأساسية لـ Ahmed Agent ناضجة بما يكفي للانتقال من “runtime hardening” إلى quality of reasoning / memory / tool effectiveness بدل الاستمرار في تحسين البنية التحتية بلا نهاية.
