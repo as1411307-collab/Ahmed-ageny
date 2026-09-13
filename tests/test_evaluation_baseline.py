@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from evaluation_baseline import (
     build_scoreboard,
@@ -8,8 +10,10 @@ from evaluation_baseline import (
     compare_scoreboards,
     deterministic_grade,
     freeze_baseline_manifest,
+    import_real_cases,
     load_case_document,
     load_evaluation_cases,
+    validate_evaluation_cases,
 )
 
 
@@ -58,25 +62,35 @@ class EvaluationBaselineTests(unittest.TestCase):
 
     def test_real_case_requires_provenance_and_conflicting_tools_fail(self) -> None:
         _, cases = load_case_document(
-            __import__("pathlib").Path(
-                "tests/fixtures/evaluation_baseline/cases.json"
-            ),
+            Path("tests/fixtures/evaluation_baseline/cases.json"),
             require_baseline_size=True,
         )
         invalid = dict(cases[0])
         invalid["provenance"] = "real_case"
         with self.assertRaises(ValueError):
-            from evaluation_baseline import validate_evaluation_cases
-
             validate_evaluation_cases([invalid])
 
         conflicting = dict(cases[0])
         conflicting["required_tools"] = ["web_search"]
         conflicting["forbidden_tools"] = ["web_search"]
         with self.assertRaises(ValueError):
-            from evaluation_baseline import validate_evaluation_cases
-
             validate_evaluation_cases([conflicting])
+
+    def test_real_case_import_requires_documented_source(self) -> None:
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "incoming.json"
+            output = Path(directory) / "real-cases.json"
+            source.write_text(
+                '{"dataset_version":"incoming-v1","cases":[{"case_type":"real_case",'
+                '"case_id":"real-1","category":"retrieval","input":"Question",'
+                '"expected_behavior":"Use the file","source_reference":"chat-export-1",'
+                '"required_tools":["search_my_files"],"forbidden_tools":[]}]}\n',
+                encoding="utf-8",
+            )
+            result = import_real_cases(source, output)
+            self.assertEqual(result["real_case_count"], 1)
+            _, imported = load_case_document(output)
+            self.assertEqual(imported[0]["provenance"], "real_case")
 
     def test_regression_comparison_reports_case_and_category_deltas(self) -> None:
         before = {
@@ -89,6 +103,7 @@ class EvaluationBaselineTests(unittest.TestCase):
             ]
         }
         after = {
+            "quality_eligible": True,
             "results": [
                 {
                     "case_id": "a",
@@ -97,6 +112,7 @@ class EvaluationBaselineTests(unittest.TestCase):
                 }
             ]
         }
+        before["quality_eligible"] = True
         comparison = compare_scoreboards(before, after)
         self.assertEqual(comparison["status"], "COMPARABLE")
         self.assertEqual(comparison["per_case"][0]["delta"], 1)

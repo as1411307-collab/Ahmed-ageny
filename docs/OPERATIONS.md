@@ -129,6 +129,24 @@ extend them with 20–30 `real_case` entries before running a live baseline.
 Semantic grading remains `NOT_RUN` until a reviewed rubric and safe grader are
 configured.
 
+Historical cases are imported through the same harness rather than a parallel
+evaluation system. The input must be a JSON document containing `cases`, where
+each case uses `case_type: "real_case"` and a non-empty `source_reference`
+(for example, a reviewed export reference). The importer accepts the structured
+fields `case_id`, `category`, `input`, `expected_behavior`,
+`expected_sources`, `required_tools`, `forbidden_tools`,
+`success_criteria`, and `forbidden_behavior`:
+
+```text
+python evaluation_baseline.py --validate-real incoming.json
+python evaluation_baseline.py --import-real incoming.json --output real-cases.json
+```
+
+The quality scoreboard refuses to produce a quality result when there are no
+qualified `real_case` entries. Contract seeds and real cases are counted and
+reported separately. Regression comparison is case- and category-level; it
+does not reduce a mixed dataset to one unqualified average.
+
 For a persisted run, inspect its owner-only state trace with:
 
 ```text

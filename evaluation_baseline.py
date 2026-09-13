@@ -88,6 +88,12 @@ def validate_evaluation_cases(
             raise ValueError(f"Invalid deterministic checks: {case_id}")
         if case["provenance"] not in {"contract_seed", "real_case"}:
             raise ValueError(f"Invalid case provenance: {case_id}")
+        if case["provenance"] == "real_case":
+            source_reference = case.get("source_reference")
+            if not isinstance(source_reference, str) or not source_reference.strip():
+                raise ValueError(
+                    f"real_case requires a documented source_reference: {case_id}"
+                )
         required_tools = set(case["required_tools"])
         forbidden_tools = set(case["forbidden_tools"])
         overlap = required_tools & forbidden_tools
@@ -98,12 +104,11 @@ def validate_evaluation_cases(
             )
         if not isinstance(case["expected_sources"], list):
             raise ValueError(f"expected_sources must be a list: {case_id}")
-        if case["provenance"] == "real_case":
-            source_reference = case.get("source_reference")
-            if not isinstance(source_reference, str) or not source_reference.strip():
-                raise ValueError(
-                    f"real_case requires a documented source_reference: {case_id}"
-                )
+        if (
+            checks.get("expected_sources_required", False)
+            and not case["expected_sources"]
+        ):
+            raise ValueError(f"Expected sources are required: {case_id}")
         validated.append(case)
     return validated
 
@@ -134,6 +139,8 @@ def _reject_secret_fields(case: dict[str, Any]) -> None:
 
 def _normalize_real_case(raw_case: dict[str, Any]) -> dict[str, Any]:
     _reject_secret_fields(raw_case)
+    if raw_case.get("case_type", "real_case") != "real_case":
+        raise ValueError("Real-case import requires case_type=real_case.")
     case_id = raw_case.get("case_id", raw_case.get("id"))
     source_reference = raw_case.get("source_reference")
     if source_reference is None:
@@ -144,6 +151,7 @@ def _normalize_real_case(raw_case: dict[str, Any]) -> dict[str, Any]:
         "id": case_id,
         "category": raw_case.get("category"),
         "provenance": "real_case",
+        "case_type": "real_case",
         "source_reference": source_reference,
         "input": raw_case.get("input"),
         "expected_behavior": raw_case.get("expected_behavior"),
@@ -342,6 +350,13 @@ def compare_scoreboards(
     baseline_a: dict[str, Any],
     baseline_b: dict[str, Any],
 ) -> dict[str, Any]:
+    if not baseline_a.get("quality_eligible") or not baseline_b.get("quality_eligible"):
+        return {
+            "status": "REAL_CASE_DATA_REQUIRED",
+            "per_case": [],
+            "per_category": {},
+            "semantic_grading": "NOT_RUN",
+        }
     results_a = {result["case_id"]: result for result in baseline_a.get("results", [])}
     results_b = {result["case_id"]: result for result in baseline_b.get("results", [])}
     case_ids = sorted(set(results_a) | set(results_b))

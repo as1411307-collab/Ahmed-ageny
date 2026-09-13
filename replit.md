@@ -88,3 +88,6 @@ Never place secret values in source files, logs, browser code, or chat.
 - `evaluation_baseline.py` provides a deterministic harness. Its initial 22
   cases are `contract_seed` entries, not a real-user quality score; add reviewed
   `real_case` entries before live-provider evaluation.
+- Real cases enter through the harness importer with `case_type=real_case` and a
+  required `source_reference`. Quality reports are gated until qualified real
+  cases exist; regression comparison is per case and category.

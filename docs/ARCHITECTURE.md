@@ -86,4 +86,7 @@ server.py
   tool selection, forbidden tools, citations, schema, and approval boundaries
   deterministically; semantic grading is explicitly disabled until real cases
   and a reviewed rubric are available.
+- Real-case ingestion requires a documented source reference, rejects duplicate
+  IDs and conflicting tool expectations, and produces a versioned dataset with
+  a content hash. Quality reports exclude `contract_seed` cases by construction.
 - The registered Node artifact is not imported by the Python runtime.
