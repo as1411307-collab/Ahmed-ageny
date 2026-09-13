@@ -44,6 +44,8 @@ from persistence import (
     reject_pending_action,
     record_tool_event,
     record_run_checkpoint,
+    cleanup_retention,
+    retention_preview,
     release_orphaned_run,
     renew_run_lease,
     run_message_count,
@@ -284,6 +286,55 @@ async def runtime_metrics_route(request: Request) -> Response:
             "data_boundary": "aggregated_operational_metadata",
         }
     )
+
+
+@server.custom_route("/retention/preview", methods=["GET"])
+async def retention_preview_route(request: Request) -> Response:
+    user, status_code, error_code = await authorize_owner(
+        request,
+        endpoint="/retention/preview",
+    )
+    if user is None:
+        return JSONResponse(
+            {"error": "owner authentication required", "code": error_code},
+            status_code=status_code,
+        )
+    try:
+        preview = await retention_preview()
+    except PersistenceError:
+        return JSONResponse(
+            {"error": "تعذر تحميل معاينة سياسة الاحتفاظ."},
+            status_code=502,
+        )
+    return JSONResponse(preview)
+
+
+@server.custom_route("/retention/cleanup", methods=["POST"])
+async def retention_cleanup_route(request: Request) -> Response:
+    user, status_code, error_code = await authorize_owner(
+        request,
+        endpoint="/retention/cleanup",
+    )
+    if user is None:
+        return JSONResponse(
+            {"error": "owner authentication required", "code": error_code},
+            status_code=status_code,
+        )
+    if request.query_params.get("confirm") != "TEST_DATA_ONLY":
+        return JSONResponse(
+            {
+                "error": "يتطلب التنظيف تأكيد TEST_DATA_ONLY؛ لا يتم حذف audit_events.",
+            },
+            status_code=400,
+        )
+    try:
+        result = await cleanup_retention(include_test_data=True)
+    except PersistenceError:
+        return JSONResponse(
+            {"error": "تعذر تنفيذ تنظيف بيانات الاختبارات."},
+            status_code=502,
+        )
+    return JSONResponse(result)
 
 
 async def _load_recovery_state(run_id: str) -> dict[str, object] | None:
