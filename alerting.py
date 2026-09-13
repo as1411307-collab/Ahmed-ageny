@@ -177,12 +177,10 @@ def transition_alert(
     suppressed_count = int(current.get("suppressed_count", 0) or 0)
 
     if next_severity == "healthy":
-        status = "recovered" if current_status in {"warning", "critical"} else current_status
         if current_status in {"warning", "critical"}:
             event_type = "alert_recovered"
             recovered_at = now
-        elif current_status == "healthy":
-            status = "healthy"
+        status = "healthy"
     elif current_status in {"healthy", "recovered"}:
         event_type = "alert_opened"
         last_triggered_at = now
@@ -203,7 +201,7 @@ def transition_alert(
     return {
         "rule": evaluation["rule"],
         "status": status,
-        "severity": next_severity if next_severity != "healthy" else status,
+        "severity": next_severity if next_severity != "healthy" else "healthy",
         "event_type": event_type,
         "last_triggered_at": last_triggered_at,
         "recovered_at": recovered_at,

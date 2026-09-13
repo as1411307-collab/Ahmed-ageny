@@ -60,7 +60,8 @@ class AlertingTests(unittest.TestCase):
             now=now + timedelta(seconds=120),
         )
         self.assertEqual(recovered["event_type"], "alert_recovered")
-        self.assertEqual(recovered["status"], "recovered")
+        self.assertEqual(recovered["status"], "healthy")
+        self.assertEqual(recovered["severity"], "healthy")
 
 
 if __name__ == "__main__":

@@ -108,8 +108,9 @@ GET /alerts/runtime
 
 The endpoint is owner-only and evaluates only service health, audit integrity,
 orphan/lease anomalies, recovery failures, and sustained failure-rate increases.
-It returns persisted states such as `healthy`, `warning`, `critical`, and
-`recovered`; delivery is currently `not_configured`. Rules use minimum sample
+It returns persisted states such as `healthy`, `warning`, and `critical`;
+`recovered` is recorded as a transition and the current state returns to
+`healthy`. Delivery is currently `not_configured`. Rules use minimum sample
 sizes and cooldowns, so repeated polling does not create an audit event unless a
 rule opens, escalates, recovers, or reaches a new suppression interval.
 
