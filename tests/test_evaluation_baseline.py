@@ -11,10 +11,13 @@ from evaluation_baseline import (
     compare_scoreboards,
     deterministic_grade,
     freeze_baseline_manifest,
+    build_evaluation_trace,
     import_real_cases,
     load_case_document,
     load_evaluation_cases,
     resolve_tool_expectation,
+    redact_evaluation_text,
+    validate_evaluation_trace,
     validate_evaluation_cases,
 )
 
@@ -44,6 +47,43 @@ class EvaluationBaselineTests(unittest.TestCase):
             if case["id"] == "web-current-official"
         )
         self.assertTrue(case_execution_capability(case)["executable_by_current_agent_tools"])
+
+    def test_trace_redacts_credentials_and_captures_hitl_boundary(self) -> None:
+        case = next(case for case in load_evaluation_cases() if case["id"] == "web-current-official")
+        self.assertNotIn("secret-value", redact_evaluation_text("Bearer secret-value"))
+        trace = build_evaluation_trace(
+            case=case,
+            run_id="run-1",
+            scope="WEB",
+            provider="gemini",
+            response_status=200,
+            response_payload={"reply": "Answer [1]"},
+            persisted={
+                "run": {
+                    "status": "succeeded",
+                    "model_name": "test-model",
+                    "created_at": "2026-09-13T00:00:00+00:00",
+                    "finished_at": "2026-09-13T00:00:01+00:00",
+                },
+                "tool_events": [
+                    {
+                        "tool_name": "web_search",
+                        "status": "success",
+                        "duration_ms": 10,
+                        "safe_metadata": {"candidate_count": 1},
+                    }
+                ],
+                "pending_actions": [],
+            },
+            latency_ms=1000,
+        )
+        validate_evaluation_trace(trace)
+        self.assertEqual(trace["execution_status"], "EXECUTED")
+        self.assertEqual(trace["tool_calls"][0]["name"], "web_search")
+
+    def test_malformed_trace_is_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            validate_evaluation_trace({"case_id": "broken"})
 
     def test_deterministic_grader_checks_tools_sources_and_schema(self) -> None:
         case = next(case for case in load_evaluation_cases() if case["id"] == "web-current-official")

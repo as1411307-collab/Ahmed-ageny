@@ -947,6 +947,57 @@ async def record_tool_event(
         raise PersistenceError("Could not persist the tool event.") from error
 
 
+async def load_run_evaluation_data(run_id: str) -> dict[str, Any]:
+    """Load only redaction-safe metadata needed to build an evaluation trace."""
+    pool = await _get_pool()
+    try:
+        async with pool.acquire() as connection:
+            run = await connection.fetchrow(
+                """
+                SELECT run_id, session_id, status, stage, recovery_status,
+                       provider_name, model_name, error_code, attempt_count,
+                       created_at, finished_at
+                FROM agent_runs
+                WHERE run_id = $1::uuid
+                """,
+                run_id,
+            )
+            tool_events = await connection.fetch(
+                """
+                SELECT tool_name, status, duration_ms, safe_metadata
+                FROM tool_events
+                WHERE run_id = $1::uuid
+                ORDER BY id ASC
+                """,
+                run_id,
+            )
+            pending_actions = await connection.fetch(
+                """
+                SELECT action_id, tool_name, risk_level, status, created_at,
+                       approved_at, rejected_at, executed_at
+                FROM pending_actions
+                WHERE run_id = $1::uuid
+                ORDER BY created_at ASC
+                """,
+                run_id,
+            )
+    except Exception as error:
+        raise PersistenceError("Could not load evaluation trace metadata.") from error
+
+    def row_dict(row: Any) -> dict[str, Any]:
+        value = dict(row)
+        for key, item in list(value.items()):
+            if hasattr(item, "isoformat"):
+                value[key] = item.isoformat()
+        return value
+
+    return {
+        "run": row_dict(run) if run is not None else None,
+        "tool_events": [row_dict(row) for row in tool_events],
+        "pending_actions": [row_dict(row) for row in pending_actions],
+    }
+
+
 async def record_run_checkpoint(
     *,
     session_id: str,

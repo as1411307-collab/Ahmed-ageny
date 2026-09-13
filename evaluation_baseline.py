@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import hashlib
 import json
+import os
+import re
+import time
+import urllib.error
+import urllib.request
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,6 +16,7 @@ from typing import Any
 from uuid import uuid4
 
 from agent_core import MAX_MODEL_REQUESTS, MAX_TOOL_CALLS, provider_model_name
+from persistence import load_run_evaluation_data
 
 
 DATASET_PATH = (
@@ -263,15 +270,272 @@ def case_execution_capability(case: dict[str, Any]) -> dict[str, Any]:
         for tool in case["required_tools"]
         if resolve_tool_expectation(tool)["status"] == "unmapped"
     ]
+    boundary_required = [
+        tool
+        for tool in case["required_tools"]
+        if resolve_tool_expectation(tool)["status"] == "boundary_only"
+    ]
     return {
         "executable_by_current_agent_tools": not (
-            unavailable_required or unmapped_required
+            unavailable_required or unmapped_required or boundary_required
         ),
         "unavailable_required_tools": unavailable_required,
         "unmapped_required_tools": unmapped_required,
+        "boundary_required_tools": boundary_required,
     }
 
 
+def redact_evaluation_text(value: str) -> str:
+    redacted = re.sub(
+        r"(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+",
+        r"\1[REDACTED]",
+        value,
+    )
+    redacted = re.sub(
+        r"(?i)\b(?:api[_-]?key|token|password|secret)\s*[:=]\s*\S+",
+        lambda match: match.group(0).split(match.group(0)[-1], 1)[0]
+        + "[REDACTED]",
+        redacted,
+    )
+    return redacted
+
+
+def _extract_trace_sources(final_output: str) -> list[str]:
+    sources = re.findall(r"\[(?:source:[^\]]+|\d+)\]", final_output)
+    sources.extend(re.findall(r"https?://[^\s)\]}]+", final_output))
+    return sorted(set(sources))
+
+
+def _post_chat_message(
+    *,
+    base_url: str,
+    owner_token: str,
+    payload: dict[str, Any],
+    timeout_seconds: float,
+) -> tuple[int, dict[str, Any]]:
+    request = urllib.request.Request(
+        f"{base_url.rstrip('/')}/chat/message",
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {owner_token}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+            body = response.read().decode("utf-8")
+            return response.status, json.loads(body) if body else {}
+    except urllib.error.HTTPError as error:
+        body = error.read().decode("utf-8", errors="replace")
+        try:
+            parsed = json.loads(body)
+        except json.JSONDecodeError:
+            parsed = {"error": "HTTP_ERROR"}
+        return error.code, parsed
+    except Exception as error:
+        return 0, {"error": type(error).__name__}
+
+
+def _case_scope(case: dict[str, Any]) -> str:
+    return "MY_FILES" if "my_files" in case["required_tools"] else "WEB"
+
+
+def build_evaluation_trace(
+    *,
+    case: dict[str, Any],
+    run_id: str,
+    scope: str,
+    provider: str,
+    response_status: int,
+    response_payload: dict[str, Any],
+    persisted: dict[str, Any],
+    latency_ms: int,
+) -> dict[str, Any]:
+    run = persisted.get("run") or {}
+    final_output = response_payload.get("reply")
+    if not isinstance(final_output, str):
+        final_output = ""
+    final_output = redact_evaluation_text(final_output)
+    tool_events = persisted.get("tool_events", [])
+    pending_actions = persisted.get("pending_actions", [])
+    tool_calls = [
+        {
+            "name": event.get("tool_name"),
+            "status": event.get("status"),
+            "duration_ms": event.get("duration_ms"),
+            "metadata": event.get("safe_metadata") or {},
+        }
+        for event in tool_events
+    ]
+    pending_events = [
+        {
+            "tool_name": event.get("tool_name"),
+            "risk_level": event.get("risk_level"),
+            "status": event.get("status"),
+        }
+        for event in pending_actions
+    ]
+    is_http_success = 200 <= response_status < 300
+    run_status = run.get("status")
+    if not is_http_success or run_status == "failed":
+        execution_status = "EXECUTION_FAILED"
+    elif pending_events:
+        execution_status = "HITL_BLOCKED"
+    else:
+        execution_status = "EXECUTED"
+    failure_reason = (
+        run.get("error_code")
+        or response_payload.get("error")
+        if execution_status == "EXECUTION_FAILED"
+        else None
+    )
+    if isinstance(failure_reason, str):
+        failure_reason = redact_evaluation_text(failure_reason)
+    return {
+        "case_id": case["id"],
+        "run_id": run_id,
+        "input": redact_evaluation_text(case["input"]),
+        "scope": scope,
+        "provider": provider,
+        "model": run.get("model_name") or provider_model_name(provider),
+        "final_output": final_output,
+        "output": {"answer": final_output},
+        "tool_calls": tool_calls,
+        "citations": _extract_trace_sources(final_output),
+        "sources": _extract_trace_sources(final_output),
+        "pending_action_events": pending_events,
+        "approval_requested": bool(pending_events),
+        "executed_without_approval": any(
+            event.get("status") in {"executing", "executed"}
+            for event in pending_actions
+        ),
+        "abstained": None,
+        "start_timestamp": run.get("created_at"),
+        "end_timestamp": run.get("finished_at"),
+        "latency_ms": latency_ms,
+        "run_attempts": run.get("attempt_count"),
+        "retries": None,
+        "tokens": None,
+        "cost": None,
+        "execution_status": execution_status,
+        "execution_error": failure_reason,
+    }
+
+
+async def execute_real_case(
+    case: dict[str, Any],
+    *,
+    base_url: str,
+    owner_token: str,
+    provider: str = "gemini",
+    timeout_seconds: float = 90.0,
+) -> dict[str, Any]:
+    capability = case_execution_capability(case)
+    if not capability["executable_by_current_agent_tools"]:
+        return {
+            "case_id": case["id"],
+            "execution_status": "NOT_EXECUTABLE_CAPABILITY_GAP",
+            "capability": capability,
+        }
+    session_id = str(uuid4())
+    run_id = str(uuid4())
+    scope = _case_scope(case)
+    payload = {
+        "message": case["input"],
+        "conversation_id": session_id,
+        "run_id": run_id,
+        "scope": scope,
+        "provider": provider,
+    }
+    started = time.perf_counter()
+    response_status, response_payload = await asyncio.to_thread(
+        _post_chat_message,
+        base_url=base_url,
+        owner_token=owner_token,
+        payload=payload,
+        timeout_seconds=timeout_seconds,
+    )
+    latency_ms = int((time.perf_counter() - started) * 1000)
+    try:
+        persisted = await load_run_evaluation_data(run_id)
+    except Exception as error:
+        persisted = {"run": None, "tool_events": [], "pending_actions": []}
+        response_payload = {
+            **response_payload,
+            "error": f"TRACE_PERSISTENCE_READ_{type(error).__name__}",
+        }
+    return build_evaluation_trace(
+        case=case,
+        run_id=run_id,
+        scope=scope,
+        provider=provider,
+        response_status=response_status,
+        response_payload=response_payload,
+        persisted=persisted,
+        latency_ms=latency_ms,
+    )
+
+
+async def run_real_cases(
+    cases: list[dict[str, Any]],
+    *,
+    base_url: str,
+    owner_token: str,
+    provider: str = "gemini",
+    timeout_seconds: float = 90.0,
+    case_ids: set[str] | None = None,
+    inter_case_delay_seconds: float = 0.0,
+) -> dict[str, Any]:
+    selected = [case for case in cases if case_ids is None or case["id"] in case_ids]
+    baseline_run_id = str(uuid4())
+    case_results: list[dict[str, Any]] = []
+    traces: dict[str, dict[str, Any]] = {}
+    for index, case in enumerate(selected):
+        if index and inter_case_delay_seconds > 0:
+            await asyncio.sleep(inter_case_delay_seconds)
+        result = await execute_real_case(
+            case,
+            base_url=base_url,
+            owner_token=owner_token,
+            provider=provider,
+            timeout_seconds=timeout_seconds,
+        )
+        case_results.append(result)
+        if result.get("execution_status") in {"EXECUTED", "HITL_BLOCKED"}:
+            traces[case["id"]] = result
+    executable_cases = [
+        case
+        for case in selected
+        if case_execution_capability(case)["executable_by_current_agent_tools"]
+    ]
+    scoreboard = build_scoreboard(executable_cases, traces)
+    coverage = Counter(result["execution_status"] for result in case_results)
+    rate_limited = sum(
+        result.get("execution_error") == "RATE_LIMITED"
+        for result in case_results
+    )
+    return {
+        "baseline_run_id": baseline_run_id,
+        "execution_config": {
+            "base_url": base_url,
+            "provider": provider,
+            "timeout_seconds": timeout_seconds,
+            "tool_call_limit": MAX_TOOL_CALLS,
+            "model_request_limit": MAX_MODEL_REQUESTS,
+        },
+        "coverage": {
+            "total_selected": len(selected),
+            "executed": coverage.get("EXECUTED", 0),
+            "execution_failed": coverage.get("EXECUTION_FAILED", 0),
+            "capability_gap": coverage.get("NOT_EXECUTABLE_CAPABILITY_GAP", 0),
+            "hitl_blocked": coverage.get("HITL_BLOCKED", 0),
+            "provider_rate_limited": rate_limited,
+        },
+        "cases": case_results,
+        "deterministic_scoreboard": scoreboard,
+        "semantic_grading": "NOT_RUN",
+    }
 def _observed_sources(trace: dict[str, Any]) -> list[str]:
     sources: list[str] = []
     for source in trace.get("sources", []):
@@ -284,6 +548,38 @@ def _observed_sources(trace: dict[str, Any]) -> list[str]:
                     sources.append(value)
                     break
     return sources
+
+
+def validate_evaluation_trace(trace: dict[str, Any]) -> None:
+    required_keys = {
+        "case_id",
+        "run_id",
+        "output",
+        "tool_calls",
+        "citations",
+        "sources",
+        "execution_status",
+    }
+    if not isinstance(trace, dict) or not required_keys <= trace.keys():
+        raise ValueError("Evaluation trace is missing required fields.")
+    if not isinstance(trace["output"], dict) or not isinstance(
+        trace["output"].get("answer"), str
+    ):
+        raise ValueError("Evaluation trace output must contain an answer string.")
+    if not isinstance(trace["tool_calls"], list):
+        raise ValueError("Evaluation trace tool_calls must be a list.")
+    if not isinstance(trace["citations"], list) or not isinstance(
+        trace["sources"], list
+    ):
+        raise ValueError("Evaluation trace citations and sources must be lists.")
+    if trace["execution_status"] not in {
+        "EXECUTED",
+        "EXECUTION_FAILED",
+        "HITL_BLOCKED",
+        "NOT_EXECUTABLE_CAPABILITY_GAP",
+        "INVALID_CASE",
+    }:
+        raise ValueError("Evaluation trace has an invalid execution status.")
 
 
 def deterministic_grade(
@@ -300,7 +596,18 @@ def deterministic_grade(
     output = trace.get("output")
     output_fields = set(output) if isinstance(output, dict) else set()
 
-    check_results = {
+    abstention_check: bool | str
+    if checks["abstention_required"]:
+        abstention_check = (
+            True
+            if trace.get("abstained") is True
+            else "NOT_AVAILABLE"
+            if trace.get("abstained") is None
+            else False
+        )
+    else:
+        abstention_check = True
+    check_results: dict[str, bool | str] = {
         "required_tools": required_tools <= tools,
         "forbidden_tools": not (forbidden_tools & tools),
         "citations": (
@@ -325,13 +632,12 @@ def deterministic_grade(
             if checks["approval_required"]
             else not bool(trace.get("executed_without_approval"))
         ),
-        "abstention": (
-            bool(trace.get("abstained"))
-            if checks["abstention_required"]
-            else True
-        ),
+        "abstention": abstention_check,
     }
-    passed = all(check_results.values())
+    passed = all(value is True for value in check_results.values())
+    metric_status = lambda value: "PASS" if value is True else (
+        "NOT_DETERMINED" if value == "NOT_AVAILABLE" else "FAIL"
+    )
     return {
         "case_id": case["id"],
         "category": case["category"],
@@ -346,7 +652,7 @@ def deterministic_grade(
                 else "FAIL"
             ),
             "retrieval_source_correctness": (
-                "PASS" if check_results["expected_sources"] else "FAIL"
+                metric_status(check_results["expected_sources"])
             ),
             "citation_correctness": (
                 "PASS"
@@ -355,12 +661,8 @@ def deterministic_grade(
             ),
             "grounding": "NOT_RUN",
             "instruction_adherence": "NOT_RUN",
-            "abstention": (
-                "PASS" if check_results["abstention"] else "FAIL"
-            ),
-            "hitl_boundary": (
-                "PASS" if check_results["approval_boundary"] else "FAIL"
-            ),
+            "abstention": metric_status(check_results["abstention"]),
+            "hitl_boundary": metric_status(check_results["approval_boundary"]),
         },
         "semantic_status": "NOT_RUN",
         "latency_ms": trace.get("latency_ms"),
@@ -376,7 +678,10 @@ def build_scoreboard(
     traces: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     results = [
-        deterministic_grade(case, traces[case["id"]])
+        (
+            validate_evaluation_trace(traces[case["id"]]),
+            deterministic_grade(case, traces[case["id"]]),
+        )[1]
         for case in cases
         if case["id"] in traces
     ]
@@ -516,8 +821,25 @@ def main() -> None:
     parser.add_argument("--manifest", action="store_true")
     parser.add_argument("--validate-real", type=Path)
     parser.add_argument("--import-real", type=Path)
+    parser.add_argument("--probe-real", type=Path)
+    parser.add_argument("--run-real", type=Path)
+    parser.add_argument("--case-id", action="append", dest="case_ids")
+    parser.add_argument(
+        "--base-url",
+        default=os.environ.get("AHMED_EVAL_BASE_URL", "http://127.0.0.1:8000"),
+    )
+    parser.add_argument(
+        "--provider",
+        default="gemini",
+        choices=("gemini", "openai"),
+    )
+    parser.add_argument("--timeout-seconds", type=float, default=90.0)
+    parser.add_argument("--inter-case-delay-seconds", type=float, default=0.0)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
+    live_commands = [args.probe_real, args.run_real]
+    if sum(value is not None for value in live_commands) > 1:
+        parser.error("use only one of --probe-real or --run-real")
     if args.validate_real:
         version, cases = load_case_document(args.validate_real)
         print(json.dumps({
@@ -534,6 +856,63 @@ def main() -> None:
             ensure_ascii=False,
             indent=2,
         ))
+        return
+    live_path = args.probe_real or args.run_real
+    if live_path:
+        owner_token = os.environ.get("AHMED_OWNER_TOKEN")
+        if not owner_token:
+            parser.error("AHMED_OWNER_TOKEN is required for live evaluation.")
+        version, cases = load_case_document(live_path, require_baseline_size=True)
+        selected_ids = set(args.case_ids or [])
+        if args.probe_real and not selected_ids:
+            selected_ids = {
+                case["id"]
+                for case in cases
+                if case_execution_capability(case)[
+                    "executable_by_current_agent_tools"
+                ]
+            }
+            selected_ids = set(sorted(selected_ids)[:3])
+        result = asyncio.run(
+            run_real_cases(
+                cases,
+                base_url=args.base_url,
+                owner_token=owner_token,
+                provider=args.provider,
+                timeout_seconds=args.timeout_seconds,
+                case_ids=selected_ids or None,
+                inter_case_delay_seconds=args.inter_case_delay_seconds,
+            )
+        )
+        result.update(
+            {
+                "dataset_version": version,
+                "dataset_sha256": hashlib.sha256(live_path.read_bytes()).hexdigest(),
+                "real_case_count": len(cases),
+                "semantic_grading": "NOT_RUN",
+                "live_provider_run": True,
+            }
+        )
+        output_path = args.output or Path(
+            "baseline-probe-v1.json" if args.probe_real else "baseline-real-v1.json"
+        )
+        output_path.write_text(
+            json.dumps(result, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        print(
+            json.dumps(
+                {
+                    "status": "WRITTEN",
+                    "output": str(output_path),
+                    "baseline_run_id": result["baseline_run_id"],
+                    "coverage": result["coverage"],
+                    "semantic_grading": "NOT_RUN",
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
         return
     cases = load_evaluation_cases()
     value = freeze_baseline_manifest() if args.manifest else {
