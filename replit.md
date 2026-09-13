@@ -82,3 +82,6 @@ Never place secret values in source files, logs, browser code, or chat.
 - Retention uses 30-day succeeded-checkpoint and 90-day failed/orphaned-
   checkpoint windows. Cleanup never deletes `audit_events`; test cleanup is
   limited to the explicit `fault_injection` and `probe` scopes.
+- `/alerts/runtime` evaluates a small owner-only operational policy for health,
+  audit integrity, orphaning/leases, recovery failures, and sustained failure
+  rate. It persists transitions but does not deliver external notifications.

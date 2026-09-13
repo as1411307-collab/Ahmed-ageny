@@ -12,3 +12,4 @@
 - [Run state checkpoints](run-state-checkpoints.md) — use finite persisted stages and safe metadata instead of open-ended agent orchestration.
 - [Runtime observability](runtime-observability.md) — expose bounded owner-only aggregate metrics from persisted run and audit data.
 - [Retention policy](retention-policy.md) — preserve hash-linked audit history while cleaning aged checkpoints and explicit test scopes.
+- [Minimal operational alerting](alerting.md) — evaluate a small persisted policy separately from notification delivery.

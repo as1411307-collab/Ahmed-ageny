@@ -75,6 +75,9 @@ The response includes total, completed, failed, active, and currently orphaned
 runs; average duration; lease expirations; recovery attempts; idempotency hits;
 and counts by execution stage. The maximum window is 720 hours, and prompts,
 provider payloads, and secrets are not returned.
+These counts are windowed by `hours`; they should not be compared directly with
+historical totals from storage or `/doctor` unless the time window and run
+definition match.
 
 Retention is intentionally conservative:
 
@@ -96,6 +99,19 @@ The first cleanup mode removes only checkpoints that crossed their retention
 age. The second additionally removes operational rows belonging to the explicit
 test scopes. Both modes append an auditable cleanup event and report the
 preserved audit-event count.
+
+Minimal operational alerts are evaluated separately from delivery:
+
+```text
+GET /alerts/runtime
+```
+
+The endpoint is owner-only and evaluates only service health, audit integrity,
+orphan/lease anomalies, recovery failures, and sustained failure-rate increases.
+It returns persisted states such as `healthy`, `warning`, `critical`, and
+`recovered`; delivery is currently `not_configured`. Rules use minimum sample
+sizes and cooldowns, so repeated polling does not create an audit event unless a
+rule opens, escalates, recovers, or reaches a new suppression interval.
 
 For a persisted run, inspect its owner-only state trace with:
 

@@ -79,4 +79,7 @@ server.py
 - Retention deletes only aged checkpoints or explicitly tagged test-scope
   operational rows. The hash-linked audit event table is preserved; cleanup
   records its own aggregate event instead of deleting audit history.
+- Alert evaluation is separate from notification delivery. Persisted rule state
+  uses cooldowns and transition events, while the current notifier is
+  intentionally unconfigured.
 - The registered Node artifact is not imported by the Python runtime.
