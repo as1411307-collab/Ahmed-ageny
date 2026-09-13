@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import os
@@ -490,7 +491,10 @@ def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[Agent
         if not ctx.deps.conversation_id or not ctx.deps.run_id:
             raise RuntimeError("Sensitive actions require a persisted session and run.")
         action_id = str(uuid4())
-        await create_pending_action(
+        idempotency_key = hashlib.sha256(
+            f"{ctx.deps.run_id}:test_sensitive_action:{reason.strip()}".encode("utf-8")
+        ).hexdigest()
+        pending_action = await create_pending_action(
             action_id=action_id,
             session_id=ctx.deps.conversation_id,
             run_id=ctx.deps.run_id,
@@ -498,7 +502,9 @@ def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[Agent
             tool_name=policy.tool_name,
             risk_level=policy.risk_level.value,
             arguments={"reason": reason.strip()},
+            idempotency_key=idempotency_key,
         )
+        action_id = str(pending_action["action_id"])
         if ctx.deps.tool_event_recorder is not None:
             await ctx.deps.tool_event_recorder(
                 policy.tool_name,

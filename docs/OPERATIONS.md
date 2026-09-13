@@ -74,6 +74,17 @@ GET /runs/{run_id}/checkpoints
 The trace identifies whether a failure occurred during context loading, model
 execution, response persistence, or completion without returning prompt text.
 
+Recovery is explicit and owner-only:
+
+```text
+GET  /runs/{run_id}/recovery
+POST /runs/{run_id}/resume
+```
+
+`POST /resume` only completes a response whose messages were already persisted.
+Runs interrupted during model execution return a safe retry/manual-review result
+instead of invoking the model again.
+
 ## Failure diagnosis
 
 - `401`: check the exact `AHMED_OWNER_TOKEN` secret name and bearer header.
@@ -81,6 +92,8 @@ execution, response persistence, or completion without returning prompt text.
 - persistence failure: check PostgreSQL availability and `/doctor`.
 - an incomplete run: inspect `/runs/{run_id}/checkpoints` before changing model
   or tool code.
+- a recovery conflict: inspect `/runs/{run_id}/recovery`; an active lease means
+  another worker still owns the run.
 - empty search results: distinguish provider no-results from provider failure
   in the returned provenance and doctor report.
 - embedding failure: continue with FTS and inspect the embedding health field.

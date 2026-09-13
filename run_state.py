@@ -14,6 +14,13 @@ class RunStage(StrEnum):
     FAILED = "failed"
 
 
+class RecoveryAction(StrEnum):
+    COMPLETE_PERSISTED_TAIL = "complete_persisted_tail"
+    RETRY_NEW_RUN = "retry_new_run"
+    MANUAL_REVIEW = "manual_review"
+    NOOP = "noop"
+
+
 _ALLOWED_TRANSITIONS: dict[RunStage, frozenset[RunStage]] = {
     RunStage.CREATED: frozenset({RunStage.CONTEXT_LOADED, RunStage.FAILED}),
     RunStage.CONTEXT_LOADED: frozenset({RunStage.MODEL_RUNNING, RunStage.FAILED}),
@@ -23,6 +30,16 @@ _ALLOWED_TRANSITIONS: dict[RunStage, frozenset[RunStage]] = {
     RunStage.COMPLETED: frozenset(),
     RunStage.FAILED: frozenset(),
 }
+
+
+def recovery_action(stage: RunStage) -> RecoveryAction:
+    if stage in {RunStage.RESPONSE_READY, RunStage.RESPONSE_PERSISTED}:
+        return RecoveryAction.COMPLETE_PERSISTED_TAIL
+    if stage in {RunStage.CREATED, RunStage.CONTEXT_LOADED}:
+        return RecoveryAction.RETRY_NEW_RUN
+    if stage is RunStage.MODEL_RUNNING:
+        return RecoveryAction.MANUAL_REVIEW
+    return RecoveryAction.NOOP
 
 
 @dataclass

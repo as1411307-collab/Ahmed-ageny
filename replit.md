@@ -73,3 +73,6 @@ Never place secret values in source files, logs, browser code, or chat.
 - FastEmbed is lazy-loaded and falls back to FTS when unavailable.
 - PostgreSQL schema tables must exist before persistence health checks can pass.
 - `AHMED_OWNER_TOKEN` must be restored before authenticated route or MCP E2E tests.
+- Run recovery is owner-only and lease-based. `/runs/{run_id}/resume` completes
+  only persisted response tails; it never replays a `model_running` call
+  automatically.

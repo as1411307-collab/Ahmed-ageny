@@ -1,6 +1,8 @@
 import os
+import asyncio
 import logging
 import json
+import socket
 import time
 from uuid import UUID, uuid4
 from pathlib import Path
@@ -30,17 +32,24 @@ from persistence import (
     claim_pending_action_execution,
     complete_pending_action,
     create_run,
+    claim_orphaned_run,
+    default_worker_id,
     ensure_session,
     finish_run,
+    load_run_recovery,
     load_run_checkpoints,
     load_message_history,
+    mark_orphaned_runs,
     reject_pending_action,
     record_tool_event,
     record_run_checkpoint,
+    release_orphaned_run,
+    renew_run_lease,
+    run_message_count,
 )
 from config import MAX_UPLOAD_BYTES
 from my_files import SUPPORTED_EXTENSIONS, extension_for, ingest_document, sanitize_filename
-from run_state import RunStage, RunState
+from run_state import RecoveryAction, RunStage, RunState, recovery_action
 from skill_tools import register_skill_tools
 
 
@@ -52,6 +61,25 @@ class PingResult(TypedDict):
 server = MCPServer("Ahmed Agent")
 WEB_DIR = Path(__file__).parent / "web"
 logger = logging.getLogger("ahmed_agent")
+WORKER_ID = default_worker_id()
+
+
+async def _run_lease_heartbeat(run_id: str) -> None:
+    try:
+        while True:
+            await asyncio.sleep(30)
+            renewed = await renew_run_lease(run_id=run_id, worker_id=WORKER_ID)
+            if not renewed:
+                logger.warning("Run lease is no longer owned run_id=%s", run_id)
+                return
+    except asyncio.CancelledError:
+        raise
+    except (PersistenceError, ValueError) as error:
+        logger.error(
+            "Run lease heartbeat failed run_id=%s error_type=%s",
+            run_id,
+            type(error).__name__,
+        )
 
 
 class OwnerMCPAuthMiddleware:
@@ -62,6 +90,9 @@ class OwnerMCPAuthMiddleware:
         self.path = path.rstrip("/") or "/"
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope.get("type") == "lifespan":
+            await self._handle_lifespan(receive, send)
+            return
         request_path = str(scope.get("path", ""))
         is_mcp_request = request_path == self.path or request_path.startswith(
             f"{self.path}/"
@@ -87,6 +118,24 @@ class OwnerMCPAuthMiddleware:
             await response(scope, receive, send)
             return
         await self.app(scope, receive, send)
+
+    async def _handle_lifespan(self, receive: Receive, send: Send) -> None:
+        while True:
+            message = await receive()
+            if message.get("type") == "lifespan.startup":
+                try:
+                    orphaned = await mark_orphaned_runs()
+                    if orphaned:
+                        logger.warning("Marked orphaned runs count=%d", len(orphaned))
+                except PersistenceError as error:
+                    logger.error(
+                        "Startup run recovery scan failed error_type=%s",
+                        type(error).__name__,
+                    )
+                await send({"type": "lifespan.startup.complete"})
+            elif message.get("type") == "lifespan.shutdown":
+                await send({"type": "lifespan.shutdown.complete"})
+                return
 
 
 def _structured_log(
@@ -199,6 +248,176 @@ async def doctor_route(request: Request) -> Response:
         probe_search=request.query_params.get("probe") == "1"
     )
     return JSONResponse(report)
+
+
+async def _load_recovery_state(run_id: str) -> dict[str, object] | None:
+    await mark_orphaned_runs()
+    return await load_run_recovery(run_id)
+
+
+@server.custom_route("/runs/{run_id}/recovery", methods=["GET"])
+async def run_recovery_route(request: Request) -> Response:
+    user, status_code, error_code = await authorize_owner(
+        request,
+        endpoint="/runs/{run_id}/recovery",
+    )
+    if user is None:
+        return JSONResponse(
+            {"error": "owner authentication required", "code": error_code},
+            status_code=status_code,
+        )
+    try:
+        run_id = _request_uuid(request.path_params.get("run_id"), "run_id")
+        recovery = await _load_recovery_state(run_id)
+    except (ValueError, PersistenceError):
+        return JSONResponse(
+            {"error": "تعذر تحميل حالة استرداد التنفيذ."},
+            status_code=400,
+        )
+    if recovery is None:
+        return JSONResponse({"error": "التنفيذ غير موجود."}, status_code=404)
+    try:
+        action = recovery_action(RunStage(str(recovery["stage"])))
+    except ValueError:
+        action = RecoveryAction.MANUAL_REVIEW
+    return JSONResponse(
+        {
+            "run": recovery,
+            "recovery_action": action.value,
+            "safe_to_resume": action is RecoveryAction.COMPLETE_PERSISTED_TAIL,
+        }
+    )
+
+
+@server.custom_route("/runs/{run_id}/resume", methods=["POST"])
+async def run_resume_route(request: Request) -> Response:
+    user, status_code, error_code = await authorize_owner(
+        request,
+        endpoint="/runs/{run_id}/resume",
+    )
+    if user is None:
+        return JSONResponse(
+            {"error": "owner authentication required", "code": error_code},
+            status_code=status_code,
+        )
+    try:
+        run_id = _request_uuid(request.path_params.get("run_id"), "run_id")
+        recovery = await _load_recovery_state(run_id)
+    except (ValueError, PersistenceError):
+        return JSONResponse(
+            {"error": "تعذر تحميل حالة استرداد التنفيذ."},
+            status_code=400,
+        )
+    if recovery is None:
+        return JSONResponse({"error": "التنفيذ غير موجود."}, status_code=404)
+
+    status = str(recovery["status"])
+    if status == "succeeded":
+        return JSONResponse({"status": "already_completed", "run": recovery})
+    if status == "failed":
+        return JSONResponse(
+            {
+                "status": "terminal_failure",
+                "code": "NEW_RUN_REQUIRED",
+                "run": recovery,
+            },
+            status_code=409,
+        )
+    if status == "running":
+        return JSONResponse(
+            {
+                "status": "busy",
+                "code": "LEASE_ACTIVE",
+                "message": "التنفيذ ما زال مملوكًا لعامل نشط.",
+            },
+            status_code=409,
+        )
+
+    try:
+        stage = RunStage(str(recovery["stage"]))
+        action = recovery_action(stage)
+    except ValueError:
+        return JSONResponse(
+            {"status": "manual_review", "code": "UNKNOWN_RUN_STAGE"},
+            status_code=409,
+        )
+
+    if action is RecoveryAction.RETRY_NEW_RUN:
+        return JSONResponse(
+            {
+                "status": "retry_new_run",
+                "code": "MODEL_RETRY_REQUIRES_NEW_RUN",
+                "message": "لا تتم إعادة استدعاء النموذج تلقائيًا من هذه المرحلة.",
+                "run": recovery,
+            },
+            status_code=409,
+        )
+    if action is RecoveryAction.MANUAL_REVIEW:
+        return JSONResponse(
+            {
+                "status": "manual_review",
+                "code": "MODEL_EXECUTION_NOT_IDEMPOTENT",
+                "message": "لا يمكن إعادة تشغيل مرحلة النموذج تلقائيًا بأمان.",
+                "run": recovery,
+            },
+            status_code=409,
+        )
+    if action is RecoveryAction.NOOP:
+        return JSONResponse({"status": "no_op", "run": recovery})
+
+    worker_id = f"{WORKER_ID}:recovery"
+    claimed = await claim_orphaned_run(
+        run_id=run_id,
+        worker_id=worker_id,
+    )
+    if claimed is None:
+        return JSONResponse(
+            {"status": "busy", "code": "RECOVERY_CLAIM_FAILED"},
+            status_code=409,
+        )
+
+    try:
+        message_count = await run_message_count(run_id)
+        if stage is RunStage.RESPONSE_READY and message_count == 0:
+            await release_orphaned_run(run_id=run_id, worker_id=worker_id)
+            return JSONResponse(
+                {
+                    "status": "retry_new_run",
+                    "code": "RESPONSE_NOT_PERSISTED",
+                    "message": "لم تُحفظ الرسالة؛ يلزم تنفيذ جديد بدل تكرار استدعاء النموذج.",
+                },
+                status_code=409,
+            )
+        if stage is RunStage.RESPONSE_READY:
+            await record_run_checkpoint(
+                session_id=str(claimed["session_id"]),
+                run_id=run_id,
+                stage=RunStage.RESPONSE_PERSISTED.value,
+                state={"message_count": message_count, "recovered": True},
+            )
+        await finish_run(run_id=run_id, status="succeeded")
+        await record_run_checkpoint(
+            session_id=str(claimed["session_id"]),
+            run_id=run_id,
+            stage=RunStage.COMPLETED.value,
+            state={"message_count": message_count, "recovered": True},
+        )
+    except PersistenceError:
+        try:
+            await release_orphaned_run(run_id=run_id, worker_id=worker_id)
+        except PersistenceError:
+            logger.error("Failed to release run after recovery failure")
+        return JSONResponse(
+            {"status": "recovery_failed", "code": "RECOVERY_PERSISTENCE_ERROR"},
+            status_code=502,
+        )
+    return JSONResponse(
+        {
+            "status": "recovered",
+            "message_count": message_count,
+            "run_id": run_id,
+        }
+    )
 
 
 @server.custom_route("/runs/{run_id}/checkpoints", methods=["GET"])
@@ -519,6 +738,7 @@ async def chat_message(request: Request) -> Response:
             user_prompt=message,
             provider_name=provider,
             model_name=provider_model_name(provider),  # type: ignore[arg-type]
+            worker_id=WORKER_ID,
         )
         run_state = RunState()
         await save_checkpoint(
@@ -553,6 +773,12 @@ async def chat_message(request: Request) -> Response:
         except PersistenceError as error:
             logger.error("Tool event persistence failed error_type=%s", type(error).__name__)
 
+    lease_heartbeat = asyncio.create_task(_run_lease_heartbeat(run_uuid))
+
+    async def stop_lease_heartbeat() -> None:
+        lease_heartbeat.cancel()
+        await asyncio.gather(lease_heartbeat, return_exceptions=True)
+
     try:
         await save_checkpoint(
             RunStage.MODEL_RUNNING,
@@ -569,6 +795,7 @@ async def chat_message(request: Request) -> Response:
             tool_event_recorder=save_tool_event,
         )
     except AgentCoreError as error:
+        await stop_lease_heartbeat()
         provider_status = error.provider_status or error.provider_code or type(error).__name__
         try:
             await finish_run(
@@ -606,6 +833,7 @@ async def chat_message(request: Request) -> Response:
             status_code=503 if provider_status == "RATE_LIMITED" else 502,
         )
     except Exception as error:
+        await stop_lease_heartbeat()
         try:
             await finish_run(
                 run_id=run_uuid,
@@ -633,6 +861,7 @@ async def chat_message(request: Request) -> Response:
             status_code=502,
         )
 
+    await stop_lease_heartbeat()
     final_text = str(result.output).strip()
     new_messages_json = result.new_messages_json()
     await save_checkpoint(
@@ -645,11 +874,11 @@ async def chat_message(request: Request) -> Response:
             run_id=run_uuid,
             new_messages_json=new_messages_json,
         )
-        await finish_run(run_id=run_uuid, status="succeeded")
         await save_checkpoint(
             RunStage.RESPONSE_PERSISTED,
             {"message_count": message_count},
         )
+        await finish_run(run_id=run_uuid, status="succeeded")
         await save_checkpoint(
             RunStage.COMPLETED,
             {"message_count": message_count},

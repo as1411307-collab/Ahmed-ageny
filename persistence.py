@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 import os
+import socket
 from collections.abc import Sequence
 from typing import Any
 
@@ -80,6 +81,25 @@ async def _ensure_policy_schema(pool: asyncpg.Pool) -> None:
 
                 CREATE INDEX IF NOT EXISTS agent_run_checkpoints_run_idx
                     ON agent_run_checkpoints (run_id, checkpoint_id);
+
+                ALTER TABLE agent_runs
+                    ADD COLUMN IF NOT EXISTS stage TEXT NOT NULL DEFAULT 'created';
+                ALTER TABLE agent_runs
+                    ADD COLUMN IF NOT EXISTS worker_id TEXT;
+                ALTER TABLE agent_runs
+                    ADD COLUMN IF NOT EXISTS lease_expires_at TIMESTAMPTZ;
+                ALTER TABLE agent_runs
+                    ADD COLUMN IF NOT EXISTS lease_version BIGINT NOT NULL DEFAULT 0;
+                ALTER TABLE agent_runs
+                    ADD COLUMN IF NOT EXISTS attempt_count INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE agent_runs
+                    ADD COLUMN IF NOT EXISTS last_checkpoint_at TIMESTAMPTZ;
+
+                ALTER TABLE pending_actions
+                    ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
+                CREATE UNIQUE INDEX IF NOT EXISTS pending_actions_run_idempotency_idx
+                    ON pending_actions (run_id, idempotency_key)
+                    WHERE idempotency_key IS NOT NULL;
                 """
             )
             _schema_ready = True
@@ -165,7 +185,11 @@ async def create_run(
     user_prompt: str,
     provider_name: str,
     model_name: str,
+    worker_id: str | None = None,
+    lease_seconds: int = 120,
 ) -> None:
+    if lease_seconds < 30 or lease_seconds > 900:
+        raise ValueError("invalid run lease")
     pool = await _get_pool()
     try:
         await pool.execute(
@@ -176,15 +200,34 @@ async def create_run(
                 status,
                 user_prompt,
                 provider_name,
-                model_name
+                model_name,
+                stage,
+                worker_id,
+                lease_expires_at,
+                lease_version,
+                attempt_count
             )
-            VALUES ($1::uuid, $2::uuid, 'running', $3, $4, $5)
+            VALUES (
+                $1::uuid,
+                $2::uuid,
+                'running',
+                $3,
+                $4,
+                $5,
+                'created',
+                $6,
+                NOW() + ($7::integer * INTERVAL '1 second'),
+                1,
+                1
+            )
             """,
             run_id,
             session_id,
             user_prompt,
             provider_name,
             model_name,
+            worker_id,
+            lease_seconds,
         )
     except Exception as error:
         raise PersistenceError("Could not create the agent run.") from error
@@ -203,7 +246,11 @@ async def finish_run(
         await pool.execute(
             """
             UPDATE agent_runs
-            SET status = $2, error_code = $3, finished_at = NOW()
+            SET status = $2,
+                error_code = $3,
+                finished_at = NOW(),
+                worker_id = NULL,
+                lease_expires_at = NULL
             WHERE run_id = $1::uuid
             """,
             run_id,
@@ -212,6 +259,166 @@ async def finish_run(
         )
     except Exception as error:
         raise PersistenceError("Could not finish the agent run.") from error
+
+
+def default_worker_id() -> str:
+    return f"{socket.gethostname()}:{os.getpid()}"
+
+
+async def renew_run_lease(
+    *,
+    run_id: str,
+    worker_id: str,
+    lease_seconds: int = 120,
+) -> bool:
+    if not worker_id or lease_seconds < 30 or lease_seconds > 900:
+        raise ValueError("invalid run lease")
+    pool = await _get_pool()
+    try:
+        updated = await pool.execute(
+            """
+            UPDATE agent_runs
+            SET lease_expires_at = NOW() + ($3::integer * INTERVAL '1 second'),
+                lease_version = lease_version + 1
+            WHERE run_id = $1::uuid
+              AND status = 'running'
+              AND worker_id = $2
+              AND lease_expires_at > NOW()
+            """,
+            run_id,
+            worker_id,
+            lease_seconds,
+        )
+    except Exception as error:
+        raise PersistenceError("Could not renew the agent run lease.") from error
+    return updated.endswith("1")
+
+
+async def mark_orphaned_runs() -> list[str]:
+    pool = await _get_pool()
+    try:
+        rows = await pool.fetch(
+            """
+            UPDATE agent_runs
+            SET status = 'orphaned',
+                error_code = 'WORKER_LOST',
+                worker_id = NULL,
+                lease_expires_at = NULL,
+                finished_at = NULL
+            WHERE status = 'running'
+              AND lease_expires_at IS NOT NULL
+              AND lease_expires_at <= NOW()
+            RETURNING run_id
+            """
+        )
+    except Exception as error:
+        raise PersistenceError("Could not mark orphaned agent runs.") from error
+    return [str(row["run_id"]) for row in rows]
+
+
+async def load_run_recovery(run_id: str) -> dict[str, Any] | None:
+    pool = await _get_pool()
+    try:
+        row = await pool.fetchrow(
+            """
+            SELECT run_id, session_id, status, stage, provider_name, model_name,
+                   error_code, worker_id, lease_expires_at, attempt_count,
+                   created_at, finished_at
+            FROM agent_runs
+            WHERE run_id = $1::uuid
+            """,
+            run_id,
+        )
+    except Exception as error:
+        raise PersistenceError("Could not load run recovery state.") from error
+    if row is None:
+        return None
+    return {
+        "run_id": str(row["run_id"]),
+        "session_id": str(row["session_id"]),
+        "status": row["status"],
+        "stage": row["stage"],
+        "provider": row["provider_name"],
+        "model": row["model_name"],
+        "error_code": row["error_code"],
+        "worker_id": row["worker_id"],
+        "lease_expires_at": (
+            row["lease_expires_at"].isoformat() if row["lease_expires_at"] else None
+        ),
+        "attempt_count": row["attempt_count"],
+        "created_at": row["created_at"].isoformat(),
+        "finished_at": row["finished_at"].isoformat() if row["finished_at"] else None,
+    }
+
+
+async def claim_orphaned_run(
+    *,
+    run_id: str,
+    worker_id: str,
+    lease_seconds: int = 120,
+) -> dict[str, Any] | None:
+    if not worker_id or lease_seconds < 30 or lease_seconds > 900:
+        raise ValueError("invalid run lease")
+    pool = await _get_pool()
+    try:
+        row = await pool.fetchrow(
+            """
+            UPDATE agent_runs
+            SET status = 'running',
+                worker_id = $2,
+                lease_expires_at = NOW() + ($3::integer * INTERVAL '1 second'),
+                lease_version = lease_version + 1,
+                attempt_count = attempt_count + 1
+            WHERE run_id = $1::uuid
+              AND (
+                  status = 'orphaned'
+                  OR (status = 'running' AND lease_expires_at <= NOW())
+              )
+              AND (lease_expires_at IS NULL OR lease_expires_at <= NOW())
+            RETURNING run_id, session_id, status, stage, provider_name, model_name,
+                      error_code, attempt_count
+            """,
+            run_id,
+            worker_id,
+            lease_seconds,
+        )
+    except Exception as error:
+        raise PersistenceError("Could not claim the orphaned run.") from error
+    return dict(row) if row else None
+
+
+async def release_orphaned_run(*, run_id: str, worker_id: str) -> bool:
+    pool = await _get_pool()
+    try:
+        updated = await pool.execute(
+            """
+            UPDATE agent_runs
+            SET status = 'orphaned',
+                error_code = 'RECOVERY_REQUIRES_NEW_RUN',
+                worker_id = NULL,
+                lease_expires_at = NULL
+            WHERE run_id = $1::uuid
+              AND status = 'running'
+              AND worker_id = $2
+            """,
+            run_id,
+            worker_id,
+        )
+    except Exception as error:
+        raise PersistenceError("Could not release the recovered agent run.") from error
+    return updated.endswith("1")
+
+
+async def run_message_count(run_id: str) -> int:
+    pool = await _get_pool()
+    try:
+        count = await pool.fetchval(
+            "SELECT COUNT(*) FROM agent_messages WHERE run_id = $1::uuid",
+            run_id,
+        )
+    except Exception as error:
+        raise PersistenceError("Could not inspect persisted run messages.") from error
+    return int(count or 0)
 
 
 async def append_new_messages(
@@ -342,6 +549,16 @@ async def record_run_checkpoint(
                     run_id,
                     stage,
                     state_json,
+                )
+                await connection.execute(
+                    """
+                    UPDATE agent_runs
+                    SET stage = $2,
+                        last_checkpoint_at = NOW()
+                    WHERE run_id = $1::uuid
+                    """,
+                    run_id,
+                    stage,
                 )
                 await _append_audit_event(
                     connection,
@@ -501,6 +718,7 @@ async def create_pending_action(
     tool_name: str,
     risk_level: str,
     arguments: dict[str, Any],
+    idempotency_key: str | None = None,
 ) -> dict[str, Any]:
     pool = await _get_pool()
     try:
@@ -515,9 +733,13 @@ async def create_pending_action(
                         user_id,
                         tool_name,
                         risk_level,
-                        arguments_json
+                        arguments_json,
+                        idempotency_key
                     )
-                    VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7::jsonb)
+                    VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7::jsonb, $8)
+                    ON CONFLICT (run_id, idempotency_key)
+                    WHERE idempotency_key IS NOT NULL
+                    DO NOTHING
                     """,
                     action_id,
                     session_id,
@@ -526,7 +748,21 @@ async def create_pending_action(
                     tool_name,
                     risk_level,
                     json.dumps(arguments, separators=(",", ":")),
+                    idempotency_key,
                 )
+                existing = await connection.fetchrow(
+                    """
+                    SELECT action_id, session_id, run_id, user_id, tool_name,
+                           risk_level, status, created_at, expires_at
+                    FROM pending_actions
+                    WHERE run_id = $1::uuid
+                      AND idempotency_key = $2
+                    """,
+                    run_id,
+                    idempotency_key,
+                ) if idempotency_key else None
+                if existing is not None:
+                    return dict(existing)
                 await _append_audit_event(
                     connection,
                     session_id=session_id,

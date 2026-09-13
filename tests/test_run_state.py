@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from run_state import RunStage, RunState
+from run_state import RecoveryAction, RunStage, RunState, recovery_action
 
 
 class RunStateTests(unittest.TestCase):
@@ -30,6 +30,28 @@ class RunStateTests(unittest.TestCase):
         state = RunState()
         with self.assertRaises(ValueError):
             state.transition(RunStage.COMPLETED)
+
+    def test_recovery_only_completes_persisted_tail(self) -> None:
+        self.assertEqual(
+            recovery_action(RunStage.RESPONSE_READY),
+            RecoveryAction.COMPLETE_PERSISTED_TAIL,
+        )
+        self.assertEqual(
+            recovery_action(RunStage.RESPONSE_PERSISTED),
+            RecoveryAction.COMPLETE_PERSISTED_TAIL,
+        )
+
+    def test_model_stage_requires_manual_review(self) -> None:
+        self.assertEqual(
+            recovery_action(RunStage.MODEL_RUNNING),
+            RecoveryAction.MANUAL_REVIEW,
+        )
+
+    def test_context_stage_requires_a_new_run(self) -> None:
+        self.assertEqual(
+            recovery_action(RunStage.CONTEXT_LOADED),
+            RecoveryAction.RETRY_NEW_RUN,
+        )
 
 
 if __name__ == "__main__":
