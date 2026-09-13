@@ -332,6 +332,14 @@ async def runtime_metrics(*, window_hours: int = 24) -> dict[str, Any]:
         )
     except Exception as error:
         raise PersistenceError("Could not load runtime metrics.") from error
+    stage_counts = row["stage_counts"] or {}
+    if isinstance(stage_counts, str):
+        try:
+            stage_counts = json.loads(stage_counts)
+        except json.JSONDecodeError:
+            stage_counts = {}
+    if not isinstance(stage_counts, dict):
+        stage_counts = {}
     return {
         "window_hours": window_hours,
         "total_runs": int(row["total_runs"] or 0),
@@ -343,7 +351,7 @@ async def runtime_metrics(*, window_hours: int = 24) -> dict[str, Any]:
         "recovery_attempts": int(row["recovery_attempts"] or 0),
         "average_duration_ms": round(float(row["average_duration_ms"] or 0), 2),
         "idempotency_hits": int(row["idempotency_hits"] or 0),
-        "stage_counts": dict(row["stage_counts"] or {}),
+        "stage_counts": stage_counts,
     }
 
 

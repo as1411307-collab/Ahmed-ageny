@@ -10,3 +10,4 @@
 - [Search fabric routing](search-fabric.md) — Tavily remains primary; Brave is an optional independent index, disabled by default until benchmark evidence.
 - [Academic provider routing](academic-provider-routing.md) — resolve DOI registration agency before selecting Crossref or DataCite; keep OpenAlex graph data on-demand.
 - [Run state checkpoints](run-state-checkpoints.md) — use finite persisted stages and safe metadata instead of open-ended agent orchestration.
+- [Runtime observability](runtime-observability.md) — expose bounded owner-only aggregate metrics from persisted run and audit data.
