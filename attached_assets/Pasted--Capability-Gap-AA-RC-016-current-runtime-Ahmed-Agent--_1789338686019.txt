@@ -1,0 +1,239 @@
+نفّذ إغلاق Capability Gap واحدة فقط:
+
+AA-RC-016 — current_runtime
+
+الهدف:
+تمكين Ahmed Agent من تحديد الـruntime الفعلي الحالي من أدلة المشروع الحقيقية، بطريقة read-only ومحدودة، دون فتح وصول عام للمشروع ودون التأثير على الفجوات الأربع الأخرى.
+
+قبل أي تعديل:
+1. تحقق من أن baseline الحالي ما زال كما يلي:
+   - 26 real cases
+   - 21 EXECUTED
+   - 5 Capability Gaps
+   - 0 Provider Failures
+   - 0 HITL_BLOCKED
+
+2. تحقق من البصمات الحالية وسجلها قبل التعديل:
+   Dataset SHA-256:
+   35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+   Canonical baseline artifact SHA-256:
+   0b2edeedf97972c46b65ae34da8f79ffd26e22117977abf43925e75a03ed4301
+
+3. لا تعدّل:
+   - baseline-real-v1-complete.json
+   - Dataset الحالي
+   - prompts العامة
+   - provider/model configuration
+   - server.py
+   - deploy/publish configuration
+   - Express/TypeScript code
+
+التصميم المطلوب:
+
+أولاً: أنشئ طبقة داخلية صغيرة للقراءة الآمنة للأدلة إذا لم توجد آلية مناسبة بالفعل.
+
+هذه الطبقة ليست Tool عامة للـAgent.
+
+وظيفتها فقط:
+- قراءة ملفات محددة مسبقاً.
+- تثبيت القراءة داخل project root.
+- canonical path validation.
+- منع path traversal.
+- منع القراءة خارج allowlist.
+- عدم تنفيذ shell commands.
+- عدم الكتابة أو التعديل.
+- عدم الوصول للشبكة.
+- عدم قراءة .env أو secrets أو credentials.
+- عدم إعادة محتوى الملفات كاملاً للموديل إذا لم يكن ضرورياً.
+- إعادة الأدلة المطلوبة فقط مع file citation / line evidence قدر الإمكان.
+
+لا تبنِ generic project_file_access.
+لا تسمح للموديل بتمرير arbitrary filesystem path.
+
+ثانياً: أضف AgentCore tool واحدة فقط باسم:
+
+inspect_runtime_evidence
+
+ويفضّل ألا تستقبل أي filesystem path من المستخدم أو الموديل.
+
+الـallowlist لهذه capability يجب أن يكون ضيقاً ومخصصاً لإثبات runtime، وأساسه:
+
+- server.py
+- pyproject.toml
+- .replit
+
+يمكن إضافة runtime/config file آخر فقط إذا أثبت فحص المشروع أنه ضروري فعلاً لتحديد entrypoint الحالي، ويجب ذكر سبب إضافته في التقرير النهائي.
+
+الأداة يجب أن تستخرج أدلة منظمة، لا أن تفترض النتيجة مسبقاً.
+
+أريد ناتجاً منظماً شبيهاً بهذا المفهوم:
+
+status:
+- verified
+- partial
+- unverified
+
+runtime evidence:
+- language
+- language version
+- active entrypoint
+- HTTP framework
+- MCP presence
+- server/runtime command
+- configured port
+- evidence references
+
+لكل claim:
+- اسم الملف.
+- السطر أو النطاق إن أمكن.
+- الدليل الذي يثبت claim.
+- verified/unverified.
+
+مهم:
+لا تكتب في الكود أن النتيجة يجب أن تكون Python لمجرد أننا نعرف ذلك الآن.
+الأداة يجب أن تستنتج النتيجة من الملفات الفعلية.
+إذا كانت الأدلة ناقصة أو متعارضة، أعد partial أو unverified ولا تخمّن.
+
+ثالثاً: الأمان والسياسة
+
+في policy.py أو طبقة السياسة الحالية:
+
+عرّف inspect_runtime_evidence كـ:
+- read-only
+- project-local evidence
+- no mutation
+- no shell execution
+- no arbitrary path access
+- no secret access
+- no deploy/publish capability
+
+لا توسّع صلاحيات MY_FILES.
+لا تجعل هذه الأداة بديلاً لـ file_access.
+لا تجعلها تغلق project_file_access عامة.
+
+رابعاً: Evaluation Mapping
+
+عدّل mapping فقط بالقدر اللازم حتى:
+
+AA-RC-016
+يصبح قابلاً للتنفيذ باستخدام:
+inspect_runtime_evidence
+
+لكن لا تعتبر الفجوات التالية مغلقة:
+
+- AA-RC-002
+- AA-RC-007
+- AA-RC-011
+- AA-RC-014
+
+يجب أن تبقى الأربع Capability Gaps بعد نجاح هذه المرحلة.
+
+خامساً: الاختبارات
+
+أضف اختبارات تغطي على الأقل:
+
+1. اكتشاف runtime من أدلة فعلية/fixtures دون hard-coded answer.
+
+2. إثبات أن الأداة read-only.
+
+3. إثبات عدم وجود arbitrary path access.
+
+4. منع path traversal والوصول خارج project root.
+
+5. عدم كشف secrets أو environment values.
+
+6. عند نقص ملفات runtime:
+   تعيد partial/unverified ولا تختلق نتيجة.
+
+7. AA-RC-016 يستخدم capability الجديدة.
+
+8. AA-RC-002 وAA-RC-007 وAA-RC-011 وAA-RC-014 تبقى Capability Gaps.
+
+9. الحالات الـ21 الناجحة سابقاً لا يحدث لها regression.
+
+10. شغّل test suite كاملة وليس الاختبارات الجديدة فقط.
+
+سادساً: Evaluation الكامل
+
+بعد نجاح الاختبارات:
+
+شغّل نفس مجموعة الـ26 real cases كاملة على execution path الحقيقي.
+
+النتيجة المستهدفة:
+
+- 22 EXECUTED
+- 4 Capability Gaps
+- 0 Provider Failures
+- 0 HITL_BLOCKED
+
+إذا لم تحصل على هذه النتيجة بالضبط:
+لا تعتبر المهمة ناجحة.
+لا تحاول إخفاء الاختلاف.
+توقف واعرض السبب والـdiff.
+
+سابعاً: Artifact جديد
+
+لا تعدّل artifact القديم.
+
+أنشئ artifact جديد باسم واضح، مثلاً:
+
+baseline-real-v2-aa-rc-016.json
+
+أو اسم versioned مكافئ يتبع naming convention الموجودة فعلياً في المشروع.
+
+احسب وسجل:
+
+- Dataset SHA-256
+- SHA-256 للartifact الجديد
+
+بما أن Dataset لم يتغير، يجب أن تظل بصمته:
+
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+وتحقق أيضاً أن:
+
+baseline-real-v1-complete.json
+
+ما زال يحمل بصمته الأصلية:
+
+0b2edeedf97972c46b65ae34da8f79ffd26e22117977abf43925e75a03ed4301
+
+إذا تغيرت البصمة القديمة، اعتبر ذلك فشلاً وتوقف.
+
+ثامناً: حدود التنفيذ
+
+ممنوع في هذه المرحلة:
+
+- إضافة project_file_access عام.
+- إضافة file_access عام.
+- تعديل server.py ما لم يظهر مانع تقني حقيقي؛ إذا ظهر، توقف قبل تعديله واشرح السبب.
+- إضافة MCP endpoint جديد.
+- إضافة Runtime جديد.
+- Express/TypeScript.
+- Agents JS.
+- OpenRouter.
+- Composio.
+- Firecrawl.
+- Tavily.
+- Resend.
+- Replicate.
+- ElevenLabs.
+- تغيير provider أو model.
+- تغيير Dataset.
+- إصلاح أي Capability Gap أخرى.
+- deploy أو publish.
+
+بعد الانتهاء، أعطني تقريراً واحداً يتضمن:
+
+- الملفات التي تغيرت.
+- وصف implementation الفعلي.
+- security boundaries المضافة.
+- عدد الاختبارات قبل وبعد.
+- نتيجة test suite الكاملة.
+- نتائج الـ26 cases.
+- حالة AA-RC-016.
+- حالة الفجوات الأربع الأخرى.
+- Dataset SHA-256.
+- artifact الجديد واسمه وSHA-256.
+- تأكيد أن baseline-real-v1-complete.json لم يت
