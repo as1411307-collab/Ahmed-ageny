@@ -12,7 +12,8 @@ Treat each agent execution as a finite state machine with explicit transitions f
 Recovery may complete only the persisted response tail. A stale `model_running`
 stage must never replay the model automatically; require a new explicit attempt
 until each side-effecting step has a durable idempotency key and ownership lease.
+Keep `recovery_status=orphaned` separate from the execution status and stage.
 
 **Why:** A crash can occur after a model or tool side effect but before its next checkpoint, so blind replay can duplicate work or sensitive actions.
 
-**How to apply:** Use worker leases and orphan detection to arbitrate ownership. Treat `created`/`context_loaded` as new-run cases, `model_running` as manual review, and `response_ready`/`response_persisted` as safe tail-recovery candidates only when persisted messages prove the response exists.
+**How to apply:** Use worker leases and orphan detection to arbitrate ownership. Treat `created`/`context_loaded` as new-run cases, `model_running` as manual review, and `response_ready`/`response_persisted` as safe tail-recovery candidates only when persisted messages prove the response exists. Validate this with a real process-kill/restart test against PostgreSQL.

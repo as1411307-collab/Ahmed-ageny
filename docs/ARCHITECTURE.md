@@ -67,8 +67,9 @@ server.py
   `response_ready`, `response_persisted`, `completed` or `failed`) in
   PostgreSQL and mirrors them into the tamper-evident audit chain. Checkpoint
   state never includes prompt text or provider secrets.
-- Run leases identify the active worker. Expired leases are marked orphaned on
-  startup. Recovery can complete a persisted response tail, but it never
+- Run leases identify the active worker. Expired leases set a separate
+  `recovery_status=orphaned` while preserving the execution `status` and
+  `stage`. Recovery can complete a persisted response tail, but it never
   replays a model call automatically from `model_running`.
 - Sensitive HITL actions use a run-scoped idempotency key so a retry cannot
   create the same pending action twice.

@@ -85,6 +85,9 @@ POST /runs/{run_id}/resume
 Runs interrupted during model execution return a safe retry/manual-review result
 instead of invoking the model again.
 
+`orphaned` is a recovery condition, not a replacement for the execution stage:
+inspect both `status`/`recovery_status` and `stage` when diagnosing a run.
+
 ## Failure diagnosis
 
 - `401`: check the exact `AHMED_OWNER_TOKEN` secret name and bearer header.
@@ -94,6 +97,9 @@ instead of invoking the model again.
   or tool code.
 - a recovery conflict: inspect `/runs/{run_id}/recovery`; an active lease means
   another worker still owns the run.
+- a full crash/restart check: run
+  `AHMED_RUN_RECOVERY_E2E=1 python -m unittest tests.test_recovery_fault_injection -v`
+  against a development PostgreSQL database only.
 - empty search results: distinguish provider no-results from provider failure
   in the returned provenance and doctor report.
 - embedding failure: continue with FTS and inspect the embedding health field.
