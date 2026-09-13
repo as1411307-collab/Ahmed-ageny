@@ -26,3 +26,11 @@ packages = ["libxcrypt", "postgresql"]
 [[ports]]
 localPort = 8000
 externalPort = 80
+
+[userenv]
+
+[userenv.shared]
+
+[userenv.development]
+
+[userenv.production]
