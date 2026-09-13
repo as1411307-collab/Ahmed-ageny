@@ -1151,6 +1151,14 @@ def build_scoreboard(
     provenance_counts = Counter(case["provenance"] for case in cases)
     return {
         "status": "PASS" if results and not missing and passed == len(results) else "INCOMPLETE",
+        "execution_status": "COMPLETE" if not missing else "INCOMPLETE",
+        "quality_status": (
+            "PASS"
+            if results and not missing and passed == len(results)
+            else "FAIL"
+            if results and not missing
+            else "NOT_DETERMINED"
+        ),
         "quality_eligible": provenance_counts.get("real_case", 0) > 0,
         "case_count": len(cases),
         "traced_case_count": len(results),
@@ -1283,6 +1291,12 @@ def main() -> None:
     parser.add_argument("--import-real", type=Path)
     parser.add_argument("--probe-real", type=Path)
     parser.add_argument("--run-real", type=Path)
+    parser.add_argument("--resume-baseline", type=Path)
+    parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=Path("real-cases-validated.json"),
+    )
     parser.add_argument("--case-id", action="append", dest="case_ids")
     parser.add_argument(
         "--base-url",
@@ -1295,11 +1309,21 @@ def main() -> None:
     )
     parser.add_argument("--timeout-seconds", type=float, default=90.0)
     parser.add_argument("--inter-case-delay-seconds", type=float, default=0.0)
+    parser.add_argument("--resume-max-retries", type=int, default=1)
+    parser.add_argument("--resume-base-delay-seconds", type=float, default=20.0)
+    parser.add_argument("--resume-max-delay-seconds", type=float, default=60.0)
+    parser.add_argument("--resume-inter-case-delay-seconds", type=float, default=10.0)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    live_commands = [args.probe_real, args.run_real]
+    live_commands = [args.probe_real, args.run_real, args.resume_baseline]
     if sum(value is not None for value in live_commands) > 1:
-        parser.error("use only one of --probe-real or --run-real")
+        parser.error(
+            "use only one of --probe-real, --run-real, or --resume-baseline"
+        )
+    if args.resume_max_retries < 0:
+        parser.error("--resume-max-retries must be non-negative")
+    if args.resume_base_delay_seconds < 0 or args.resume_max_delay_seconds < 0:
+        parser.error("resume delays must be non-negative")
     if args.validate_real:
         version, cases = load_case_document(args.validate_real)
         print(json.dumps({
@@ -1367,6 +1391,56 @@ def main() -> None:
                     "output": str(output_path),
                     "baseline_run_id": result["baseline_run_id"],
                     "coverage": result["coverage"],
+                    "semantic_grading": "NOT_RUN",
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return
+    if args.resume_baseline:
+        owner_token = os.environ.get("AHMED_OWNER_TOKEN")
+        if not owner_token:
+            parser.error("AHMED_OWNER_TOKEN is required for baseline resume.")
+        baseline = json.loads(
+            args.resume_baseline.read_text(encoding="utf-8")
+        )
+        version, cases = load_case_document(
+            args.dataset,
+            require_baseline_size=True,
+        )
+        dataset_sha256 = hashlib.sha256(args.dataset.read_bytes()).hexdigest()
+        if dataset_sha256 != baseline.get("dataset_sha256"):
+            parser.error("Dataset SHA-256 does not match the original baseline.")
+        if version != baseline.get("dataset_version"):
+            parser.error("Dataset version does not match the original baseline.")
+        result = asyncio.run(
+            resume_rate_limited_baseline(
+                baseline,
+                cases,
+                owner_token=owner_token,
+                max_retries=args.resume_max_retries,
+                base_delay_seconds=args.resume_base_delay_seconds,
+                max_delay_seconds=args.resume_max_delay_seconds,
+                inter_case_delay_seconds=args.resume_inter_case_delay_seconds,
+            )
+        )
+        output_path = args.output or Path("baseline-real-v1-complete.json")
+        output_path.write_text(
+            json.dumps(result, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        print(
+            json.dumps(
+                {
+                    "status": "WRITTEN",
+                    "output": str(output_path),
+                    "original_baseline_run_id": result["original_baseline_run_id"],
+                    "resume_run_id": result["resume_run_id"],
+                    "coverage": result["coverage"],
+                    "quality_failures": result["analysis"]["quality_failures"],
+                    "provider_failures": result["analysis"]["provider_failures"],
+                    "capability_gaps": result["analysis"]["capability_gaps"],
                     "semantic_grading": "NOT_RUN",
                 },
                 ensure_ascii=False,
