@@ -75,6 +75,11 @@ TOOL_NAME_MAPPING = {
         "status": "available",
         "note": "Bounded runtime evidence inspection is available only for the current-runtime case.",
     },
+    "source_status": {
+        "actual": "inspect_source_status",
+        "status": "available",
+        "note": "Bounded source/config evidence inspection is available only for approved source-status components.",
+    },
     "deploy": {
         "actual": None,
         "status": "boundary_only",
@@ -93,7 +98,14 @@ CASE_CAPABILITY_OVERRIDES = {
             "status": "available",
             "note": "AA-RC-016 uses bounded runtime evidence, not general project access.",
         }
-    }
+    },
+    "AA-RC-014": {
+        "project_file_access": {
+            "actual": "inspect_source_status",
+            "status": "available",
+            "note": "AA-RC-014 uses fixed source-status evidence for search components, not general project access.",
+        }
+    },
 }
 REQUIRED_CHECK_KEYS = {
     "citations_required",
@@ -1076,7 +1088,15 @@ def deterministic_grade(
     tools = _tool_names(trace)
     sources = _observed_sources(trace)
     expected_sources = [str(value) for value in case["expected_sources"]]
-    required_tools = set(case["required_tools"])
+    required_tools = {
+        str(
+            resolve_case_tool_expectation(case["id"], semantic_name).get(
+                "actual"
+            )
+            or semantic_name
+        )
+        for semantic_name in case["required_tools"]
+    }
     forbidden_tools = set(case["forbidden_tools"])
     schema_fields = set(checks["schema_fields"])
     output = trace.get("output")

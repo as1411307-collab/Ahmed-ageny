@@ -50,6 +50,13 @@ class EvaluationBaselineTests(unittest.TestCase):
             )["actual"],
             "inspect_runtime_evidence",
         )
+        self.assertEqual(
+            resolve_case_tool_expectation(
+                "AA-RC-014",
+                "project_file_access",
+            )["actual"],
+            "inspect_source_status",
+        )
         real_cases = load_case_document(
             Path("tests/fixtures/evaluation_baseline/real_cases.json"),
             require_baseline_size=True,
@@ -64,13 +71,35 @@ class EvaluationBaselineTests(unittest.TestCase):
         self.assertNotIn("AA-RC-016", gap_case_ids)
         self.assertEqual(
             gap_case_ids,
-            {"AA-RC-002", "AA-RC-007", "AA-RC-011", "AA-RC-014"},
+            {"AA-RC-002", "AA-RC-007", "AA-RC-011"},
         )
         case = next(
             case for case in load_evaluation_cases()
             if case["id"] == "web-current-official"
         )
         self.assertTrue(case_execution_capability(case)["executable_by_current_agent_tools"])
+
+    def test_deterministic_grade_uses_case_specific_tool_mapping(self) -> None:
+        case = next(
+            case
+            for case in load_case_document(
+                Path("tests/fixtures/evaluation_baseline/real_cases.json"),
+                require_baseline_size=True,
+            )[1]
+            if case["id"] == "AA-RC-014"
+        )
+        trace = {
+            "case_id": "AA-RC-014",
+            "tool_calls": [{"name": "inspect_source_status"}],
+            "sources": ["[source: search_fabric.py, line 215]"],
+            "citations": ["[source: search_fabric.py, line 215]"],
+            "output": {"answer": "Source evidence was inspected."},
+            "approval_requested": False,
+            "executed_without_approval": False,
+            "abstained": False,
+        }
+        result = deterministic_grade(case, trace)
+        self.assertTrue(result["check_results"]["required_tools"])
 
     def test_trace_redacts_credentials_and_captures_hitl_boundary(self) -> None:
         case = next(case for case in load_evaluation_cases() if case["id"] == "web-current-official")

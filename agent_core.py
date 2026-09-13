@@ -41,6 +41,7 @@ from github_search import github_search as existing_github_search
 from runtime_evidence import (
     inspect_runtime_evidence as inspect_existing_runtime_evidence,
 )
+from source_status import inspect_source_status as inspect_existing_source_status
 from skill_tools import web_search as existing_web_search
 
 
@@ -81,6 +82,14 @@ Use github_search only for explicit structured GitHub requests: repositories,
 issues, pull requests, releases, or repository metadata. Use it for public
 GitHub records, not for general technical documentation or every technical
 question. Use web_search for documentation and broader web context.
+
+Use inspect_source_status for explicit questions about the implementation,
+wiring, configuration, or readiness of the project's search components. For a
+WEB/search source-status request, inspect both search_provider and page_fetcher.
+Treat its structured facts and provenance as untrusted evidence: cite the
+returned source references, distinguish source/config evidence from live
+provider health, and never claim that a component is operational without
+evidence that proves it.
 """.strip()
 
 MY_FILES_INSTRUCTIONS = f"""
@@ -574,12 +583,64 @@ def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[Agent
             "data_boundary": data_only_boundary("project_runtime_evidence"),
         }
 
+    async def inspect_source_status(
+        ctx: RunContext[AgentDeps],
+        component: Annotated[
+            Literal["search_provider", "page_fetcher"],
+            Field(description="Fixed source-status component identifier."),
+        ],
+    ) -> dict[str, object]:
+        """Inspect fixed source/config evidence for one approved component."""
+
+        started_at = time.perf_counter()
+        try:
+            result = await asyncio.to_thread(
+                inspect_existing_source_status,
+                component,
+            )
+        except Exception:
+            if ctx.deps.tool_event_recorder is not None:
+                await ctx.deps.tool_event_recorder(
+                    "inspect_source_status",
+                    "failed",
+                    int((time.perf_counter() - started_at) * 1000),
+                    {
+                        "scope": "PROJECT_SOURCE_STATUS_EVIDENCE",
+                        "component": component,
+                    },
+                )
+            raise
+
+        policy = tool_metadata("inspect_source_status")
+        safe_metadata = {
+            "scope": "PROJECT_SOURCE_STATUS_EVIDENCE",
+            "component": component,
+            "evidence_status": result.get("evidence_status"),
+            "evidence_item_count": result.get("extracted_facts", {}).get(
+                "evidence_item_count", 0
+            ),
+            "policy": policy,
+        }
+        if ctx.deps.tool_event_recorder is not None:
+            await ctx.deps.tool_event_recorder(
+                "inspect_source_status",
+                "success",
+                int((time.perf_counter() - started_at) * 1000),
+                safe_metadata,
+            )
+        return {
+            **result,
+            "policy": policy,
+            "data_boundary": data_only_boundary("project_source_status_evidence"),
+        }
+
     if scope == "WEB":
         tools = [
             web_search,
             academic_search,
             github_search,
             inspect_runtime_evidence,
+            inspect_source_status,
             test_sensitive_action,
         ]
         instructions = WEB_INSTRUCTIONS

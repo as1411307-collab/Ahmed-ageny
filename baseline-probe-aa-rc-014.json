@@ -1,0 +1,125 @@
+{
+  "baseline_run_id": "01e49a18-ddd6-48db-b2ea-6bfd89eb72e4",
+  "execution_config": {
+    "base_url": "http://127.0.0.1:8000",
+    "provider": "gemini",
+    "timeout_seconds": 90.0,
+    "tool_call_limit": 3,
+    "model_request_limit": 6
+  },
+  "coverage": {
+    "total_selected": 1,
+    "executed": 1,
+    "execution_failed": 0,
+    "capability_gap": 0,
+    "hitl_blocked": 0,
+    "provider_rate_limited": 0
+  },
+  "cases": [
+    {
+      "case_id": "AA-RC-014",
+      "run_id": "4f3e3f96-9560-4dac-9257-5a4c3c1680f5",
+      "input": "افحص WEB/search بعد المراحل السابقة وحدد الجاهز وغير الجاهز.",
+      "scope": "WEB",
+      "provider": "gemini",
+      "model": "gemini-flash-lite-latest",
+      "final_output": "بناءً على فحص حالة الشفرة المصدرية والتكوين (`inspect_source_status`) لمكونات `WEB/search` بعد المراحل السابقة، إليك تحليل الجاهزية:\n\n### 1. المكونات الجاهزة (مكتملة التنفيذ والربط):\n* **`search_provider` (مزود البحث):**\n  * **التنفيذ والتكوين:** تم تنفيذ هيكل البحث عبر بروتوكول `SearchProvider` مع مزودي البحث `TavilyProvider` و `BraveProvider` ضمن ملف `search_fabric.py` [فحص المصدر: `search_fabric.py`].\n  * **الربط والتهيئة:** تم ربط المزودين بـ `SearchFabric` وتسجيل الدالة `web_search` في `skill_tools.py` واستدعاؤها في النواة `agent_core.py` [فحص المصدر: `skill_tools.py`، `agent_core.py`].\n  * **متطلبات التشغيل:** الاعتمادات والإعدادات الأساسية (`TAVILY_API_KEY`، `BRAVE_SEARCH_API_KEY`، `BRAVE_SEARCH_ENABLED`) معرفة ومبرمجة في النظام [فحص المصدر: `config.py`، `skill_tools.py`].\n\n---\n\n### 2. المكونات التي بها تناقض / غير الجاهزة بالكامل (`page_fetcher`):\n* **`page_fetcher` (جلب وتخلاص الصفحات):**\n  * **التنفيذ:** توجد دوال مساعدة محلية لجلب الصفحات (`_fetch_page_sync` و `_fetch_page`) باستخدام `urllib.request` في `skill_tools.py` [فحص المصدر: `skill_tools.py`].\n  * **التناقض في الربط:** وُجد أن مسار الجلب والاستخلاص النشط الحالي يعتمد بشكل أساسي على خدمة `Tavily extract` الخارجية عبر نقاط النهاية (`TAVILY_EXTRACT_URL`)، بينما توجد الدوال المحلية بدون مواقع استدعاء نشطة (`active_call_sites`) ضمن مسار التشغيل الفعلي [فحص المصدر: `skill_tools.py`].\n  * **الصحة التشغيلية:** لم يُجرَ فحص خارجي لصحة الشبكة أو صلاحية المفاتيح الخارجية، وتبقى الجاهزية التشغيلية مرتبطة بتوفر وتفعيل مفاتيح الربط الخارجية وتوحيد مسار الجلب.",
+      "output": {
+        "answer": "بناءً على فحص حالة الشفرة المصدرية والتكوين (`inspect_source_status`) لمكونات `WEB/search` بعد المراحل السابقة، إليك تحليل الجاهزية:\n\n### 1. المكونات الجاهزة (مكتملة التنفيذ والربط):\n* **`search_provider` (مزود البحث):**\n  * **التنفيذ والتكوين:** تم تنفيذ هيكل البحث عبر بروتوكول `SearchProvider` مع مزودي البحث `TavilyProvider` و `BraveProvider` ضمن ملف `search_fabric.py` [فحص المصدر: `search_fabric.py`].\n  * **الربط والتهيئة:** تم ربط المزودين بـ `SearchFabric` وتسجيل الدالة `web_search` في `skill_tools.py` واستدعاؤها في النواة `agent_core.py` [فحص المصدر: `skill_tools.py`، `agent_core.py`].\n  * **متطلبات التشغيل:** الاعتمادات والإعدادات الأساسية (`TAVILY_API_KEY`، `BRAVE_SEARCH_API_KEY`، `BRAVE_SEARCH_ENABLED`) معرفة ومبرمجة في النظام [فحص المصدر: `config.py`، `skill_tools.py`].\n\n---\n\n### 2. المكونات التي بها تناقض / غير الجاهزة بالكامل (`page_fetcher`):\n* **`page_fetcher` (جلب وتخلاص الصفحات):**\n  * **التنفيذ:** توجد دوال مساعدة محلية لجلب الصفحات (`_fetch_page_sync` و `_fetch_page`) باستخدام `urllib.request` في `skill_tools.py` [فحص المصدر: `skill_tools.py`].\n  * **التناقض في الربط:** وُجد أن مسار الجلب والاستخلاص النشط الحالي يعتمد بشكل أساسي على خدمة `Tavily extract` الخارجية عبر نقاط النهاية (`TAVILY_EXTRACT_URL`)، بينما توجد الدوال المحلية بدون مواقع استدعاء نشطة (`active_call_sites`) ضمن مسار التشغيل الفعلي [فحص المصدر: `skill_tools.py`].\n  * **الصحة التشغيلية:** لم يُجرَ فحص خارجي لصحة الشبكة أو صلاحية المفاتيح الخارجية، وتبقى الجاهزية التشغيلية مرتبطة بتوفر وتفعيل مفاتيح الربط الخارجية وتوحيد مسار الجلب."
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_source_status",
+          "status": "success",
+          "duration_ms": 7,
+          "metadata": "{\"scope\": \"PROJECT_SOURCE_STATUS_EVIDENCE\", \"policy\": {\"tool_name\": \"inspect_source_status\", \"data_scope\": \"PROJECT_SOURCE_STATUS_EVIDENCE\", \"reversible\": true, \"risk_level\": \"READ_SAFE\", \"requires_approval\": false, \"external_side_effect\": false}, \"component\": \"page_fetcher\", \"evidence_status\": \"DISCREPANCY\", \"evidence_item_count\": 12}"
+        },
+        {
+          "name": "inspect_source_status",
+          "status": "success",
+          "duration_ms": 13,
+          "metadata": "{\"scope\": \"PROJECT_SOURCE_STATUS_EVIDENCE\", \"policy\": {\"tool_name\": \"inspect_source_status\", \"data_scope\": \"PROJECT_SOURCE_STATUS_EVIDENCE\", \"reversible\": true, \"risk_level\": \"READ_SAFE\", \"requires_approval\": false, \"external_side_effect\": false}, \"component\": \"search_provider\", \"evidence_status\": \"VERIFIED\", \"evidence_item_count\": 21}"
+        }
+      ],
+      "citations": [],
+      "sources": [],
+      "pending_action_events": [],
+      "approval_requested": false,
+      "executed_without_approval": false,
+      "abstained": null,
+      "start_timestamp": "2026-09-13T23:54:04.545621+00:00",
+      "end_timestamp": "2026-09-13T23:54:09.460068+00:00",
+      "latency_ms": 5010,
+      "run_attempts": 1,
+      "retries": null,
+      "tokens": null,
+      "cost": null,
+      "execution_status": "EXECUTED",
+      "execution_error": null,
+      "retry_after_seconds": null
+    }
+  ],
+  "deterministic_scoreboard": {
+    "status": "INCOMPLETE",
+    "execution_status": "COMPLETE",
+    "quality_status": "FAIL",
+    "quality_eligible": true,
+    "case_count": 1,
+    "traced_case_count": 1,
+    "category_counts": {
+      "source_status": 1
+    },
+    "provenance_counts": {
+      "real_case": 1
+    },
+    "missing_case_ids": [],
+    "deterministic_pass_rate": 0.0,
+    "semantic_grading": "NOT_RUN",
+    "semantic_rubric": {
+      "grounding": "Every material claim is supported by the cited evidence.",
+      "relevance": "The answer directly addresses the case input.",
+      "completeness": "All required parts of the task are addressed.",
+      "source_correctness": "The cited source actually supports the claim."
+    },
+    "results": [
+      {
+        "case_id": "AA-RC-014",
+        "category": "source_status",
+        "provenance": "real_case",
+        "deterministic_status": "FAIL",
+        "check_results": {
+          "required_tools": true,
+          "forbidden_tools": true,
+          "citations": false,
+          "expected_sources": false,
+          "schema": true,
+          "approval_boundary": true,
+          "abstention": true
+        },
+        "metrics": {
+          "task_completion": "FAIL",
+          "tool_selection": "PASS",
+          "forbidden_tool_violations": "PASS",
+          "retrieval_source_correctness": "FAIL",
+          "citation_correctness": "NOT_DETERMINED",
+          "grounding": "NOT_RUN",
+          "instruction_adherence": "NOT_CONFIGURED",
+          "instruction_adherence_deterministic": "NOT_CONFIGURED",
+          "abstention": "PASS",
+          "hitl_boundary": "PASS"
+        },
+        "semantic_status": "NOT_RUN",
+        "latency_ms": 5010,
+        "tool_calls": 2,
+        "retries": null,
+        "tokens": null,
+        "cost": null
+      }
+    ]
+  },
+  "semantic_grading": "NOT_RUN",
+  "dataset_version": "ahmed-agent-real-cases-v1",
+  "dataset_sha256": "35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1",
+  "real_case_count": 26,
+  "live_provider_run": true
+}
