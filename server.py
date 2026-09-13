@@ -32,12 +32,15 @@ from persistence import (
     create_run,
     ensure_session,
     finish_run,
+    load_run_checkpoints,
     load_message_history,
     reject_pending_action,
     record_tool_event,
+    record_run_checkpoint,
 )
 from config import MAX_UPLOAD_BYTES
 from my_files import SUPPORTED_EXTENSIONS, extension_for, ingest_document, sanitize_filename
+from run_state import RunStage, RunState
 from skill_tools import register_skill_tools
 
 
@@ -196,6 +199,30 @@ async def doctor_route(request: Request) -> Response:
         probe_search=request.query_params.get("probe") == "1"
     )
     return JSONResponse(report)
+
+
+@server.custom_route("/runs/{run_id}/checkpoints", methods=["GET"])
+async def run_checkpoints_route(request: Request) -> Response:
+    user, status_code, error_code = await authorize_owner(
+        request,
+        endpoint="/runs/{run_id}/checkpoints",
+    )
+    if user is None:
+        return JSONResponse(
+            {"error": "owner authentication required", "code": error_code},
+            status_code=status_code,
+        )
+    try:
+        run_id = _request_uuid(request.path_params.get("run_id"), "run_id")
+        raw_limit = request.query_params.get("limit", "50")
+        limit = int(raw_limit)
+        checkpoints = await load_run_checkpoints(run_id=run_id, limit=limit)
+    except (ValueError, PersistenceError):
+        return JSONResponse(
+            {"error": "تعذر تحميل نقاط تفتيش التنفيذ."},
+            status_code=400,
+        )
+    return JSONResponse({"run_id": run_id, "checkpoints": checkpoints})
 
 
 async def _execute_approved_action(
@@ -452,6 +479,33 @@ async def chat_message(request: Request) -> Response:
 
     trace_id = str(uuid4())
     started_at = time.perf_counter()
+    run_state: RunState | None = None
+
+    async def save_checkpoint(
+        next_stage: RunStage,
+        state: dict[str, object],
+    ) -> None:
+        if run_state is None:
+            return
+        try:
+            run_state.transition(next_stage)
+        except ValueError as error:
+            logger.error("Invalid run state transition error=%s", error)
+            return
+        try:
+            await record_run_checkpoint(
+                session_id=session_id,
+                run_id=run_uuid,
+                stage=run_state.stage.value,
+                state=state,
+            )
+        except (PersistenceError, ValueError) as error:
+            logger.error(
+                "Run checkpoint persistence failed stage=%s error_type=%s",
+                run_state.stage.value,
+                type(error).__name__,
+            )
+
     try:
         await ensure_session(session_id, scope=scope)
         stored_history = await load_message_history(session_id)
@@ -465,6 +519,15 @@ async def chat_message(request: Request) -> Response:
             user_prompt=message,
             provider_name=provider,
             model_name=provider_model_name(provider),  # type: ignore[arg-type]
+        )
+        run_state = RunState()
+        await save_checkpoint(
+            RunStage.CONTEXT_LOADED,
+            {
+                "scope": scope,
+                "provider": provider,
+                "history_items": len(message_history or []),
+            },
         )
     except (PersistenceError, ValueError) as error:
         logger.error("Agent persistence setup failed error_type=%s", type(error).__name__)
@@ -491,6 +554,10 @@ async def chat_message(request: Request) -> Response:
             logger.error("Tool event persistence failed error_type=%s", type(error).__name__)
 
     try:
+        await save_checkpoint(
+            RunStage.MODEL_RUNNING,
+            {"provider": provider, "scope": scope},
+        )
         result = await run_ahmed(
             message,
             message_history=message_history,
@@ -519,6 +586,10 @@ async def chat_message(request: Request) -> Response:
             status="failed",
             latency_ms=int((time.perf_counter() - started_at) * 1000),
             error_code=provider_status,
+        )
+        await save_checkpoint(
+            RunStage.FAILED,
+            {"error_code": provider_status, "provider": provider},
         )
         logger.warning(
             "Agent core failed provider=%s status_code=%s provider_status=%s",
@@ -552,6 +623,10 @@ async def chat_message(request: Request) -> Response:
             latency_ms=int((time.perf_counter() - started_at) * 1000),
             error_code=type(error).__name__,
         )
+        await save_checkpoint(
+            RunStage.FAILED,
+            {"error_code": type(error).__name__, "provider": provider},
+        )
         logger.error("Agent core failed exception_type=%s", type(error).__name__)
         return JSONResponse(
             {"error": "تعذر الحصول على رد من الوكيل الآن. حاول مرة أخرى."},
@@ -560,6 +635,10 @@ async def chat_message(request: Request) -> Response:
 
     final_text = str(result.output).strip()
     new_messages_json = result.new_messages_json()
+    await save_checkpoint(
+        RunStage.RESPONSE_READY,
+        {"response_bytes": len(new_messages_json), "provider": provider},
+    )
     try:
         message_count = await append_new_messages(
             session_id=session_id,
@@ -567,6 +646,14 @@ async def chat_message(request: Request) -> Response:
             new_messages_json=new_messages_json,
         )
         await finish_run(run_id=run_uuid, status="succeeded")
+        await save_checkpoint(
+            RunStage.RESPONSE_PERSISTED,
+            {"message_count": message_count},
+        )
+        await save_checkpoint(
+            RunStage.COMPLETED,
+            {"message_count": message_count},
+        )
     except PersistenceError as error:
         logger.error("Agent result persistence failed error_type=%s", type(error).__name__)
         try:
@@ -585,6 +672,10 @@ async def chat_message(request: Request) -> Response:
             status="failed",
             latency_ms=int((time.perf_counter() - started_at) * 1000),
             error_code=type(error).__name__,
+        )
+        await save_checkpoint(
+            RunStage.FAILED,
+            {"error_code": type(error).__name__, "provider": provider},
         )
         return JSONResponse(
             {"error": "تعذر الحصول على رد من الوكيل الآن. حاول مرة أخرى."},

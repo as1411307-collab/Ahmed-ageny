@@ -13,7 +13,7 @@ server.py
   |-- policy and HITL routes
   |-- MCP transport protection
         |
-        +--> agent_core.py ------> Gemini
+         +--> agent_core.py ------> Gemini / ChatGPT
         |         |
         |         +--------------> skill_tools.py
         |                            |-- Search Fabric / Tavily
@@ -39,7 +39,8 @@ server.py
 | `github_search.py` | Read-only GitHub REST search |
 | `my_files.py` | Upload validation, extraction, chunking, retrieval |
 | `embeddings.py` | Lazy optional semantic retrieval provider |
-| `persistence.py` | PostgreSQL sessions, messages, runs, actions, audit |
+| `persistence.py` | PostgreSQL sessions, messages, runs, checkpoints, actions, audit |
+| `run_state.py` | Deterministic run stages and allowed transitions |
 | `auth.py` | Single-owner bearer authentication |
 | `policy.py` | Tool risk policy and HITL metadata |
 | `doctor.py` | Operational health and diagnostic report |
@@ -62,4 +63,8 @@ server.py
 - GitHub is read-only.
 - The current sensitive action is an internal no-side-effect test action.
 - FastEmbed is optional; FTS remains the safe fallback.
+- Each run records safe state checkpoints (`context_loaded`, `model_running`,
+  `response_ready`, `response_persisted`, `completed` or `failed`) in
+  PostgreSQL and mirrors them into the tamper-evident audit chain. Checkpoint
+  state never includes prompt text or provider secrets.
 - The registered Node artifact is not imported by the Python runtime.

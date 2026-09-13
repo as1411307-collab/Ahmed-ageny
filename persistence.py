@@ -68,6 +68,18 @@ async def _ensure_policy_schema(pool: asyncpg.Pool) -> None:
 
                 CREATE INDEX IF NOT EXISTS audit_events_created_idx
                     ON audit_events (created_at, event_id);
+
+                CREATE TABLE IF NOT EXISTS agent_run_checkpoints (
+                    checkpoint_id BIGSERIAL PRIMARY KEY,
+                    session_id UUID NOT NULL,
+                    run_id UUID NOT NULL,
+                    stage TEXT NOT NULL,
+                    state_json JSONB NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
+
+                CREATE INDEX IF NOT EXISTS agent_run_checkpoints_run_idx
+                    ON agent_run_checkpoints (run_id, checkpoint_id);
                 """
             )
             _schema_ready = True
@@ -296,6 +308,95 @@ async def record_tool_event(
         )
     except Exception as error:
         raise PersistenceError("Could not persist the tool event.") from error
+
+
+async def record_run_checkpoint(
+    *,
+    session_id: str,
+    run_id: str,
+    stage: str,
+    state: dict[str, Any],
+) -> None:
+    if not stage or len(stage) > 64:
+        raise ValueError("invalid checkpoint stage")
+    try:
+        state_json = json.dumps(state, separators=(",", ":"), ensure_ascii=False)
+    except (TypeError, ValueError) as error:
+        raise ValueError("checkpoint state must be JSON serializable") from error
+
+    pool = await _get_pool()
+    try:
+        async with pool.acquire() as connection:
+            async with connection.transaction():
+                await connection.execute(
+                    """
+                    INSERT INTO agent_run_checkpoints (
+                        session_id,
+                        run_id,
+                        stage,
+                        state_json
+                    )
+                    VALUES ($1::uuid, $2::uuid, $3, $4::jsonb)
+                    """,
+                    session_id,
+                    run_id,
+                    stage,
+                    state_json,
+                )
+                await _append_audit_event(
+                    connection,
+                    session_id=session_id,
+                    run_id=run_id,
+                    action_id=None,
+                    event_type="run.checkpoint",
+                    tool_name=None,
+                    status=stage,
+                    safe_metadata={"stage": stage},
+                )
+    except PersistenceError:
+        raise
+    except Exception as error:
+        raise PersistenceError("Could not persist the run checkpoint.") from error
+
+
+async def load_run_checkpoints(
+    *,
+    run_id: str,
+    limit: int = 50,
+) -> list[dict[str, Any]]:
+    if limit < 1 or limit > 100:
+        raise ValueError("invalid checkpoint limit")
+    pool = await _get_pool()
+    try:
+        rows = await pool.fetch(
+            """
+            SELECT checkpoint_id, session_id, run_id, stage, state_json, created_at
+            FROM agent_run_checkpoints
+            WHERE run_id = $1::uuid
+            ORDER BY checkpoint_id ASC
+            LIMIT $2
+            """,
+            run_id,
+            limit,
+        )
+    except Exception as error:
+        raise PersistenceError("Could not load run checkpoints.") from error
+    checkpoints: list[dict[str, Any]] = []
+    for row in rows:
+        state = row["state_json"]
+        if isinstance(state, str):
+            state = json.loads(state)
+        checkpoints.append(
+            {
+                "checkpoint_id": row["checkpoint_id"],
+                "session_id": str(row["session_id"]),
+                "run_id": str(row["run_id"]),
+                "stage": row["stage"],
+                "state": state,
+                "created_at": row["created_at"].isoformat(),
+            }
+        )
+    return checkpoints
 
 
 async def record_auth_event(
@@ -744,6 +845,7 @@ async def doctor_storage_health() -> dict[str, Any]:
                 ) AS pgvector_available,
                 (SELECT COUNT(*)::int FROM pending_actions) AS pending_actions,
                 (SELECT COUNT(*)::int FROM audit_events) AS audit_events,
+                (SELECT COUNT(*)::int FROM agent_run_checkpoints) AS run_checkpoints,
                 to_tsvector('simple', 'health check') @@
                     plainto_tsquery('simple', 'health') AS fts_healthy,
                 EXISTS (

@@ -77,6 +77,7 @@ async def _build_report(*, probe_search: bool) -> dict[str, Any]:
             "pgvector_available": storage.get("pgvector_available"),
             "pending_actions": storage.get("pending_actions"),
             "audit_events": storage.get("audit_events"),
+            "run_checkpoints": storage.get("run_checkpoints"),
         }
 
     try:
