@@ -1,0 +1,126 @@
+واصل من baseline-real-v1.json الحالي فقط.
+
+الهدف:
+إكمال الـbaseline الحالي دون تغيير سلوك Ahmed Agent أو dataset أو model/config.
+
+نفّذ التالي:
+
+1. اقرأ baseline-real-v1.json وحدد الحالات التي فشلت فقط بسبب:
+   RATE_LIMITED
+
+2. لا تعِد تشغيل:
+   - الحالات التي EXECUTED بالفعل
+   - الحالات الخمس NOT_EXECUTABLE_CAPABILITY_GAP
+   - أي حالة لم تفشل بسبب rate limit
+
+3. أضف/استخدم retry mode مخصص لإكمال baseline ناقص، مثل:
+   --resume-baseline baseline-real-v1.json
+
+   إذا لم يكن موجودًا، أضف أقل implementation ممكن.
+
+4. الـresume يجب أن:
+   - يحتفظ بنفس dataset SHA-256
+   - يحتفظ بنفس dataset_version
+   - يحتفظ بنفس expected behavior
+   - يحتفظ بنفس model/config
+   - يحتفظ بنتائج الحالات المنفذة سابقًا كما هي
+   - يشغّل فقط RATE_LIMITED cases
+
+5. pacing:
+   - استخدم inter-case delay أكبر من السابق.
+   - أضف exponential backoff مع jitter للـ429/RATE_LIMITED فقط.
+   - لا تستخدم retry غير محدود.
+   - احترم Retry-After إن كان provider يعيده.
+   - سجل عدد retries لكل case.
+
+6. لا تعتبر provider rate limit quality failure.
+   صنفه:
+   EXECUTION_FAILED_PROVIDER_RATE_LIMIT
+   أو equivalent واضح منفصل عن جودة الوكيل.
+
+7. إذا فشلت حالة مرة أخرى بسبب rate limit بعد الحد المسموح:
+   اتركها incomplete.
+   لا تغير provider ولا model في نفس baseline.
+
+8. بعد اكتمال الحالات التسع، أنشئ artifact نهائي جديد:
+   baseline-real-v1-complete.json
+
+9. artifact النهائي يجب أن يحتوي بوضوح:
+   - original baseline_run_id
+   - resume run identifier
+   - dataset SHA-256
+   - model/config
+   - code/build identifier
+   - لكل case:
+     - execution status
+     - attempts
+     - retries
+     - original execution timestamp إن كانت من الجولة الأولى
+     - resumed execution timestamp إن كانت أعيدت
+   - provenance أن بعض النتائج جاءت من resume لنفس baseline config
+
+10. لا تعِد كتابة نتائج الـ12 cases الناجحة السابقة.
+
+11. بعد اكتمال التشغيل، ابنِ deterministic scoreboard الحقيقي فقط للحالات القابلة للتنفيذ.
+
+12. افصل النتائج إلى:
+   A. Quality failures
+   B. Execution/provider failures
+   C. Capability gaps
+
+13. لا تدخل capability gaps في denominator الخاص بجودة الوكيل.
+
+14. لا تدخل rate-limit failures في quality denominator إذا بقيت غير منفذة.
+
+15. أخرج النتائج لكل metric على حدة:
+   - task completion
+   - tool selection
+   - forbidden tool violations
+   - citation correctness
+   - expected source matching
+   - HITL boundary
+   - abstention
+   - instruction adherence deterministic checks
+   - latency
+   - retries
+   - tool-call count
+   - tokens/cost availability
+
+16. بالنسبة لـ AA-RC-010:
+   لا تغير النتيجة.
+   إذا لم يستدع web_search رغم requirement، سجلها كـtool-selection failure حقيقية.
+
+17. لا تشغّل semantic grading بعد.
+
+18. لا تعدّل:
+   - Memory
+   - Retrieval
+   - routing
+   - prompts
+   - tools
+   - model
+   - provider
+   - expected behavior
+   - real-case dataset
+
+19. بعد اكتمال baseline، أعطني تقريرًا مركزًا يتضمن:
+   - عدد الحالات EXECUTED النهائي
+   - عدد capability gaps
+   - عدد provider failures المتبقية
+   - deterministic pass/fail لكل metric
+   - failures حسب case_id
+   - failures حسب category
+   - أهم 3 نقاط ضعف ظهرت
+   - هل المشكلة الأقوى تبدو:
+     Context / Retrieval / Tool Selection / Grounding / HITL / Provider
+   - latency/retry/tool-call summary
+   - token/cost availability
+   - SHA-256 للartifact النهائي
+   - عدد الاختبارات
+   - health/audit/alerts status
+
+20. توقف بعد التقرير.
+لا تصلح أي failure في نفس الجولة.
+
+معيار النجاح:
+الحصول على baseline مكتمل وقابل للمقارنة، وليس رفع الدرجة.

@@ -5,12 +5,14 @@ import asyncio
 import hashlib
 import json
 import os
+import random
 import re
 import time
 import urllib.error
 import urllib.request
 from collections import Counter
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -312,7 +314,7 @@ def _post_chat_message(
     owner_token: str,
     payload: dict[str, Any],
     timeout_seconds: float,
-) -> tuple[int, dict[str, Any]]:
+) -> tuple[int, dict[str, Any], dict[str, str]]:
     request = urllib.request.Request(
         f"{base_url.rstrip('/')}/chat/message",
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
@@ -325,16 +327,42 @@ def _post_chat_message(
     try:
         with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
             body = response.read().decode("utf-8")
-            return response.status, json.loads(body) if body else {}
+            return (
+                response.status,
+                json.loads(body) if body else {},
+                {key: value for key, value in response.headers.items()},
+            )
     except urllib.error.HTTPError as error:
         body = error.read().decode("utf-8", errors="replace")
         try:
             parsed = json.loads(body)
         except json.JSONDecodeError:
             parsed = {"error": "HTTP_ERROR"}
-        return error.code, parsed
+        return (
+            error.code,
+            parsed,
+            {key: value for key, value in error.headers.items()}
+            if error.headers
+            else {},
+        )
     except Exception as error:
-        return 0, {"error": type(error).__name__}
+        return 0, {"error": type(error).__name__}, {}
+
+
+def _retry_after_seconds(headers: dict[str, str]) -> float | None:
+    value = headers.get("Retry-After") or headers.get("retry-after")
+    if not value:
+        return None
+    try:
+        return max(0.0, float(value))
+    except ValueError:
+        try:
+            retry_at = parsedate_to_datetime(value)
+        except (TypeError, ValueError, OverflowError):
+            return None
+        if retry_at.tzinfo is None:
+            retry_at = retry_at.replace(tzinfo=timezone.utc)
+        return max(0.0, (retry_at - datetime.now(timezone.utc)).total_seconds())
 
 
 def _case_scope(case: dict[str, Any]) -> str:
@@ -351,6 +379,7 @@ def build_evaluation_trace(
     response_payload: dict[str, Any],
     persisted: dict[str, Any],
     latency_ms: int,
+    retry_after_seconds: float | None = None,
 ) -> dict[str, Any]:
     run = persisted.get("run") or {}
     final_output = response_payload.get("reply")
@@ -420,6 +449,7 @@ def build_evaluation_trace(
         "cost": None,
         "execution_status": execution_status,
         "execution_error": failure_reason,
+        "retry_after_seconds": retry_after_seconds,
     }
 
 
@@ -449,7 +479,7 @@ async def execute_real_case(
         "provider": provider,
     }
     started = time.perf_counter()
-    response_status, response_payload = await asyncio.to_thread(
+    response_status, response_payload, response_headers = await asyncio.to_thread(
         _post_chat_message,
         base_url=base_url,
         owner_token=owner_token,
@@ -474,6 +504,7 @@ async def execute_real_case(
         response_payload=response_payload,
         persisted=persisted,
         latency_ms=latency_ms,
+        retry_after_seconds=_retry_after_seconds(response_headers),
     )
 
 
