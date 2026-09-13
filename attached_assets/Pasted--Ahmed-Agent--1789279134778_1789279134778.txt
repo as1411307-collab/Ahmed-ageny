@@ -1,0 +1,182 @@
+واصل تطوير Ahmed Agent من الحالة الحالية. لا تعِد بناء أو استبدال المكونات المستقرة الموجودة، ولا تدخل LangGraph أو Multi-Agent أو MCTS أو أي framework جديد في هذه المرحلة.
+
+الحالة الحالية المؤكدة:
+- Durable execution مكتمل:
+  - deterministic run state
+  - PostgreSQL persistence
+  - checkpoints
+  - worker leases
+  - recovery
+  - idempotency
+  - audit chain
+  - HITL
+- fault injection الحقيقي نجح.
+- Operational metrics موجودة.
+- Retention + cleanup مكتملان.
+- Minimal Operational Alerting مكتمل.
+- alert_recovered أصبح transition ثم تعود الحالة إلى healthy مع recovered_at.
+- Evaluation Harness موجود في evaluation_baseline.py.
+- يوجد 22 contract_seed.
+- deterministic graders موجودة.
+- baseline manifest وdataset SHA-256 موجودان.
+- semantic grading = NOT_RUN.
+- live provider baseline لم يتم تشغيله.
+- آخر تحقق معروف: 65 اختبارًا ناجحًا، مع fault-injection الاختياري متخطى افتراضيًا.
+
+الهدف الحالي:
+الانتقال من contract testing إلى أول Evaluation Baseline حقيقي قبل تعديل Memory أو Retrieval.
+
+نفّذ العمل التالي بالترتيب:
+
+1. افحص أولًا implementation الحالي لـ evaluation_baseline.py والـdataset والـgraders والـmanifest والتوثيق المرتبط بها.
+   - لا تفترض أسماء حقول أو interfaces غير موجودة.
+   - أعد استخدام البنية الحالية قدر الإمكان.
+   - لا تنشئ نظام evaluation ثانيًا موازيًا.
+
+2. أنشئ طبقة واضحة لدعم real_case مع إبقاء contract_seed منفصلة تمامًا.
+   يجب أن يمكن تحديد نوع كل case بوضوح:
+   - contract_seed
+   - real_case
+
+3. لا تخترع أسئلة أو expected answers وتنسبها إلى استخدام أحمد الحقيقي.
+   استخدم فقط real cases يمكن إثبات أصلها من البيانات/fixtures/المحادثات/الملفات المتاحة فعليًا داخل بيئة المشروع.
+   إذا لم تكن محادثات ChatGPT التاريخية متاحة لـReplit، لا تدّع أنها متاحة ولا تنشئ بدائل وهمية.
+
+4. إذا كانت البيانات التاريخية الحقيقية غير متاحة داخل Replit، أنشئ فقط آلية ingestion/import للـreal cases بحيث يمكن إدخالها لاحقًا دون تغيير الـharness.
+   اجعل الإدخال يدعم بيانات منظمة مثل:
+   - case_id
+   - category
+   - input
+   - expected_behavior
+   - expected_sources عند الحاجة
+   - required_tools
+   - forbidden_tools
+   - success_criteria
+   - forbidden_behavior
+   - provenance/source reference
+   - case_type=real_case
+
+   لا تفرض جميع الحقول إذا كانت بنية الـharness الحالية تستخدم contract مختلفًا؛ طوّر schema بأقل تغيير متوافق.
+
+5. أضف validation قوي للـreal cases:
+   - case_id فريد.
+   - provenance موجودة.
+   - منع real_case بلا أصل موثق.
+   - منع خلط contract_seed بنتائج quality baseline الحقيقي.
+   - اكتشاف الحقول المتعارضة مثل required_tool وforbidden_tool لنفس الأداة.
+   - التحقق من expected sources عندما تكون مطلوبة.
+   - فشل واضح عند dataset غير صالح.
+
+6. اجعل dataset الحقيقية versioned وقابلة لإعادة الإنتاج.
+   يجب أن يسجل manifest على الأقل:
+   - dataset version
+   - SHA-256
+   - عدد real cases
+   - توزيع categories
+   - model/config المستخدمة
+   - tool/model limits
+   - timestamp/run identifier
+   - deterministic grading status
+   - semantic grading status
+   - live provider status
+
+7. لا تشغّل semantic grading تلقائيًا الآن إذا لم توجد real cases حقيقية مثبتة.
+   ولا تعرض contract_seed على أنها quality score.
+
+8. عند توفر real cases حقيقية كافية، يجب أن يستطيع الـharness قياس هذه المحاور بشكل منفصل، لا دمجها في رقم تجميلي غامض:
+   - task completion
+   - tool selection
+   - retrieval/source correctness
+   - citation correctness
+   - grounding
+   - instruction adherence
+   - abstention when evidence is insufficient
+   - HITL boundary compliance
+   - latency
+   - retries
+   - tool calls
+   - token/cost metadata عندما تكون متاحة
+
+9. افصل deterministic graders عن semantic graders.
+   استخدم deterministic checks لكل ما يمكن إثباته آليًا.
+   لا تستخدم LLM judge بدل checks حتمية موجودة.
+
+10. جهّز semantic grading كطبقة اختيارية فقط.
+    يجب أن يكون لها rubric واضح لمعايير مثل:
+    - groundedness
+    - relevance
+    - completeness
+    - source correctness
+    لكن لا تعطِ score نهائيًا مصطنعًا من نوع 95/100 دون أساس واضح.
+
+11. أضف regression comparison:
+    يجب أن نستطيع لاحقًا مقارنة:
+    baseline A قبل تعديل Memory/Retrieval
+    مقابل
+    baseline B بعد التعديل
+    مع إظهار التحسن والتراجع لكل metric/category، وليس المتوسط فقط.
+
+12. لا تعدّل Memory Architecture أو Retrieval implementation الآن.
+    الهدف هو قياس النسخة الحالية أولًا حتى يصبح لدينا baseline صالح للمقارنة.
+
+13. لا تضف dashboard أو notification delivery أو orchestration framework أو multi-agent في هذه المهمة.
+
+14. حافظ على الخصوصية:
+    - لا تضع secrets داخل dataset أو manifest.
+    - لا تحفظ owner token.
+    - لا تنسخ provider payloads الحساسة.
+    - إذا احتوت real case على بيانات لا يحتاجها التقييم، قللها أو اعمل لها redaction مناسبًا مع الحفاظ على معنى الاختبار.
+
+15. أضف الاختبارات اللازمة للميزات الجديدة، خصوصًا:
+    - فصل contract_seed عن real_case.
+    - provenance validation.
+    - duplicate IDs.
+    - invalid/conflicting tool expectations.
+    - dataset hashing/versioning.
+    - manifest correctness.
+    - regression comparison.
+    - منع إعلان quality baseline إذا لم توجد real cases مؤهلة.
+
+16. بعد التنفيذ شغّل جميع الاختبارات الحالية والجديدة، compile check، git diff --check، وأي health/workflow checks معتادة في المشروع.
+    لا تكسر fault injection أو recovery أو audit أو alerts أو retention.
+
+17. إذا كانت real historical cases غير متاحة فعليًا داخل Replit، لا تعتبر المهمة فاشلة.
+    أكمل infrastructure اللازمة للاستيراد والتحقق والتقييم، ثم اذكر بوضوح:
+    REAL_CASE_DATA_REQUIRED
+    وحدد بالضبط صيغة البيانات المطلوبة لإكمال baseline الحقيقي.
+
+18. إذا كانت real cases متاحة بالفعل، استخدم مجموعة صغيرة ممثلة أولًا، تقريبًا 20–30 حالة إن كان المحتوى الحقيقي يسمح بذلك، مع تغطية قدر الإمكان:
+    - context/project continuity
+    - retrieval
+    - source freshness/conflicts
+    - tool selection
+    - grounding/citations
+    - HITL
+    - ambiguity/abstention
+    - multi-step tasks
+
+19. لا تحسّن النظام بناءً على نتائج الـbaseline في نفس المهمة.
+    أخرج التشخيص فقط:
+    - أقوى المجالات
+    - أضعف المجالات
+    - failures حسب category
+    - هل عنق الزجاجة Context/Memory أم Retrieval أم Tool Selection أم Grounding أم غير ذلك
+    ثم توقف قبل تعديل المعمارية.
+
+في النهاية أعطني تقريرًا واحدًا مركزًا يتضمن:
+- ما الذي فحصته قبل التعديل.
+- الملفات التي تغيرت.
+- ما الذي أضفته.
+- عدد contract_seed وreal_case الفعلي.
+- هل real cases موثقة provenance أم لا.
+- نتائج الاختبارات.
+- نتيجة manifest/hash validation.
+- هل تم تشغيل live baseline أم لا.
+- هل تم تشغيل semantic grading أم لا.
+- أي failures أو limitations.
+- الخطوة التالية الموصى بها بناءً على الأدلة فقط.
+
+مهم:
+لا تقل "تم" لأي جزء لم تتحقق منه فعليًا.
+لا تخترع historical user cases.
+لا تبدأ Memory/Retrieval improvements حتى نحصل على baseline حقيقي قابل لإعادة الإنتاج.

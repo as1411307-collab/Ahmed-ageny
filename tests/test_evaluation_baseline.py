@@ -4,8 +4,11 @@ import unittest
 
 from evaluation_baseline import (
     build_scoreboard,
+    build_quality_scoreboard,
+    compare_scoreboards,
     deterministic_grade,
     freeze_baseline_manifest,
+    load_case_document,
     load_evaluation_cases,
 )
 
@@ -42,9 +45,62 @@ class EvaluationBaselineTests(unittest.TestCase):
         manifest = freeze_baseline_manifest()
         serialized = str(manifest)
         self.assertEqual(manifest["dataset_case_count"], 22)
+        self.assertEqual(manifest["real_case_count"], 0)
+        self.assertIn("category_counts", manifest)
         self.assertNotIn("API_KEY", serialized)
         self.assertNotIn("TOKEN", serialized)
         self.assertFalse(manifest["live_provider_run"])
+
+    def test_quality_scoreboard_requires_real_cases(self) -> None:
+        report = build_quality_scoreboard(load_evaluation_cases(), {})
+        self.assertEqual(report["status"], "REAL_CASE_DATA_REQUIRED")
+        self.assertFalse(report["quality_eligible"])
+
+    def test_real_case_requires_provenance_and_conflicting_tools_fail(self) -> None:
+        _, cases = load_case_document(
+            __import__("pathlib").Path(
+                "tests/fixtures/evaluation_baseline/cases.json"
+            ),
+            require_baseline_size=True,
+        )
+        invalid = dict(cases[0])
+        invalid["provenance"] = "real_case"
+        with self.assertRaises(ValueError):
+            from evaluation_baseline import validate_evaluation_cases
+
+            validate_evaluation_cases([invalid])
+
+        conflicting = dict(cases[0])
+        conflicting["required_tools"] = ["web_search"]
+        conflicting["forbidden_tools"] = ["web_search"]
+        with self.assertRaises(ValueError):
+            from evaluation_baseline import validate_evaluation_cases
+
+            validate_evaluation_cases([conflicting])
+
+    def test_regression_comparison_reports_case_and_category_deltas(self) -> None:
+        before = {
+            "results": [
+                {
+                    "case_id": "a",
+                    "category": "retrieval",
+                    "deterministic_status": "FAIL",
+                }
+            ]
+        }
+        after = {
+            "results": [
+                {
+                    "case_id": "a",
+                    "category": "retrieval",
+                    "deterministic_status": "PASS",
+                }
+            ]
+        }
+        comparison = compare_scoreboards(before, after)
+        self.assertEqual(comparison["status"], "COMPARABLE")
+        self.assertEqual(comparison["per_case"][0]["delta"], 1)
+        self.assertEqual(comparison["per_category"]["retrieval"]["delta"], 1.0)
 
 
 if __name__ == "__main__":
