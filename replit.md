@@ -85,3 +85,6 @@ Never place secret values in source files, logs, browser code, or chat.
 - `/alerts/runtime` evaluates a small owner-only operational policy for health,
   audit integrity, orphaning/leases, recovery failures, and sustained failure
   rate. It persists transitions but does not deliver external notifications.
+- `evaluation_baseline.py` provides a deterministic harness. Its initial 22
+  cases are `contract_seed` entries, not a real-user quality score; add reviewed
+  `real_case` entries before live-provider evaluation.

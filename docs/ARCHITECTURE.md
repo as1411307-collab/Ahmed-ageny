@@ -82,4 +82,8 @@ server.py
 - Alert evaluation is separate from notification delivery. Persisted rule state
   uses cooldowns and transition events, while the current notifier is
   intentionally unconfigured.
+- Evaluation is separate from runtime operations. The baseline harness grades
+  tool selection, forbidden tools, citations, schema, and approval boundaries
+  deterministically; semantic grading is explicitly disabled until real cases
+  and a reviewed rubric are available.
 - The registered Node artifact is not imported by the Python runtime.

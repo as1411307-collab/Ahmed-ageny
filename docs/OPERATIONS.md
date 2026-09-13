@@ -114,6 +114,21 @@ It returns persisted states such as `healthy`, `warning`, and `critical`;
 sizes and cooldowns, so repeated polling does not create an audit event unless a
 rule opens, escalates, recovers, or reaches a new suppression interval.
 
+The Evaluation Baseline harness is deterministic by default and does not call a
+live provider:
+
+```text
+python evaluation_baseline.py
+python evaluation_baseline.py --manifest
+python -m unittest tests.test_evaluation_baseline -v
+```
+
+The initial 22 cases are labeled `contract_seed`, so their deterministic
+contract results must not be presented as a real-user quality score. Replace or
+extend them with 20–30 `real_case` entries before running a live baseline.
+Semantic grading remains `NOT_RUN` until a reviewed rubric and safe grader are
+configured.
+
 For a persisted run, inspect its owner-only state trace with:
 
 ```text
