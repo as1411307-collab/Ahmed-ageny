@@ -7,6 +7,10 @@ AHMED_PRIMARY_MODEL = (
     os.environ.get("AHMED_PRIMARY_MODEL", "gemini-flash-lite-latest").strip()
     or "gemini-flash-lite-latest"
 )
+AHMED_OPENAI_MODEL = (
+    os.environ.get("AHMED_OPENAI_MODEL", "gpt-5.6-terra").strip()
+    or "gpt-5.6-terra"
+)
 AHMED_OWNER_TOKEN = os.environ.get("AHMED_OWNER_TOKEN", "").strip()
 MY_FILES_EMBEDDING_MODEL = os.environ.get(
     "MY_FILES_EMBEDDING_MODEL",

@@ -8,3 +8,9 @@ Treat `oauth.v2.ApiKeyNotApproved` from the Replit model gateway as an authoriza
 **Why:** The runtime can expose the managed integration variables while the gateway still requires an approval or reconnect action in the Replit UI.
 
 **How to apply:** Keep the provider adapter explicit and classify the failure as `UNAUTHORIZED`; do not silently switch providers or ask for a personal key. After UI approval or reconnect, rerun the healthcheck and the real tool-call flow.
+
+The managed AI setup helper can also stop immediately with an account-restriction error even when its environment variables already exist.
+
+**Why:** Setup authorization and runtime secret presence are separate states.
+
+**How to apply:** Preserve a validated, environment-gated provider adapter and report the setup blocker; do not expose secret values or silently substitute another model.

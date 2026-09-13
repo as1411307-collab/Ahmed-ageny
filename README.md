@@ -1,9 +1,9 @@
 # Ahmed Agent
 
-Ahmed Agent is a single-owner assistant built around Gemini. It combines
-conversation, web research, academic lookup, GitHub structured search, and
-private `MY_FILES` retrieval behind a small authenticated API and MCP
-transport.
+Ahmed Agent is a single-owner assistant with selectable Gemini and ChatGPT
+providers. It combines conversation, web research, academic lookup, GitHub
+structured search, and private `MY_FILES` retrieval behind a small
+authenticated API and MCP transport.
 
 ## Runtime
 
@@ -34,6 +34,7 @@ write the token into the URL, chat payload, page content, or application logs.
 | --- | --- |
 | `WEB` | Tavily/Search Fabric, academic search, GitHub structured search |
 | `MY_FILES` | TXT, Markdown, PDF text layers, DOCX, PostgreSQL FTS, optional FastEmbed |
+| `MODELS` | Per-message choice between Gemini and ChatGPT |
 | `MCP` | `ping` and `web_search`, protected by owner bearer authentication |
 | `POLICY` | risk classification, approval/rejection, persistence, audit events |
 
@@ -44,6 +45,8 @@ chat:
 
 - `AHMED_OWNER_TOKEN`
 - `GEMINI_API_KEY`
+- `AI_INTEGRATIONS_OPENAI_API_KEY`
+- `AI_INTEGRATIONS_OPENAI_BASE_URL`
 
 Optional provider secrets are documented in `replit.md`.
 

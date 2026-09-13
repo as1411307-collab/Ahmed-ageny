@@ -16,9 +16,12 @@ from pydantic_ai.exceptions import ModelHTTPError
 from pydantic_ai.messages import ModelMessage, ModelMessagesTypeAdapter
 from pydantic_ai.models import Model
 from pydantic_ai.models.google import GoogleModel
+from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.google import GoogleProvider
+from pydantic_ai.providers.openai import OpenAIProvider
 
 from config import (
+    AHMED_OPENAI_MODEL,
     AHMED_PRIMARY_MODEL,
     DEFAULT_TOP_K,
     GEMINI_429_BACKOFF_BASE_SECONDS,
@@ -40,7 +43,9 @@ from skill_tools import web_search as existing_web_search
 logger = logging.getLogger("ahmed_agent.core")
 
 GEMINI_MODEL = AHMED_PRIMARY_MODEL
-PROVIDER_NAME = "gemini"
+OPENAI_MODEL = AHMED_OPENAI_MODEL
+ProviderName = Literal["gemini", "openai"]
+SUPPORTED_PROVIDER_NAMES = frozenset({"gemini", "openai"})
 MAX_MESSAGE_HISTORY_ITEMS = 50
 MAX_MESSAGE_HISTORY_BYTES = 1_000_000
 MAX_TOOL_CALLS = 3
@@ -120,6 +125,7 @@ class AgentDeps:
 class ProviderCandidate:
     name: str
     model: Model
+    model_name: str
 
 
 @dataclass
@@ -133,65 +139,97 @@ class _ProviderState:
     last_latency_ms: int | None = None
 
 
-_provider_state = _ProviderState()
+_provider_states: dict[str, _ProviderState] = {
+    "gemini": _ProviderState(),
+    "openai": _ProviderState(),
+}
 
 
-def provider_health() -> dict[str, object]:
-    if not os.environ.get("GEMINI_API_KEY"):
+def _provider_state_for(provider: ProviderName) -> _ProviderState:
+    return _provider_states[provider]
+
+
+def _provider_is_configured(provider: ProviderName) -> bool:
+    if provider == "gemini":
+        return bool(os.environ.get("GEMINI_API_KEY"))
+    return bool(
+        os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY")
+        and os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL")
+    )
+
+
+def provider_model_name(provider: ProviderName) -> str:
+    return GEMINI_MODEL if provider == "gemini" else OPENAI_MODEL
+
+
+def provider_health(provider: ProviderName = "gemini") -> dict[str, object]:
+    state = _provider_state_for(provider)
+    model_name = provider_model_name(provider)
+    if not _provider_is_configured(provider):
         return {
-            "provider": PROVIDER_NAME,
-            "model": GEMINI_MODEL,
+            "provider": provider,
+            "model": model_name,
             "status": "NOT_CONFIGURED",
-            "last_success": _provider_state.last_success,
-            "last_failure": _provider_state.last_failure,
-            "last_failure_code": _provider_state.last_failure_code,
-            "latency_ms": _provider_state.last_latency_ms,
+            "last_success": state.last_success,
+            "last_failure": state.last_failure,
+            "last_failure_code": state.last_failure_code,
+            "latency_ms": state.last_latency_ms,
         }
-    if _provider_state.status == "RATE_LIMITED":
-        remaining = max(0.0, _provider_state.rate_limited_until - time.monotonic())
+    if state.status == "RATE_LIMITED":
+        remaining = max(0.0, state.rate_limited_until - time.monotonic())
         if remaining > 0:
             return {
-                "provider": PROVIDER_NAME,
-                "model": GEMINI_MODEL,
+                "provider": provider,
+                "model": model_name,
                 "status": "RATE_LIMITED",
                 "cooldown_remaining_seconds": round(remaining, 3),
-                "last_success": _provider_state.last_success,
-                "last_failure": _provider_state.last_failure,
-                "last_failure_code": _provider_state.last_failure_code,
-                "latency_ms": _provider_state.last_latency_ms,
+                "last_success": state.last_success,
+                "last_failure": state.last_failure,
+                "last_failure_code": state.last_failure_code,
+                "latency_ms": state.last_latency_ms,
             }
-        _provider_state.status = "READY"
-        _provider_state.consecutive_429 = 0
+        state.status = "READY"
+        state.consecutive_429 = 0
     return {
-        "provider": PROVIDER_NAME,
-        "model": GEMINI_MODEL,
-        "status": _provider_state.status,
-        "last_success": _provider_state.last_success,
-        "last_failure": _provider_state.last_failure,
-        "last_failure_code": _provider_state.last_failure_code,
-        "latency_ms": _provider_state.last_latency_ms,
+        "provider": provider,
+        "model": model_name,
+        "status": state.status,
+        "last_success": state.last_success,
+        "last_failure": state.last_failure,
+        "last_failure_code": state.last_failure_code,
+        "latency_ms": state.last_latency_ms,
     }
 
 
-def _mark_provider_ready(latency_ms: int) -> None:
-    _provider_state.consecutive_429 = 0
-    _provider_state.rate_limited_until = 0.0
-    _provider_state.status = "READY"
-    _provider_state.last_success = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    _provider_state.last_failure = None
-    _provider_state.last_failure_code = None
-    _provider_state.last_latency_ms = latency_ms
+def all_provider_health() -> dict[str, dict[str, object]]:
+    return {
+        provider: provider_health(provider)
+        for provider in ("gemini", "openai")
+    }
 
 
-def _mark_provider_429() -> None:
-    _provider_state.consecutive_429 += 1
-    if _provider_state.consecutive_429 >= GEMINI_429_CIRCUIT_THRESHOLD:
-        _open_rate_limit()
+def _mark_provider_ready(provider: ProviderName, latency_ms: int) -> None:
+    state = _provider_state_for(provider)
+    state.consecutive_429 = 0
+    state.rate_limited_until = 0.0
+    state.status = "READY"
+    state.last_success = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    state.last_failure = None
+    state.last_failure_code = None
+    state.last_latency_ms = latency_ms
 
 
-def _open_rate_limit() -> None:
-    _provider_state.status = "RATE_LIMITED"
-    _provider_state.rate_limited_until = (
+def _mark_provider_429(provider: ProviderName) -> None:
+    state = _provider_state_for(provider)
+    state.consecutive_429 += 1
+    if state.consecutive_429 >= GEMINI_429_CIRCUIT_THRESHOLD:
+        _open_rate_limit(provider)
+
+
+def _open_rate_limit(provider: ProviderName) -> None:
+    state = _provider_state_for(provider)
+    state.status = "RATE_LIMITED"
+    state.rate_limited_until = (
         time.monotonic() + GEMINI_429_COOLDOWN_SECONDS
     )
 
@@ -203,16 +241,39 @@ def _gemini_model(api_key: str) -> GoogleModel:
     )
 
 
+def _openai_model(api_key: str, base_url: str) -> OpenAIChatModel:
+    return OpenAIChatModel(
+        OPENAI_MODEL,
+        provider=OpenAIProvider(api_key=api_key, base_url=base_url),
+    )
+
+
 def _configured_providers() -> list[ProviderCandidate]:
+    providers: list[ProviderCandidate] = []
     gemini_key = os.environ.get("GEMINI_API_KEY")
-    if not gemini_key:
-        return []
-    return [
-        ProviderCandidate(
-            name="gemini",
-            model=_gemini_model(gemini_key),
+    if gemini_key:
+        providers.append(
+            ProviderCandidate(
+                name="gemini",
+                model=_gemini_model(gemini_key),
+                model_name=GEMINI_MODEL,
+            )
         )
-    ]
+    openai_key = os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY")
+    openai_base_url = os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL")
+    if openai_key and openai_base_url:
+        providers.append(
+            ProviderCandidate(
+                name="openai",
+                model=_openai_model(openai_key, openai_base_url),
+                model_name=OPENAI_MODEL,
+            )
+        )
+    return providers
+
+
+def configured_provider_names() -> list[str]:
+    return [candidate.name for candidate in _configured_providers()]
 
 
 def _provider_error_code(error: Exception) -> str | None:
@@ -530,26 +591,32 @@ async def run_ahmed(
     run_id: str | None = None,
     user_id: str | None = None,
     scope: Literal["WEB", "MY_FILES"] = "WEB",
+    provider: ProviderName = "gemini",
     tool_event_recorder: (
         Callable[[str, str, int, dict[str, Any] | None], Awaitable[None]] | None
     ) = None,
 ):
-    providers = _configured_providers()
-    if not providers:
+    if provider not in SUPPORTED_PROVIDER_NAMES:
+        raise ValueError("invalid model provider")
+
+    providers = {
+        candidate.name: candidate for candidate in _configured_providers()
+    }
+    candidate = providers.get(provider)
+    if candidate is None:
         raise AgentCoreError(
             "No authorized model provider is configured.",
-            provider=PROVIDER_NAME,
+            provider=provider,
             provider_status="NOT_CONFIGURED",
         )
 
     if scope not in {"WEB", "MY_FILES"}:
         raise ValueError("invalid agent scope")
 
-    candidate = providers[0]
-    health = provider_health()
+    health = provider_health(provider)
     if health["status"] == "RATE_LIMITED":
         raise AgentCoreError(
-            "Gemini is temporarily rate limited.",
+            f"{provider} is temporarily rate limited.",
             provider=candidate.name,
             status_code=429,
             provider_code="RATE_LIMITED",
@@ -578,14 +645,15 @@ async def run_ahmed(
                 ),
             )
             _mark_provider_ready(
+                provider,
                 int((time.perf_counter() - attempt_started) * 1000)
             )
             return result
         except ModelHTTPError as error:
             last_error = error
             if error.status_code == 429:
-                _mark_provider_429()
-                if _provider_state.status == "RATE_LIMITED":
+                _mark_provider_429(provider)
+                if _provider_state_for(provider).status == "RATE_LIMITED":
                     break
                 if attempt < GEMINI_429_MAX_RETRIES:
                     await asyncio.sleep(_retry_after_seconds(error, attempt))
@@ -608,18 +676,19 @@ async def run_ahmed(
         else None
     )
     if status_code == 429:
-        _open_rate_limit()
+        _open_rate_limit(provider)
         provider_status = "RATE_LIMITED"
         provider_code = "RATE_LIMITED"
     elif status_code in {401, 403} or provider_code == "oauth.v2.ApiKeyNotApproved":
-        _provider_state.status = "UNAUTHORIZED"
+        _provider_state_for(provider).status = "UNAUTHORIZED"
         provider_status = "UNAUTHORIZED"
     else:
-        _provider_state.status = "ERROR"
+        _provider_state_for(provider).status = "ERROR"
         provider_status = "ERROR"
-    _provider_state.last_failure = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    _provider_state.last_failure_code = provider_code or provider_status
-    _provider_state.last_latency_ms = None
+    state = _provider_state_for(provider)
+    state.last_failure = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    state.last_failure_code = provider_code or provider_status
+    state.last_latency_ms = None
     raise AgentCoreError(
         "All configured model providers failed.",
         provider=candidate.name,

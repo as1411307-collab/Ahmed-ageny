@@ -1,7 +1,8 @@
 # Ahmed Agent
 
-Ahmed Agent is a single-owner AI assistant with Gemini chat, web search, academic
-search, GitHub structured search, and private `MY_FILES` retrieval.
+Ahmed Agent is a single-owner AI assistant with selectable Gemini or ChatGPT
+chat, web search, academic search, GitHub structured search, and private
+`MY_FILES` retrieval.
 
 ## Run & Operate
 
@@ -18,7 +19,7 @@ artifact under `artifacts/api-server` is a scaffold and is not the Ahmed runtime
 - Python 3.13
 - Starlette + Uvicorn
 - MCP SDK streamable HTTP transport
-- PydanticAI + Google Gemini
+- PydanticAI + Google Gemini/OpenAI-compatible ChatGPT
 - PostgreSQL via asyncpg
 - PostgreSQL FTS with optional local FastEmbed hybrid retrieval
 - Crossref, DataCite, OpenAlex, GitHub REST API, and Tavily
@@ -47,6 +48,8 @@ artifact under `artifacts/api-server` is a scaffold and is not the Ahmed runtime
 
 - `DATABASE_URL` — managed PostgreSQL connection
 - `GEMINI_API_KEY` — valid Google Gemini API key
+- `AI_INTEGRATIONS_OPENAI_API_KEY` — Replit-managed OpenAI-compatible key
+- `AI_INTEGRATIONS_OPENAI_BASE_URL` — Replit-managed OpenAI-compatible base URL
 - `AHMED_OWNER_TOKEN` — owner bearer token
 
 Optional:
@@ -60,8 +63,12 @@ Never place secret values in source files, logs, browser code, or chat.
 
 ## Gotchas
 
-- Gemini is the model provider; web search is a separate Tavily/Search Fabric
-  capability. Google Search grounding is not enabled by default.
+- Gemini and ChatGPT are selectable model providers; web search is a separate
+  Tavily/Search Fabric capability. Google Search grounding is not enabled by
+  default.
+- The ChatGPT provider is only available when both OpenAI integration variables
+  are configured. It never silently falls back to Gemini after the user selects
+  ChatGPT.
 - Brave is optional and disabled unless configured and selected by routing.
 - FastEmbed is lazy-loaded and falls back to FTS when unavailable.
 - PostgreSQL schema tables must exist before persistence health checks can pass.

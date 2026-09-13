@@ -14,10 +14,10 @@ from starlette.responses import FileResponse, JSONResponse, Response
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from agent_core import (
-    GEMINI_MODEL,
-    PROVIDER_NAME,
+    SUPPORTED_PROVIDER_NAMES,
     AgentCoreError,
     parse_message_history,
+    provider_model_name,
     provider_health,
     run_ahmed,
 )
@@ -91,6 +91,7 @@ def _structured_log(
     trace_id: str,
     session_id: str,
     run_id: str,
+    provider: str,
     status: str,
     latency_ms: int,
     error_code: str | None = None,
@@ -101,8 +102,8 @@ def _structured_log(
                 "trace_id": trace_id,
                 "session_id": session_id,
                 "run_id": run_id,
-                "provider": PROVIDER_NAME,
-                "model": GEMINI_MODEL,
+                "provider": provider,
+                "model": provider_model_name(provider),  # type: ignore[arg-type]
                 "status": status,
                 "latency_ms": latency_ms,
                 **({"error_code": error_code} if error_code else {}),
@@ -171,7 +172,13 @@ async def provider_health_route(request: Request) -> Response:
             {"error": "owner authentication required", "code": error_code},
             status_code=status_code,
         )
-    return JSONResponse(provider_health())
+    provider = request.query_params.get("provider", "gemini")
+    if provider not in SUPPORTED_PROVIDER_NAMES:
+        return JSONResponse(
+            {"error": "provider غير صالح. استخدم gemini أو openai."},
+            status_code=400,
+        )
+    return JSONResponse(provider_health(provider))  # type: ignore[arg-type]
 
 
 @server.custom_route("/doctor", methods=["GET"])
@@ -431,6 +438,12 @@ async def chat_message(request: Request) -> Response:
             {"error": "scope غير صالح. استخدم WEB أو MY_FILES."},
             status_code=400,
         )
+    provider = payload.get("provider", "gemini")
+    if not isinstance(provider, str) or provider not in SUPPORTED_PROVIDER_NAMES:
+        return JSONResponse(
+            {"error": "provider غير صالح. استخدم gemini أو openai."},
+            status_code=400,
+        )
     try:
         session_id = _request_uuid(conversation_id, "conversation_id")
         run_uuid = _request_uuid(run_id, "run_id")
@@ -450,8 +463,8 @@ async def chat_message(request: Request) -> Response:
             run_id=run_uuid,
             session_id=session_id,
             user_prompt=message,
-            provider_name=PROVIDER_NAME,
-            model_name=GEMINI_MODEL,
+            provider_name=provider,
+            model_name=provider_model_name(provider),  # type: ignore[arg-type]
         )
     except (PersistenceError, ValueError) as error:
         logger.error("Agent persistence setup failed error_type=%s", type(error).__name__)
@@ -485,6 +498,7 @@ async def chat_message(request: Request) -> Response:
             run_id=run_uuid,
             user_id=authenticated_user.user_id if authenticated_user else None,
             scope=scope,
+            provider=provider,  # type: ignore[arg-type]
             tool_event_recorder=save_tool_event,
         )
     except AgentCoreError as error:
@@ -501,6 +515,7 @@ async def chat_message(request: Request) -> Response:
             trace_id=trace_id,
             session_id=session_id,
             run_id=run_uuid,
+            provider=provider,
             status="failed",
             latency_ms=int((time.perf_counter() - started_at) * 1000),
             error_code=provider_status,
@@ -532,6 +547,7 @@ async def chat_message(request: Request) -> Response:
             trace_id=trace_id,
             session_id=session_id,
             run_id=run_uuid,
+            provider=provider,
             status="failed",
             latency_ms=int((time.perf_counter() - started_at) * 1000),
             error_code=type(error).__name__,
@@ -565,6 +581,7 @@ async def chat_message(request: Request) -> Response:
             trace_id=trace_id,
             session_id=session_id,
             run_id=run_uuid,
+            provider=provider,
             status="failed",
             latency_ms=int((time.perf_counter() - started_at) * 1000),
             error_code=type(error).__name__,
@@ -578,6 +595,7 @@ async def chat_message(request: Request) -> Response:
         trace_id=trace_id,
         session_id=session_id,
         run_id=run_uuid,
+        provider=provider,
         status="succeeded",
         latency_ms=int((time.perf_counter() - started_at) * 1000),
     )

@@ -5,7 +5,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
-from agent_core import provider_health
+from agent_core import all_provider_health, provider_health
 from academic_search import academic_health
 from auth import auth_health
 from embeddings import embedding_health
@@ -143,6 +143,7 @@ async def _build_report(*, probe_search: bool) -> dict[str, Any]:
             "status": provider_status,
             "provider": provider.get("provider"),
             "model": provider.get("model"),
+            "available_providers": all_provider_health(),
             "circuit_breaker": provider_status,
             "last_success": provider.get("last_success"),
             "last_failure": provider.get("last_failure"),

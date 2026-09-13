@@ -248,7 +248,7 @@
       }
 
       .chat-form {
-        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-columns: auto auto minmax(0, 1fr) auto;
         align-items: end;
       }
 
@@ -439,7 +439,9 @@
         <div>
           <p class="eyebrow">Ahmed Agent</p>
           <h1>لوحة تشغيل الوكيل</h1>
-          <p class="subtitle">Gemini مع البحث، الملفات، والمصادقة الخاصة بالمالك.</p>
+          <p class="subtitle">
+            Gemini وChatGPT مع البحث، الملفات، والمصادقة الخاصة بالمالك.
+          </p>
         </div>
         <div id="connection-status" class="status" data-state="locked" role="status">
           غير موثق
@@ -487,6 +489,13 @@
           </ol>
           <div class="chat-composer">
             <form id="chat-form" class="chat-form">
+              <div class="field">
+                <label for="provider">المزوّد</label>
+                <select id="provider" name="provider">
+                  <option value="gemini">Gemini</option>
+                  <option value="openai">ChatGPT</option>
+                </select>
+              </div>
               <div class="field">
                 <label for="scope">النطاق</label>
                 <select id="scope" name="scope">
@@ -549,6 +558,7 @@
       const uploadForm = document.querySelector("#upload-form");
       const tokenInput = document.querySelector("#owner-token");
       const messageInput = document.querySelector("#message");
+      const providerInput = document.querySelector("#provider");
       const scopeInput = document.querySelector("#scope");
       const sendButton = document.querySelector("#send");
       const uploadButton = document.querySelector("#upload");
@@ -659,7 +669,11 @@
           const response = await authenticatedFetch("/chat/message", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message, scope: scopeInput.value }),
+            body: JSON.stringify({
+              message,
+              provider: providerInput.value,
+              scope: scopeInput.value,
+            }),
           });
           const data = await readJson(response);
           if (!response.ok) {
