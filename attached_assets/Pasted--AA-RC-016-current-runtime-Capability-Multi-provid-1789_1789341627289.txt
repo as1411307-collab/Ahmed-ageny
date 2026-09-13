@@ -1,0 +1,167 @@
+أكمل فقط إغلاق AA-RC-016 — current_runtime.
+
+هذه ليست مرحلة Capability جديدة، ولا مرحلة Multi-provider، ولا إعادة هيكلة للمشروع.
+
+الهدف الوحيد:
+تحويل نتيجة inspect_runtime_evidence من partial إلى verified اعتمادًا على الأدلة الفعلية للمشروع، مع الحفاظ على كل security boundaries الحالية.
+
+الوضع الحالي المؤكد:
+- inspect_runtime_evidence موجود ويعمل.
+- allowlist الحالية:
+  - server.py
+  - pyproject.toml
+  - .replit
+- AA-RC-016 أصبحت EXECUTED ولكن runtime evidence ما زالت partial.
+- السبب المحدد:
+  parser الحالي لا يقرأ run الموجود داخل [deployment] في .replit.
+- active_entrypoint = unverified
+- server_runtime_command = unverified.
+- 79 tests ناجحة + اختبار fault-injection اختياري skipped.
+- لا يوجد regression محلي مثبت.
+
+المطلوب:
+
+1. لا تستخدم regex أو hard-coded answer لتقرير أن runtime هو Python/server.py.
+
+2. استخدم parser بنيويًا لملف .replit.
+   بما أن runtime هو Python 3.13، فضّل مكتبة Python القياسية tomllib إذا كان الملف متوافقًا معها.
+   لا تضف dependency خارجية إلا إذا ثبت أن tomllib غير مناسب.
+
+3. افحص بنية .replit الفعلية واستخرج runtime command من المكان الموجود فيه فعليًا، بما في ذلك [deployment] إن كان هو المصدر.
+
+4. لا تفترض مسبقًا أن:
+   run = "uv run server.py"
+   يجب أن تكون النتيجة.
+   استخرج القيمة من الملف الحقيقي.
+
+5. تعامل بأمان مع شكل run الفعلي سواء كان string أو structure/list مدعومًا في الملف.
+
+6. استخرج بشكل مستقل:
+   - server_runtime_command
+   - active_entrypoint
+
+7. active_entrypoint يجب أن يُشتق من runtime command الفعلي.
+   لا تكتب "server.py" كثابت في منطق الاكتشاف.
+
+8. إذا وجدت أكثر من runtime command في .replit:
+   - لا تخفِ التعارض.
+   - صنف كل مصدر.
+   - استخدم evidence واضحًا لتحديد deployment/runtime الفعلي إن أمكن.
+   - إذا كانت الأدلة متعارضة حقًا، أعد partial بدل التخمين.
+
+9. حافظ على security boundaries الحالية بالكامل:
+   - read-only
+   - fixed allowlist
+   - no arbitrary paths
+   - no path traversal
+   - no external symlinks
+   - no shell execution
+   - no network
+   - no mutation
+   - no .env
+   - no secrets
+
+مهم:
+قراءة runtime command كنص من .replit مسموحة.
+تنفيذ runtime command غير مسموح.
+
+10. حافظ على evidence references:
+    لكل claim مهم أرجع:
+    - source file
+    - line/range إن أمكن
+    - extracted evidence
+    - verification status
+
+11. أضف/حدّث الاختبارات لتغطي على الأقل:
+    - run داخل [deployment].
+    - استخراج runtime command بدون hard coding.
+    - اشتقاق entrypoint من command.
+    - missing run => partial/unverified.
+    - conflicting evidence => لا يتم التخمين.
+    - path/security boundaries القديمة لا تتراجع.
+
+12. شغّل test suite الكاملة.
+
+شرط Capability Acceptance:
+
+AA-RC-016 يجب أن تصبح:
+
+- EXECUTED
+- inspect_runtime_evidence مستخدمة فعليًا.
+- overall runtime evidence = verified.
+- language = verified.
+- language version = verified.
+- Starlette/Uvicorn = verified إذا أثبتتها الملفات.
+- MCP = verified إذا أثبتته الملفات.
+- port = verified إذا أثبتته الملفات.
+- server_runtime_command = verified.
+- active_entrypoint = verified.
+
+ثم شغّل AA-RC-016 بشكل مستهدف على execution path الحقيقي.
+
+إذا أصبحت verified:
+اعتبر Capability Acceptance ناجحة.
+
+لا تبدأ AA-RC-014.
+لا تبدأ أي Capability Gap أخرى.
+
+لا تعدّل:
+- server.py
+- agent architecture
+- provider/model configuration
+- Gemini configuration
+- OpenAI configuration
+- Express/TypeScript
+- Dataset
+- baseline-real-v1-complete.json
+- deploy/publish configuration
+
+ولا تنفذ الآن:
+- provider abstraction refactor
+- model routing
+- fallback providers
+- OpenRouter
+- Agents JS
+- Composio
+- Firecrawl
+- أي API جديد
+
+بالنسبة للتقييم الكامل:
+
+لا تغيّر provider لتجاوز rate limit.
+
+بعد نجاح AA-RC-016 المستهدف، يمكنك إجراء full 26-case evaluation مرة واحدة فقط إذا كان provider متاحًا.
+
+شرط Baseline Promotion يبقى:
+
+- 26 total
+- 22 EXECUTED
+- 4 Capability Gaps
+- 0 Provider Failures
+- 0 HITL_BLOCKED
+
+إذا عاد Gemini rate limiting:
+- لا تعتبر AA-RC-016 فاشلة إذا كان targeted capability acceptance ناجحًا.
+- لا تعتمد artifact جديدًا كـbaseline ناجح.
+- سجل Provider Failure منفصلًا.
+- توقف دون تغيير provider أو إعادة المحاولة المتكررة.
+
+حافظ على Dataset SHA-256 الحالي:
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+وحافظ على baseline-real-v1-complete.json دون أي تعديل.
+
+في النهاية أعطني تقريرًا مختصرًا يحتوي:
+- الملفات المعدلة.
+- سبب الخلل الحقيقي في parser.
+- طريقة الإصلاح.
+- نتيجة inspect_runtime_evidence.
+- evidence الذي أثبت command والentrypoint.
+- نتائج الاختبارات.
+- نتيجة AA-RC-016 المستهدفة.
+- نتيجة full evaluation إن تم تشغيلها.
+- provider failures إن وجدت.
+- تأكيد عدم تغيير baseline القديم.
+
+إذا نجحت Capability Acceptance، توقف.
+لا تبدأ الفجوة التالية.

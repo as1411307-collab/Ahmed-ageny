@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import shlex
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -101,6 +102,97 @@ def _parse_toml(lines: list[str], filename: str) -> dict[str, Any]:
         raise RuntimeEvidenceError(f"{filename} is not valid TOML") from error
 
 
+def _command_value(raw_command: object) -> str | None:
+    if isinstance(raw_command, str):
+        return raw_command.strip() or None
+    if isinstance(raw_command, list) and all(
+        isinstance(part, str) for part in raw_command
+    ):
+        return " ".join(part for part in raw_command if part).strip() or None
+    return None
+
+
+def _run_line_evidence(
+    lines: list[str],
+    source: str,
+) -> list[dict[str, object]]:
+    current_section = "root"
+    references: list[dict[str, object]] = []
+    for index, line in enumerate(lines):
+        section_match = re.match(r"^\s*\[([^\]]+)\]\s*$", line)
+        if section_match:
+            current_section = section_match.group(1)
+            continue
+        if current_section != source:
+            continue
+        if re.match(r"^\s*run\s*=", line) is None:
+            continue
+        line_number = index + 1
+        references.append(
+            {
+                "file": ".replit",
+                "line_start": line_number,
+                "line_end": line_number,
+                "citation": f"[source: .replit, line {line_number}]",
+                "evidence": _safe_snippet(line),
+            }
+        )
+    return references
+
+
+def _runtime_command_candidates(
+    replit: dict[str, Any],
+    replit_lines: list[str],
+) -> list[dict[str, object]]:
+    candidates: list[dict[str, object]] = []
+    sources: list[tuple[str, object]] = [("root", replit.get("run"))]
+    deployment = replit.get("deployment")
+    if isinstance(deployment, dict):
+        sources.append(("deployment", deployment.get("run")))
+
+    for source, raw_command in sources:
+        if raw_command is None:
+            continue
+        command = _command_value(raw_command)
+        references = _run_line_evidence(replit_lines, source)
+        candidates.append(
+            {
+                "source": source,
+                "command": command,
+                "status": "verified" if command and references else "unverified",
+                "evidence": references,
+            }
+        )
+    return candidates
+
+
+def _derive_entrypoint(command: str | None) -> str | None:
+    if not command:
+        return None
+    try:
+        parts = shlex.split(command)
+    except ValueError:
+        return None
+    for part in reversed(parts):
+        if part and not part.startswith("-"):
+            return part
+    return None
+
+
+def _select_runtime_command(
+    candidates: list[dict[str, object]],
+) -> dict[str, object] | None:
+    if not candidates:
+        return None
+    # Deployment is the active runtime source when present. A root-level run
+    # remains visible in runtime_command_candidates for conflict analysis.
+    for source in ("deployment", "root"):
+        matching = [candidate for candidate in candidates if candidate["source"] == source]
+        if matching:
+            return matching[0]
+    return None
+
+
 def inspect_runtime_evidence(
     *,
     project_root: Path | None = None,
@@ -138,32 +230,35 @@ def inspect_runtime_evidence(
         else None
     )
 
-    run_command = replit.get("run")
-    if isinstance(run_command, list) and all(
-        isinstance(part, str) for part in run_command
-    ):
-        run_command_value = " ".join(run_command)
-    elif isinstance(run_command, str):
-        run_command_value = run_command
-    else:
-        run_command_value = None
-
-    entrypoint_value = None
-    if isinstance(run_command_value, str):
-        command_parts = run_command_value.split()
-        if command_parts:
-            entrypoint_candidate = command_parts[-1]
-            if entrypoint_candidate.endswith(".py"):
-                entrypoint_value = entrypoint_candidate
-    entrypoint_references = _evidence(
-        ".replit",
+    runtime_command_candidates = _runtime_command_candidates(
+        replit,
         replit_lines,
-        lambda line: re.match(r"^\s*run\s*=", line) is not None,
     )
-    if entrypoint_value != "server.py":
-        entrypoint_references = []
-    server_path_exists = (root / "server.py").is_file()
-    if not server_path_exists:
+    selected_runtime_command = _select_runtime_command(
+        runtime_command_candidates
+    )
+    run_command_value = (
+        selected_runtime_command.get("command")
+        if selected_runtime_command
+        else None
+    )
+    command_references = (
+        selected_runtime_command.get("evidence", [])
+        if selected_runtime_command
+        else []
+    )
+    if not isinstance(command_references, list):
+        command_references = []
+    entrypoint_value = _derive_entrypoint(
+        run_command_value if isinstance(run_command_value, str) else None
+    )
+    entrypoint_references = command_references
+    if isinstance(entrypoint_value, str):
+        try:
+            _safe_evidence_path(root, entrypoint_value)
+        except (FileNotFoundError, RuntimeEvidenceError):
+            entrypoint_references = []
+    else:
         entrypoint_references = []
 
     framework_references = _evidence(
@@ -184,7 +279,6 @@ def inspect_runtime_evidence(
     )
     mcp_value = bool(mcp_references) if mcp_references else None
 
-    command_references = entrypoint_references
     port_references = _evidence(
         ".replit",
         replit_lines,
@@ -250,4 +344,10 @@ def inspect_runtime_evidence(
         "runtime_evidence": runtime_evidence,
         "evidence_references": evidence_references,
         "evidence_files": list(RUNTIME_EVIDENCE_FILES),
+        "runtime_command_candidates": runtime_command_candidates,
+        "selected_runtime_command_source": (
+            selected_runtime_command.get("source")
+            if selected_runtime_command
+            else None
+        ),
     }

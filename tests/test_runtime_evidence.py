@@ -38,7 +38,9 @@ class RuntimeEvidenceTests(unittest.TestCase):
                 ),
                 pyproject='[project]\nrequires-python = ">=3.12,<3.13"\n',
                 replit=(
-                    'run = ["uv", "run", "server.py"]\n'
+                    'run = ["legacy", "legacy.py"]\n'
+                    "[deployment]\n"
+                    'run = ["python", "server.py"]\n'
                     "[[ports]]\nlocalPort = 9100\nexternalPort = 80\n"
                 ),
             )
@@ -51,7 +53,16 @@ class RuntimeEvidenceTests(unittest.TestCase):
             claims["language_version"]["value"],
             "Python (>=3.12,<3.13)",
         )
+        self.assertEqual(
+            claims["server_runtime_command"]["value"],
+            "python server.py",
+        )
         self.assertEqual(claims["active_entrypoint"]["value"], "server.py")
+        self.assertEqual(result["selected_runtime_command_source"], "deployment")
+        self.assertEqual(
+            {candidate["source"] for candidate in result["runtime_command_candidates"]},
+            {"root", "deployment"},
+        )
         self.assertEqual(
             claims["http_framework"]["value"],
             "Starlette + Uvicorn",
@@ -124,7 +135,7 @@ class RuntimeEvidenceTests(unittest.TestCase):
                 root,
                 server="",
                 pyproject='[project]\nrequires-python = ">=3.13,<3.14"\n',
-                replit='run = ["uv", "run", "server.py"]\n',
+                replit="[deployment]\n",
             )
             (root / "server.py").unlink()
             result = inspect_runtime_evidence(project_root=root)
@@ -152,6 +163,36 @@ class RuntimeEvidenceTests(unittest.TestCase):
 
         self.assertNotIn("OWNER_TOKEN", str(result))
         self.assertNotIn("os.environ.get(", str(result))
+
+    def test_conflicting_runtime_sources_do_not_guess_an_unallowlisted_entrypoint(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_fixture(
+                root,
+                server="from starlette.applications import Starlette\n",
+                pyproject='[project]\nrequires-python = ">=3.13,<3.14"\n',
+                replit=(
+                    'run = ["uv", "run", "server.py"]\n'
+                    "[deployment]\n"
+                    'run = ["python", "other.py"]\n'
+                ),
+            )
+            result = inspect_runtime_evidence(project_root=root)
+
+        self.assertEqual(result["selected_runtime_command_source"], "deployment")
+        self.assertEqual(
+            result["runtime_evidence"]["server_runtime_command"]["value"],
+            "python other.py",
+        )
+        self.assertEqual(
+            result["runtime_evidence"]["active_entrypoint"]["value"],
+            "other.py",
+        )
+        self.assertEqual(
+            result["runtime_evidence"]["active_entrypoint"]["status"],
+            "unverified",
+        )
+        self.assertEqual(result["status"], "partial")
 
 
 if __name__ == "__main__":
