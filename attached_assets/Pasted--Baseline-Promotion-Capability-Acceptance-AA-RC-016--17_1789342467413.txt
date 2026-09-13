@@ -1,0 +1,193 @@
+نفّذ مرحلة Baseline Promotion فقط بعد نجاح Capability Acceptance لـ AA-RC-016.
+
+الوضع الحالي المعتمد:
+- AA-RC-016 = CLOSED / verified
+- inspect_runtime_evidence تم اختباره على execution path الحقيقي.
+- targeted result:
+  - EXECUTED: 1
+  - Capability Gaps: 0
+  - Provider Failures: 0
+  - HITL_BLOCKED: 0
+- 80 tests passed
+- 1 optional fault-injection test skipped
+- Dataset لم يتغير.
+- baseline-real-v1-complete.json لم يتغير.
+
+الهدف الوحيد لهذه المرحلة:
+تشغيل نفس مجموعة الـ26 real cases كاملة مرة واحدة للتحقق من عدم وجود regression وترقية الـbaseline إذا تحققت شروط النجاح.
+
+ممنوع قبل التشغيل:
+- لا تعدّل أي كود.
+- لا تعدّل prompts.
+- لا تغيّر provider أو model.
+- لا تغيّر Gemini configuration.
+- لا تضف retries غير الموجودة حاليًا.
+- لا تعدّل Dataset.
+- لا تعدّل baseline-real-v1-complete.json.
+- لا تبدأ AA-RC-014.
+- لا تبدأ أي Capability Gap أخرى.
+- لا تنفذ Project Evidence Core.
+- لا تنفذ ADR-017.
+- لا تنفذ Adaptive Brain أو Multi-provider أو Provider Router.
+- لا تضف APIs أو frameworks أو dependencies جديدة.
+
+1. تحقق أولاً من سلامة الحالة الحالية
+
+شغّل test suite الكاملة.
+
+الحد الأدنى المتوقع:
+- 80 tests passed.
+- fault-injection الاختياري قد يبقى skipped.
+- compileall = success.
+- git diff --check = success.
+
+إذا فشلت الاختبارات:
+توقف فورًا.
+لا تشغّل الـ26 cases.
+اعرض فقط سبب الفشل.
+
+2. تحقق من الـDataset والـbaseline القديم
+
+Dataset SHA-256 يجب أن يبقى:
+
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+وتحقق أن:
+
+baseline-real-v1-complete.json
+
+لم يتم تعديله.
+
+لا تستبدله ولا تعيد كتابته.
+
+3. شغّل Full Evaluation مرة واحدة فقط
+
+شغّل نفس الـ26 real cases باستخدام:
+- execution path الحقيقي الحالي.
+- provider/model configuration الحالية دون تغيير.
+- نفس evaluation dataset.
+
+لا تعمل loop لإعادة المحاولة إذا ظهرت provider rate limits.
+
+4. شرط Baseline Promotion
+
+النتيجة المقبولة الوحيدة:
+
+- Total cases: 26
+- EXECUTED: 22
+- Capability Gaps: 4
+- Provider Failures: 0
+- HITL_BLOCKED: 0
+
+ويجب أن تبقى Capability Gaps الأربع تحديدًا:
+
+- AA-RC-002
+- AA-RC-007
+- AA-RC-011
+- AA-RC-014
+
+ويجب أن تبقى:
+
+AA-RC-016 = EXECUTED
+
+مع استخدام inspect_runtime_evidence بنجاح وruntime evidence = verified.
+
+5. إذا تحققت النتيجة المطلوبة
+
+أنشئ artifact جديدًا ناجحًا versioned.
+
+استخدم naming convention الموجودة في المشروع، ويفضل اسمًا واضحًا مثل:
+
+baseline-real-v2-aa-rc-016-complete.json
+
+إذا كان هذا متوافقًا مع naming convention الحالية.
+
+لا تعدّل artifact القديم.
+
+يجب أن يحتوي artifact الجديد على:
+- نتائج الـ26 cases.
+- summary counts.
+- Dataset SHA-256.
+- provenance اللازمة.
+- canonical artifact SHA-256 وفق الآلية الحالية للمشروع.
+
+احسب وسجل:
+- physical SHA-256 للartifact الجديد.
+- canonical artifact SHA-256.
+- Dataset SHA-256.
+
+بعدها اعتبر:
+
+AA-RC-016 baseline promotion = SUCCESS
+
+وثبت نقطة التوقف الجديدة:
+
+26 cases
+22 EXECUTED
+4 Capability Gaps
+0 Provider Failures
+0 HITL_BLOCKED
+
+ثم توقف.
+
+لا تبدأ الفجوة التالية.
+
+6. إذا عاد Gemini rate limiting أو أي Provider Failure
+
+إذا لم تتحقق النتيجة فقط بسبب provider failure:
+
+- لا تعدّل AA-RC-016.
+- لا تغيّر provider.
+- لا تغيّر model.
+- لا تضف workaround.
+- لا تعمل retries متكررة.
+- لا تعتمد artifact كـbaseline نجاح.
+
+سجل النتيجة كالتالي:
+
+AA-RC-016 Capability Acceptance = SUCCESS
+Baseline Promotion = DEFERRED بسبب Provider Availability
+
+إذا تم إنشاء artifact لهذه الجولة، صنفه بوضوح كـdiagnostic/failed-run artifact ولا تعتبره canonical success baseline.
+
+ثم توقف.
+
+7. إذا حدث regression حقيقي
+
+إذا فشلت حالة كانت ناجحة سابقًا لسبب غير provider availability:
+
+- لا تحاول إصلاحها تلقائيًا.
+- صنف الفشل:
+  - capability regression
+  - policy regression
+  - execution regression
+  - evaluation issue
+  - unknown
+- اعرض case IDs والأسباب والأدلة.
+- توقف قبل أي تعديل.
+
+8. التقرير النهائي
+
+أعطني تقريرًا مختصرًا يحتوي على:
+
+- نتائج test suite.
+- نتيجة الـ26 cases.
+- EXECUTED count.
+- Capability Gaps count وأسماؤها.
+- Provider Failures count وأسماؤها إن وجدت.
+- HITL_BLOCKED count.
+- حالة AA-RC-016.
+- Dataset SHA-256.
+- تأكيد عدم تعديل baseline-real-v1-complete.json.
+- اسم artifact الجديد إن تم إنشاؤه.
+- physical SHA-256 للartifact الجديد.
+- canonical artifact SHA-256 إن كان Success Artifact.
+- القرار النهائي:
+  - BASELINE PROMOTED
+  أو
+  - BASELINE PROMOTION DEFERRED
+  أو
+  - REGRESSION DETECTED
+
+نفّذ هذه المرحلة فقط ثم توقف.
+لا تبدأ Project Evidence Core أو AA-RC-014 بعد الانتهاء.
