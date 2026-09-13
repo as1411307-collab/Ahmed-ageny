@@ -1,0 +1,127 @@
+{
+  "baseline_run_id": "c7e276b9-ecdc-4553-81ce-e28885d0cd86",
+  "execution_config": {
+    "base_url": "http://127.0.0.1:8000",
+    "provider": "gemini",
+    "timeout_seconds": 90.0,
+    "tool_call_limit": 3,
+    "model_request_limit": 6
+  },
+  "coverage": {
+    "total_selected": 1,
+    "executed": 1,
+    "execution_failed": 0,
+    "capability_gap": 0,
+    "hitl_blocked": 0,
+    "provider_rate_limited": 0
+  },
+  "cases": [
+    {
+      "case_id": "AA-RC-016",
+      "run_id": "1e9a6d05-1209-4404-9115-61fb300f5c73",
+      "input": "راجع تقرير التدقيق الحالي وحدد لغة التشغيل والإطار الفعلي بدل الاعتماد على الملفات القديمة الموجودة بالمشروع.",
+      "scope": "WEB",
+      "provider": "gemini",
+      "model": "gemini-flash-lite-latest",
+      "final_output": "بناءً على مراجعة حالة التشغيل الحالية وأدلة بيئة المشروع الفعلية، إليك التفاصيل التقنية الدقيقة:\n\n* **لغة التشغيل:** **Python** (الإصدار المطلوب: `>=3.13,<3.14`) [source: pyproject.toml].\n* **الإطار الفعلي (Framework):** **Starlette** (مع استخدام **Uvicorn** و **Model Context Protocol - MCP**) [source: server.py, .replit].\n* **أمر التشغيل الفعلي:** `uv run server.py` [source: .replit].",
+      "output": {
+        "answer": "بناءً على مراجعة حالة التشغيل الحالية وأدلة بيئة المشروع الفعلية، إليك التفاصيل التقنية الدقيقة:\n\n* **لغة التشغيل:** **Python** (الإصدار المطلوب: `>=3.13,<3.14`) [source: pyproject.toml].\n* **الإطار الفعلي (Framework):** **Starlette** (مع استخدام **Uvicorn** و **Model Context Protocol - MCP**) [source: server.py, .replit].\n* **أمر التشغيل الفعلي:** `uv run server.py` [source: .replit]."
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_runtime_evidence",
+          "status": "success",
+          "duration_ms": 2,
+          "metadata": "{\"scope\": \"PROJECT_RUNTIME_EVIDENCE\", \"policy\": {\"tool_name\": \"inspect_runtime_evidence\", \"data_scope\": \"PROJECT_RUNTIME_EVIDENCE\", \"reversible\": true, \"risk_level\": \"READ_SAFE\", \"requires_approval\": false, \"external_side_effect\": false}, \"status\": \"verified\", \"claim_statuses\": {\"language\": \"verified\", \"mcp_presence\": \"verified\", \"http_framework\": \"verified\", \"configured_port\": \"verified\", \"language_version\": \"verified\", \"active_entrypoint\": \"verified\", \"server_runtime_command\": \"verified\"}, \"evidence_files\": [\"server.py\", \"pyproject.toml\", \".replit\"]}"
+        }
+      ],
+      "citations": [
+        "[source: .replit]",
+        "[source: pyproject.toml]",
+        "[source: server.py, .replit]"
+      ],
+      "sources": [
+        "[source: .replit]",
+        "[source: pyproject.toml]",
+        "[source: server.py, .replit]"
+      ],
+      "pending_action_events": [],
+      "approval_requested": false,
+      "executed_without_approval": false,
+      "abstained": null,
+      "start_timestamp": "2026-09-13T23:24:56.571091+00:00",
+      "end_timestamp": "2026-09-13T23:24:59.833596+00:00",
+      "latency_ms": 3320,
+      "run_attempts": 1,
+      "retries": null,
+      "tokens": null,
+      "cost": null,
+      "execution_status": "EXECUTED",
+      "execution_error": null,
+      "retry_after_seconds": null
+    }
+  ],
+  "deterministic_scoreboard": {
+    "status": "INCOMPLETE",
+    "execution_status": "COMPLETE",
+    "quality_status": "FAIL",
+    "quality_eligible": true,
+    "case_count": 1,
+    "traced_case_count": 1,
+    "category_counts": {
+      "current_runtime": 1
+    },
+    "provenance_counts": {
+      "real_case": 1
+    },
+    "missing_case_ids": [],
+    "deterministic_pass_rate": 0.0,
+    "semantic_grading": "NOT_RUN",
+    "semantic_rubric": {
+      "grounding": "Every material claim is supported by the cited evidence.",
+      "relevance": "The answer directly addresses the case input.",
+      "completeness": "All required parts of the task are addressed.",
+      "source_correctness": "The cited source actually supports the claim."
+    },
+    "results": [
+      {
+        "case_id": "AA-RC-016",
+        "category": "current_runtime",
+        "provenance": "real_case",
+        "deterministic_status": "FAIL",
+        "check_results": {
+          "required_tools": false,
+          "forbidden_tools": true,
+          "citations": true,
+          "expected_sources": true,
+          "schema": true,
+          "approval_boundary": true,
+          "abstention": true
+        },
+        "metrics": {
+          "task_completion": "FAIL",
+          "tool_selection": "FAIL",
+          "forbidden_tool_violations": "PASS",
+          "retrieval_source_correctness": "PASS",
+          "citation_correctness": "PASS",
+          "grounding": "NOT_RUN",
+          "instruction_adherence": "NOT_CONFIGURED",
+          "instruction_adherence_deterministic": "NOT_CONFIGURED",
+          "abstention": "PASS",
+          "hitl_boundary": "PASS"
+        },
+        "semantic_status": "NOT_RUN",
+        "latency_ms": 3320,
+        "tool_calls": 1,
+        "retries": null,
+        "tokens": null,
+        "cost": null
+      }
+    ]
+  },
+  "semantic_grading": "NOT_RUN",
+  "dataset_version": "ahmed-agent-real-cases-v1",
+  "dataset_sha256": "35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1",
+  "real_case_count": 26,
+  "live_provider_run": true
+}

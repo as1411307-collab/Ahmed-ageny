@@ -14,3 +14,4 @@
 - [Retention policy](retention-policy.md) — preserve hash-linked audit history while cleaning aged checkpoints and explicit test scopes.
 - [Minimal operational alerting](alerting.md) — evaluate a small persisted policy separately from notification delivery.
 - [Evaluation baseline provenance](evaluation-baseline.md) — contract seeds are not quality evidence; gate reports on documented real cases.
+- [Runtime evidence configuration](runtime-evidence-replit-structure.md) — `.replit` runtime commands may be nested under `[deployment]`; select them structurally with evidence.
