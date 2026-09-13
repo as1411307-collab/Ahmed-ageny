@@ -73,4 +73,7 @@ server.py
   replays a model call automatically from `model_running`.
 - Sensitive HITL actions use a run-scoped idempotency key so a retry cannot
   create the same pending action twice.
+- Runtime observability is exposed as owner-only aggregated metrics with a
+  bounded time window; it does not expose prompts, provider payloads, or
+  secrets.
 - The registered Node artifact is not imported by the Python runtime.

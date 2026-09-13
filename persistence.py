@@ -271,6 +271,82 @@ def default_worker_id() -> str:
     return f"{socket.gethostname()}:{os.getpid()}"
 
 
+def normalize_metrics_window(value: object) -> int:
+    if value is None:
+        return 24
+    try:
+        hours = int(value)
+    except (TypeError, ValueError) as error:
+        raise ValueError("invalid metrics window") from error
+    if hours < 1 or hours > 720:
+        raise ValueError("invalid metrics window")
+    return hours
+
+
+async def runtime_metrics(*, window_hours: int = 24) -> dict[str, Any]:
+    window_hours = normalize_metrics_window(window_hours)
+    pool = await _get_pool()
+    try:
+        row = await pool.fetchrow(
+            """
+            WITH run_window AS (
+                SELECT *
+                FROM agent_runs
+                WHERE created_at >= NOW() - ($1::integer * INTERVAL '1 hour')
+            ),
+            stage_summary AS (
+                SELECT stage, COUNT(*)::integer AS count
+                FROM run_window
+                GROUP BY stage
+            )
+            SELECT
+                (SELECT COUNT(*)::integer FROM run_window) AS total_runs,
+                (SELECT COUNT(*)::integer FROM run_window
+                 WHERE status = 'succeeded') AS completed_runs,
+                (SELECT COUNT(*)::integer FROM run_window
+                 WHERE status = 'failed') AS failed_runs,
+                (SELECT COUNT(*)::integer FROM run_window
+                 WHERE status = 'running') AS active_runs,
+                (SELECT COUNT(*)::integer FROM run_window
+                 WHERE recovery_status = 'orphaned') AS orphaned_runs,
+                (SELECT COUNT(*)::integer FROM run_window
+                 WHERE error_code = 'WORKER_LOST') AS lease_expirations,
+                (SELECT COALESCE(SUM(GREATEST(attempt_count - 1, 0)), 0)::integer
+                 FROM run_window) AS recovery_attempts,
+                (SELECT COALESCE(
+                    AVG(EXTRACT(EPOCH FROM (finished_at - created_at)) * 1000)
+                    FILTER (WHERE finished_at IS NOT NULL),
+                    0
+                ) FROM run_window) AS average_duration_ms,
+                (SELECT COUNT(*)::integer
+                 FROM audit_events
+                 WHERE event_type = 'pending_action.idempotency_hit'
+                   AND created_at >= NOW() - ($1::integer * INTERVAL '1 hour')
+                ) AS idempotency_hits,
+                COALESCE(
+                    (SELECT jsonb_object_agg(stage, count) FROM stage_summary),
+                    '{}'::jsonb
+                ) AS stage_counts
+            """,
+            window_hours,
+        )
+    except Exception as error:
+        raise PersistenceError("Could not load runtime metrics.") from error
+    return {
+        "window_hours": window_hours,
+        "total_runs": int(row["total_runs"] or 0),
+        "completed_runs": int(row["completed_runs"] or 0),
+        "failed_runs": int(row["failed_runs"] or 0),
+        "active_runs": int(row["active_runs"] or 0),
+        "orphaned_runs": int(row["orphaned_runs"] or 0),
+        "lease_expirations": int(row["lease_expirations"] or 0),
+        "recovery_attempts": int(row["recovery_attempts"] or 0),
+        "average_duration_ms": round(float(row["average_duration_ms"] or 0), 2),
+        "idempotency_hits": int(row["idempotency_hits"] or 0),
+        "stage_counts": dict(row["stage_counts"] or {}),
+    }
+
+
 async def renew_run_lease(
     *,
     run_id: str,
@@ -771,6 +847,16 @@ async def create_pending_action(
                     idempotency_key,
                 ) if idempotency_key else None
                 if existing is not None:
+                    await _append_audit_event(
+                        connection,
+                        session_id=session_id,
+                        run_id=run_id,
+                        action_id=str(existing["action_id"]),
+                        event_type="pending_action.idempotency_hit",
+                        tool_name=tool_name,
+                        status="deduplicated",
+                        safe_metadata={"risk_level": risk_level},
+                    )
                     return dict(existing)
                 await _append_audit_event(
                     connection,

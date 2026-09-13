@@ -65,6 +65,17 @@ Authenticated provider, chat, upload, doctor, and MCP protocol checks must be
 run through an approved client without printing the owner token or provider
 secret.
 
+Runtime metrics are available to the owner as aggregated operational metadata:
+
+```text
+GET /metrics/runtime?hours=24
+```
+
+The response includes total, completed, failed, active, and currently orphaned
+runs; average duration; lease expirations; recovery attempts; idempotency hits;
+and counts by execution stage. The maximum window is 720 hours, and prompts,
+provider payloads, and secrets are not returned.
+
 For a persisted run, inspect its owner-only state trace with:
 
 ```text

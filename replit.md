@@ -77,3 +77,5 @@ Never place secret values in source files, logs, browser code, or chat.
   `recovery_status=orphaned` without changing the execution stage.
   `/runs/{run_id}/resume` completes only persisted response tails; it never
   replays a `model_running` call automatically.
+- `/metrics/runtime?hours=24` exposes bounded, owner-only aggregate runtime
+  metrics without prompts or secrets.

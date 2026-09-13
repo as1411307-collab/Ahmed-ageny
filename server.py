@@ -40,12 +40,14 @@ from persistence import (
     load_run_checkpoints,
     load_message_history,
     mark_orphaned_runs,
+    normalize_metrics_window,
     reject_pending_action,
     record_tool_event,
     record_run_checkpoint,
     release_orphaned_run,
     renew_run_lease,
     run_message_count,
+    runtime_metrics,
 )
 from config import MAX_UPLOAD_BYTES
 from my_files import SUPPORTED_EXTENSIONS, extension_for, ingest_document, sanitize_filename
@@ -248,6 +250,40 @@ async def doctor_route(request: Request) -> Response:
         probe_search=request.query_params.get("probe") == "1"
     )
     return JSONResponse(report)
+
+
+@server.custom_route("/metrics/runtime", methods=["GET"])
+async def runtime_metrics_route(request: Request) -> Response:
+    user, status_code, error_code = await authorize_owner(
+        request,
+        endpoint="/metrics/runtime",
+    )
+    if user is None:
+        return JSONResponse(
+            {"error": "owner authentication required", "code": error_code},
+            status_code=status_code,
+        )
+    try:
+        window_hours = normalize_metrics_window(
+            request.query_params.get("hours", "24")
+        )
+        metrics = await runtime_metrics(window_hours=window_hours)
+    except ValueError:
+        return JSONResponse(
+            {"error": "نافذة المقاييس يجب أن تكون بين 1 و720 ساعة."},
+            status_code=400,
+        )
+    except PersistenceError:
+        return JSONResponse(
+            {"error": "تعذر تحميل مقاييس التشغيل."},
+            status_code=502,
+        )
+    return JSONResponse(
+        {
+            "metrics": metrics,
+            "data_boundary": "aggregated_operational_metadata",
+        }
+    )
 
 
 async def _load_recovery_state(run_id: str) -> dict[str, object] | None:
