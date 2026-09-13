@@ -284,7 +284,10 @@ async def run_recovery_route(request: Request) -> Response:
         {
             "run": recovery,
             "recovery_action": action.value,
-            "safe_to_resume": action is RecoveryAction.COMPLETE_PERSISTED_TAIL,
+            "safe_to_resume": (
+                recovery.get("recovery_status") == "orphaned"
+                and action is RecoveryAction.COMPLETE_PERSISTED_TAIL
+            ),
         }
     )
 
@@ -323,7 +326,7 @@ async def run_resume_route(request: Request) -> Response:
             },
             status_code=409,
         )
-    if status == "running":
+    if status == "running" and recovery.get("recovery_status") != "orphaned":
         return JSONResponse(
             {
                 "status": "busy",

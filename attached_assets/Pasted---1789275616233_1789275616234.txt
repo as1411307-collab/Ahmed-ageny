@@ -1,0 +1,65 @@
+التنفيذ وصل لنقطة جيدة جدًا: طبقة الاسترداد الآن شبه مكتملة معماريًا، والفجوة الحقيقية الوحيدة قبل اعتبار Durable Execution جاهزًا هي fault injection حقيقي.
+
+أنا لا أنصح الآن بإضافة أي abstraction جديد. لا LangGraph، لا multi-agent، ولا توسيع الذاكرة قبل اختبار الانهيار الفعلي. السبب بسيط: كل ما عندك حاليًا يبدو صحيحًا نظريًا واختباريًا، لكن الاختبار الحاسم هو هل النظام يتصرف كما صممته عند موت العملية في منتصف التنفيذ الحقيقي.
+
+الخيار	الميزة	العيب / المخاطرة	الوقت والجهد	الترشيح والسبب
+Fault injection end-to-end	يثبت فعليًا recovery + lease + idempotency	يحتاج تجهيز سيناريو قتل متحكم	متوسط	الأولوية 1 الآن
+Retention / cleanup	يحافظ على حجم قاعدة البيانات	لا يثبت سلامة التشغيل	منخفض	بعد fault injection
+Metrics / observability	يسهل مراقبة الأعطال	فائدته أكبر بعد ثبوت recovery	منخفض-متوسط	التالي مباشرة
+Memory improvements	يرفع جودة السياق	ليس bottleneck حاليًا	متوسط	لاحقًا
+Orchestration framework	يضيف قدرات متقدمة	تعقيد غير مبرر الآن	مرتفع	مؤجل
+
+الاختبار الذي أعتبره بوابة الاعتماد
+
+لازم يغطي على الأقل 4 حالات:
+
+1. Crash أثناء model_running
+    * قتل العملية.
+    * انتهاء الـ lease.
+    * إعادة تشغيل الخادم.
+    * تتحول الحالة إلى orphaned.
+    * recovery يعيد manual_review.
+    * لا يتم استدعاء النموذج مرة ثانية تلقائيًا.
+2. Crash بعد side effect وقبل checkpoint التالي
+    * نفّذ فعلًا حساسًا مرة واحدة.
+    * اقتل العملية قبل تسجيل التقدم النهائي.
+    * أعد الاستئناف.
+    * يجب أن يرجع نفس action_id.
+    * لا يحدث side effect ثانٍ.
+3. Crash عند response_ready
+    * الرد موجود فعلًا في التخزين.
+    * restart.
+    * resume يكمل persistence/transition فقط.
+    * لا يعيد استدعاء النموذج.
+4. Crash عند response_persisted
+    * restart.
+    * يكمل فقط إلى completed.
+    * بدون إعادة أي عمل سابق.
+
+نقطة واحدة أحتاجك تنتبه لها
+
+إذا كان orphaned مجرد وصف مشتق من انتهاء الـ lease فهذا جيد. أما إذا أصبح حالة دائمة داخل نفس state machine، فراجع التصميم؛ لأن عندك أصلًا invariant واضح للحالات التنفيذية. الأفضل غالبًا أن تظل الحالة الأصلية محفوظة، ويكون orphaned execution condition أو recovery status منفصل، حتى لا تدخل حالة تشغيلية جديدة تربك transitions.
+
+مثال أنظف:
+
+run_state = model_running
+recovery_status = orphaned
+
+بدل:
+
+run_state = orphaned
+
+إلا إذا كنت صممت الانتقالات رسميًا حولها واختبرتها بالكامل.
+
+بعد نجاح fault injection
+
+الترتيب الأفضل عندي يصبح:
+
+Fault injection → recovery metrics → retention/cleanup → operational alerts → بعدها فقط تقييم memory/orchestration.
+
+الخطوة: تنفيذ اختبار انهيار حقيقي end-to-end.
+المتطلبات: بيئة اختبار مع PostgreSQL حقيقي، worker process قابل للقتل، tool تجريبي له side effect يمكن قياسه، وسجل audit.
+الوقت المتوقع: متوسط.
+النتيجة: إثبات أن Ahmed Agent يتحمل crash/restart بدون تكرار الأفعال أو إعادة تشغيل غير آمنة.
+
+ولا أرى حاليًا سببًا تقنيًا قويًا للانتقال إلى LangGraph أو multi-agent قبل اجتياز هذه البوابة.

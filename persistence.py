@@ -94,6 +94,11 @@ async def _ensure_policy_schema(pool: asyncpg.Pool) -> None:
                     ADD COLUMN IF NOT EXISTS attempt_count INTEGER NOT NULL DEFAULT 0;
                 ALTER TABLE agent_runs
                     ADD COLUMN IF NOT EXISTS last_checkpoint_at TIMESTAMPTZ;
+                ALTER TABLE agent_runs
+                    ADD COLUMN IF NOT EXISTS recovery_status TEXT NOT NULL DEFAULT 'active';
+                UPDATE agent_runs
+                SET status = 'running', recovery_status = 'orphaned'
+                WHERE status = 'orphaned';
 
                 ALTER TABLE pending_actions
                     ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
@@ -250,7 +255,8 @@ async def finish_run(
                 error_code = $3,
                 finished_at = NOW(),
                 worker_id = NULL,
-                lease_expires_at = NULL
+                lease_expires_at = NULL,
+                recovery_status = 'resolved'
             WHERE run_id = $1::uuid
             """,
             run_id,
@@ -300,12 +306,13 @@ async def mark_orphaned_runs() -> list[str]:
         rows = await pool.fetch(
             """
             UPDATE agent_runs
-            SET status = 'orphaned',
+            SET recovery_status = 'orphaned',
                 error_code = 'WORKER_LOST',
                 worker_id = NULL,
                 lease_expires_at = NULL,
                 finished_at = NULL
             WHERE status = 'running'
+              AND recovery_status = 'active'
               AND lease_expires_at IS NOT NULL
               AND lease_expires_at <= NOW()
             RETURNING run_id
@@ -321,8 +328,9 @@ async def load_run_recovery(run_id: str) -> dict[str, Any] | None:
     try:
         row = await pool.fetchrow(
             """
-            SELECT run_id, session_id, status, stage, provider_name, model_name,
-                   error_code, worker_id, lease_expires_at, attempt_count,
+            SELECT run_id, session_id, status, recovery_status, stage,
+                   provider_name, model_name, error_code, worker_id,
+                   lease_expires_at, attempt_count,
                    created_at, finished_at
             FROM agent_runs
             WHERE run_id = $1::uuid
@@ -337,6 +345,7 @@ async def load_run_recovery(run_id: str) -> dict[str, Any] | None:
         "run_id": str(row["run_id"]),
         "session_id": str(row["session_id"]),
         "status": row["status"],
+        "recovery_status": row["recovery_status"],
         "stage": row["stage"],
         "provider": row["provider_name"],
         "model": row["model_name"],
@@ -365,18 +374,17 @@ async def claim_orphaned_run(
             """
             UPDATE agent_runs
             SET status = 'running',
+                recovery_status = 'active',
                 worker_id = $2,
                 lease_expires_at = NOW() + ($3::integer * INTERVAL '1 second'),
                 lease_version = lease_version + 1,
                 attempt_count = attempt_count + 1
             WHERE run_id = $1::uuid
-              AND (
-                  status = 'orphaned'
-                  OR (status = 'running' AND lease_expires_at <= NOW())
-              )
+              AND status = 'running'
+              AND recovery_status = 'orphaned'
               AND (lease_expires_at IS NULL OR lease_expires_at <= NOW())
-            RETURNING run_id, session_id, status, stage, provider_name, model_name,
-                      error_code, attempt_count
+            RETURNING run_id, session_id, status, recovery_status, stage,
+                      provider_name, model_name, error_code, attempt_count
             """,
             run_id,
             worker_id,
@@ -393,7 +401,8 @@ async def release_orphaned_run(*, run_id: str, worker_id: str) -> bool:
         updated = await pool.execute(
             """
             UPDATE agent_runs
-            SET status = 'orphaned',
+            SET status = 'running',
+                recovery_status = 'orphaned',
                 error_code = 'RECOVERY_REQUIRES_NEW_RUN',
                 worker_id = NULL,
                 lease_expires_at = NULL
