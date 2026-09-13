@@ -76,6 +76,27 @@ runs; average duration; lease expirations; recovery attempts; idempotency hits;
 and counts by execution stage. The maximum window is 720 hours, and prompts,
 provider payloads, and secrets are not returned.
 
+Retention is intentionally conservative:
+
+- succeeded-run checkpoints become eligible after 30 days;
+- failed and orphaned checkpoints become eligible after 90 days;
+- `audit_events` are preserved and never deleted by this policy;
+- test cleanup is restricted to the explicit `fault_injection` and `probe`
+  session scopes.
+
+Use the owner-only preview before cleanup:
+
+```text
+GET /retention/preview
+POST /retention/cleanup?confirm=CHECKPOINTS_ONLY
+POST /retention/cleanup?confirm=TEST_DATA_ONLY
+```
+
+The first cleanup mode removes only checkpoints that crossed their retention
+age. The second additionally removes operational rows belonging to the explicit
+test scopes. Both modes append an auditable cleanup event and report the
+preserved audit-event count.
+
 For a persisted run, inspect its owner-only state trace with:
 
 ```text

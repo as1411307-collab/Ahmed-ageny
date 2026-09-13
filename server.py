@@ -320,15 +320,21 @@ async def retention_cleanup_route(request: Request) -> Response:
             {"error": "owner authentication required", "code": error_code},
             status_code=status_code,
         )
-    if request.query_params.get("confirm") != "TEST_DATA_ONLY":
+    confirmation = request.query_params.get("confirm")
+    if confirmation not in {"TEST_DATA_ONLY", "CHECKPOINTS_ONLY"}:
         return JSONResponse(
             {
-                "error": "يتطلب التنظيف تأكيد TEST_DATA_ONLY؛ لا يتم حذف audit_events.",
+                "error": (
+                    "يتطلب التنظيف تأكيد TEST_DATA_ONLY أو CHECKPOINTS_ONLY؛ "
+                    "لا يتم حذف audit_events."
+                ),
             },
             status_code=400,
         )
     try:
-        result = await cleanup_retention(include_test_data=True)
+        result = await cleanup_retention(
+            include_test_data=confirmation == "TEST_DATA_ONLY"
+        )
     except PersistenceError:
         return JSONResponse(
             {"error": "تعذر تنفيذ تنظيف بيانات الاختبارات."},

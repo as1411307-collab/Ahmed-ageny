@@ -79,3 +79,6 @@ Never place secret values in source files, logs, browser code, or chat.
   replays a `model_running` call automatically.
 - `/metrics/runtime?hours=24` exposes bounded, owner-only aggregate runtime
   metrics without prompts or secrets.
+- Retention uses 30-day succeeded-checkpoint and 90-day failed/orphaned-
+  checkpoint windows. Cleanup never deletes `audit_events`; test cleanup is
+  limited to the explicit `fault_injection` and `probe` scopes.

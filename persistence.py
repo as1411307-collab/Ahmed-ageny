@@ -401,133 +401,166 @@ async def retention_preview() -> dict[str, Any]:
         "checkpoint_candidates": int(row["checkpoint_candidates"] or 0),
         "test_run_candidates": int(row["test_run_candidates"] or 0),
         "audit_events_preserved": int(row["audit_events_preserved"] or 0),
-        "deletion_mode": "test_scopes_only",
+        "deletion_mode": "preview_only",
+        "supported_cleanup_modes": ["CHECKPOINTS_ONLY", "TEST_DATA_ONLY"],
     }
 
 
 async def cleanup_retention(*, include_test_data: bool = False) -> dict[str, Any]:
-    if not include_test_data:
-        raise ValueError("retention cleanup requires an explicit test-data scope")
     pool = await _get_pool()
     try:
         async with pool.acquire() as connection:
             async with connection.transaction():
-                run_ids = await connection.fetch(
-                    """
-                    SELECT r.run_id
-                    FROM agent_runs r
-                    JOIN agent_sessions s ON s.session_id = r.session_id
-                    WHERE s.scope = ANY($1::text[])
-                    FOR UPDATE OF r
-                    """,
-                    list(TEST_RETENTION_SCOPES),
-                )
-                run_id_values = [str(row["run_id"]) for row in run_ids]
-                if not run_id_values:
-                    return {
-                        "deleted_runs": 0,
-                        "deleted_sessions": 0,
-                        "deleted_messages": 0,
-                        "deleted_checkpoints": 0,
-                        "deleted_tool_events": 0,
-                        "deleted_pending_actions": 0,
-                        "audit_events_preserved": await connection.fetchval(
-                            "SELECT COUNT(*)::integer FROM audit_events"
-                        ),
-                    }
-
-                deleted_messages = await connection.fetchval(
+                deleted_checkpoint_rows = await connection.fetchval(
                     """
                     WITH deleted AS (
-                        DELETE FROM agent_messages
-                        WHERE run_id = ANY($1::uuid[])
-                        RETURNING 1
-                    )
-                    SELECT COUNT(*)::integer FROM deleted
-                    """,
-                    run_id_values,
-                )
-                deleted_checkpoints = await connection.fetchval(
-                    """
-                    WITH deleted AS (
-                        DELETE FROM agent_run_checkpoints
-                        WHERE run_id = ANY($1::uuid[])
-                        RETURNING 1
-                    )
-                    SELECT COUNT(*)::integer FROM deleted
-                    """,
-                    run_id_values,
-                )
-                deleted_tool_events = await connection.fetchval(
-                    """
-                    WITH deleted AS (
-                        DELETE FROM tool_events
-                        WHERE run_id = ANY($1::uuid[])
-                        RETURNING 1
-                    )
-                    SELECT COUNT(*)::integer FROM deleted
-                    """,
-                    run_id_values,
-                )
-                deleted_pending_actions = await connection.fetchval(
-                    """
-                    WITH deleted AS (
-                        DELETE FROM pending_actions
-                        WHERE run_id = ANY($1::uuid[])
-                        RETURNING 1
-                    )
-                    SELECT COUNT(*)::integer FROM deleted
-                    """,
-                    run_id_values,
-                )
-                deleted_runs = await connection.fetchval(
-                    """
-                    WITH deleted AS (
-                        DELETE FROM agent_runs
-                        WHERE run_id = ANY($1::uuid[])
-                        RETURNING session_id
-                    )
-                    SELECT COUNT(*)::integer FROM deleted
-                    """,
-                    run_id_values,
-                )
-                deleted_sessions = await connection.fetchval(
-                    """
-                    WITH deleted AS (
-                        DELETE FROM agent_sessions s
-                        WHERE s.scope = ANY($1::text[])
-                          AND NOT EXISTS (
-                              SELECT 1
-                              FROM agent_runs r
-                              WHERE r.session_id = s.session_id
+                        DELETE FROM agent_run_checkpoints c
+                        USING agent_runs r
+                        WHERE c.run_id = r.run_id
+                          AND (
+                              (
+                                  r.status = 'succeeded'
+                                  AND c.created_at < NOW() - INTERVAL '30 days'
+                              )
+                              OR (
+                                  (r.status = 'failed' OR r.recovery_status = 'orphaned')
+                                  AND c.created_at < NOW() - INTERVAL '90 days'
+                              )
                           )
-                        RETURNING 1
+                        RETURNING c.checkpoint_id
                     )
                     SELECT COUNT(*)::integer FROM deleted
-                    """,
-                    list(TEST_RETENTION_SCOPES),
+                    """
+                )
+                run_id_values: list[str] = []
+                deleted_messages = 0
+                deleted_test_checkpoint_rows = 0
+                deleted_tool_events = 0
+                deleted_pending_actions = 0
+                deleted_runs = 0
+                deleted_sessions = 0
+
+                if include_test_data:
+                    run_ids = await connection.fetch(
+                        """
+                        SELECT r.run_id
+                        FROM agent_runs r
+                        JOIN agent_sessions s ON s.session_id = r.session_id
+                        WHERE s.scope = ANY($1::text[])
+                        FOR UPDATE OF r
+                        """,
+                        list(TEST_RETENTION_SCOPES),
+                    )
+                    run_id_values = [str(row["run_id"]) for row in run_ids]
+
+                if run_id_values:
+                    deleted_messages = await connection.fetchval(
+                        """
+                        WITH deleted AS (
+                            DELETE FROM agent_messages
+                            WHERE run_id = ANY($1::uuid[])
+                            RETURNING 1
+                        )
+                        SELECT COUNT(*)::integer FROM deleted
+                        """,
+                        run_id_values,
+                    )
+                    deleted_test_checkpoint_rows = await connection.fetchval(
+                        """
+                        WITH deleted AS (
+                            DELETE FROM agent_run_checkpoints
+                            WHERE run_id = ANY($1::uuid[])
+                            RETURNING 1
+                        )
+                        SELECT COUNT(*)::integer FROM deleted
+                        """,
+                        run_id_values,
+                    )
+                    deleted_tool_events = await connection.fetchval(
+                        """
+                        WITH deleted AS (
+                            DELETE FROM tool_events
+                            WHERE run_id = ANY($1::uuid[])
+                            RETURNING 1
+                        )
+                        SELECT COUNT(*)::integer FROM deleted
+                        """,
+                        run_id_values,
+                    )
+                    deleted_pending_actions = await connection.fetchval(
+                        """
+                        WITH deleted AS (
+                            DELETE FROM pending_actions
+                            WHERE run_id = ANY($1::uuid[])
+                            RETURNING 1
+                        )
+                        SELECT COUNT(*)::integer FROM deleted
+                        """,
+                        run_id_values,
+                    )
+                    deleted_runs = await connection.fetchval(
+                        """
+                        WITH deleted AS (
+                            DELETE FROM agent_runs
+                            WHERE run_id = ANY($1::uuid[])
+                            RETURNING session_id
+                        )
+                        SELECT COUNT(*)::integer FROM deleted
+                        """,
+                        run_id_values,
+                    )
+                    deleted_sessions = await connection.fetchval(
+                        """
+                        WITH deleted AS (
+                            DELETE FROM agent_sessions s
+                            WHERE s.scope = ANY($1::text[])
+                              AND NOT EXISTS (
+                                  SELECT 1
+                                  FROM agent_runs r
+                                  WHERE r.session_id = s.session_id
+                              )
+                            RETURNING 1
+                        )
+                        SELECT COUNT(*)::integer FROM deleted
+                        """,
+                        list(TEST_RETENTION_SCOPES),
+                    )
+
+                deleted_checkpoints = int(deleted_checkpoint_rows or 0) + int(
+                    deleted_test_checkpoint_rows or 0
+                )
+                event_type = (
+                    "retention.test_data_cleanup"
+                    if include_test_data
+                    else "retention.checkpoint_cleanup"
                 )
                 await _append_audit_event(
                     connection,
                     session_id=None,
                     run_id=None,
                     action_id=None,
-                    event_type="retention.test_data_cleanup",
+                    event_type=event_type,
                     tool_name=None,
                     status="completed",
                     safe_metadata={
-                        "scopes": list(TEST_RETENTION_SCOPES),
+                        "scopes": list(TEST_RETENTION_SCOPES)
+                        if include_test_data
+                        else [],
                         "deleted_runs": int(deleted_runs or 0),
                         "deleted_sessions": int(deleted_sessions or 0),
                         "deleted_messages": int(deleted_messages or 0),
-                        "deleted_checkpoints": int(deleted_checkpoints or 0),
+                        "deleted_checkpoints": deleted_checkpoints,
                         "deleted_tool_events": int(deleted_tool_events or 0),
-                        "deleted_pending_actions": int(deleted_pending_actions or 0),
+                        "deleted_pending_actions": int(
+                            deleted_pending_actions or 0
+                        ),
                         "audit_events_deleted": 0,
                     },
                 )
                 audit_events_preserved = await connection.fetchval(
-                    "SELECT COUNT(*)::integer FROM audit_events"
+                    """
+                    SELECT COUNT(*)::integer FROM audit_events
+                    """
                 )
     except PersistenceError:
         raise
@@ -537,12 +570,12 @@ async def cleanup_retention(*, include_test_data: bool = False) -> dict[str, Any
         "deleted_runs": int(deleted_runs or 0),
         "deleted_sessions": int(deleted_sessions or 0),
         "deleted_messages": int(deleted_messages or 0),
-        "deleted_checkpoints": int(deleted_checkpoints or 0),
+        "deleted_checkpoints": deleted_checkpoints,
         "deleted_tool_events": int(deleted_tool_events or 0),
         "deleted_pending_actions": int(deleted_pending_actions or 0),
         "audit_events_preserved": int(audit_events_preserved or 0),
         "audit_events_deleted": 0,
-        "scopes": list(TEST_RETENTION_SCOPES),
+        "scopes": list(TEST_RETENTION_SCOPES) if include_test_data else [],
     }
 
 
