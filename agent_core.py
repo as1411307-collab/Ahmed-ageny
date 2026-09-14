@@ -114,8 +114,11 @@ Use the citation format returned by the tool, such as
 [source: filename.pdf, page 3, chunk 7].
 For source-of-truth questions, use search_my_files first. When a result has
 original_available=true and a source_id, call inspect_source_of_truth with that
-source_id. Never pass a path or filename to that tool. Compare original-source
-evidence and cite only its returned canonical evidence references.
+source_id. For a comparison involving multiple files or a logical collection,
+inspect every distinct relevant source_id returned by search before concluding
+that evidence is missing. Never pass a path or filename to that tool. Compare
+original-source evidence and cite only its returned canonical evidence
+references.
 """.strip()
 
 

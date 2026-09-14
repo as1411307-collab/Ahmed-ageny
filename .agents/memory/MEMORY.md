@@ -16,3 +16,4 @@
 - [Evaluation baseline provenance](evaluation-baseline.md) — contract seeds are not quality evidence; gate reports on documented real cases.
 - [Runtime evidence configuration](runtime-evidence-replit-structure.md) — `.replit` runtime commands may be nested under `[deployment]`; select them structurally with evidence.
 - [Quality acceptance and persisted evidence](quality-acceptance.md) — keep targeted quality separate from coverage and normalize persisted JSON metadata at evaluation boundaries.
+- [Asyncpg pool lifecycle](asyncpg-loop-lifecycle.md) — close database pools inside the same asyncio event loop that created them.

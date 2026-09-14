@@ -7,6 +7,7 @@ import os
 import socket
 from collections.abc import Sequence
 from typing import Any
+from uuid import UUID
 
 import asyncpg
 
@@ -1884,6 +1885,42 @@ async def delete_original_source(*, source_id: str) -> None:
                     )
     except Exception as error:
         raise PersistenceError("Could not remove the original source.") from error
+
+
+async def delete_documents_for_source_ids(source_ids: Sequence[str]) -> int:
+    """Remove only documents/chunks linked to the explicitly supplied sources."""
+
+    normalized_ids: list[str] = []
+    for source_id in source_ids:
+        try:
+            normalized_ids.append(str(UUID(str(source_id))))
+        except (TypeError, ValueError) as error:
+            raise ValueError("source_ids must contain UUIDs") from error
+    if not normalized_ids:
+        return 0
+    pool = await _get_pool()
+    try:
+        async with pool.acquire() as connection:
+            async with connection.transaction():
+                await connection.execute(
+                    """
+                    DELETE FROM document_chunks
+                    WHERE source_id = ANY($1::uuid[])
+                    """,
+                    normalized_ids,
+                )
+                result = await connection.execute(
+                    """
+                    DELETE FROM documents
+                    WHERE source_id = ANY($1::uuid[])
+                    """,
+                    normalized_ids,
+                )
+        return int(result.rsplit(" ", 1)[-1])
+    except Exception as error:
+        raise PersistenceError(
+            "Could not remove documents for the supplied source IDs."
+        ) from error
 
 
 async def store_document(
