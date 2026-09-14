@@ -6,8 +6,8 @@
   "files": [
     {
       "file": "aa-rc-026-build-vs-buy-evaluation-2026-09-14.json",
-      "sha256": "6d9ed4e2827e33e204ef4bb8400a591707cc19d80a2c196b899741412c9915a4",
-      "bytes": 94435
+      "sha256": "a0b7eba5e71c42742e04f53b0c91b6708419cea2ce46c09ba724ed3347f2c6d2",
+      "bytes": 109414
     },
     {
       "file": "semantic-evaluation-contract-v11.json",
@@ -15,10 +15,13 @@
       "bytes": 77845
     }
   ],
-  "external_evidence_count": 4,
+  "external_evidence_count": 8,
+  "external_evidence_bundle_url_count": 8,
   "project_architecture_fingerprint": "e04de4f715fe33fad42297a679a6ab41ed02921a47180d883f6a0c142688d882",
   "targeted_execution_status": "EXECUTED",
   "evidence_precondition_status": "READY",
+  "independent_review_decision": "FAIL",
+  "recommendation_status": "NOT_DETERMINED",
   "semantic_status": "REVIEW_REQUIRED",
   "raw_trace_saved": false
 }

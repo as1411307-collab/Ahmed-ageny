@@ -2,7 +2,7 @@
   "schema_version": "aa-rc-026-targeted-evaluation.v1",
   "case_id": "AA-RC-026",
   "evaluation_version": "2026-09-14.build-vs-buy.openai-only",
-  "generated_at": "2026-09-14T17:53:01.902595+00:00",
+  "generated_at": "2026-09-14T17:56:51.371049+00:00",
   "external_evidence_policy": {
     "allowed_source_identity": "external_openai_official",
     "allowed_domains": [
@@ -1581,69 +1581,160 @@
   },
   "external_evidence": [
     {
-      "key": "responses_api_tools",
-      "url": "https://platform.openai.com/docs/guides/tools",
-      "title": "Using tools | OpenAI API",
+      "key": "agents_sdk_overview",
+      "url": "https://openai.github.io/openai-agents-python/",
+      "title": "OpenAI Agents SDK",
       "source_identity": "external_openai_official",
+      "evidence_classification": "EXTERNAL_EVIDENCE",
       "verification_status": "UNVERIFIED_EXTERNAL",
-      "retrieved_at": "2026-09-14T17:52:24.353575+00:00",
+      "retrieved_at": "2026-09-14T17:56:20.163258+00:00",
+      "date_accessed": "2026-09-14T17:56:20.163258+00:00",
       "http_status": 200,
-      "content_sha256": "85e7160156f4fa71ce1f3a30c2aa4449e37827c29f230432c96f5a1e44828e54",
+      "content_sha256": "bcb759d8806f8f6d361c8b034394fb9de0781d0dcd995e77b89f25df014e3f0f",
       "snippets": [
-        "Using tools | OpenAI API For the complete documentation index, see llms.txt . Markdown versions of documentation pages are available by appending .md to the page URL. ChatGPT Home API Codex Docs Guides, concepts, and product docs for Codex Use cases Example workflows and tasks teams can take on with ChatGPT or Codex Docs Use cases Training Resources ChatGPT Plugins Extend ChatGPT and Codex Workspace Agents Trigger published ChatGPT workspace agents Commerce Build commerce flows in ChatGPT Ads Publish and measure ads in ChatGP",
-        "ce Production API reference Overview Models Agents Tools Audio & voice Production API reference Docs Tools Home Get started Quickstart Using GPT-6 Astra Key concepts Core concepts Responses API Conversation state Background mode Streaming WebSocket mode Mid-turn steering Multi-agent Webhooks File inputs Compaction Counting tokens SDKs and CLI OpenAI SDK OpenAI CLI Resources Changelog Deprecations Supported countries OpenAI Crawlers Terms and policies Legacy APIs Agent Builder Overview Migration guide Node reference Safety in building agents Evals Getting started Working with evals Prompt optimizer External models Best practices Graders Fine-tuning Optimization cycle Supervised fine-tuning Vision fine-tun",
-        "ems Manage sessions Webhooks Environments and sandboxes OpenAI-hosted sandboxes Self-hosted sandboxes Sandbox lifecycle Sandbox security Files and artifacts Tools and integrations Web search Functions MCP connections Plugins Vaults Multi-agent Observability and usage Tracing Agents SDK Overview Quickstart Agent definitions Models and providers Running agents Sandbox agents Orchestration Guardrails Results and state Integrations and observability Evaluate agent workflows ChatKit Overview Customize Widgets Actions Advanced integrations Overview Function calling Search and retrieval Web search File search Retrieval Connect tools and data MCP and Connectors Secure MCP Tunnel Build tool workflows Skills To",
-        "Integrations and observability Evaluate agent workflows ChatKit Overview Customize Widgets Actions Advanced integrations Overview Function calling Search and retrieval Web search File search Retrieval Connect tools and data MCP and Connectors Secure MCP Tunnel Build tool workflows Skills Tool search Programmatic tool calling Async tool calling Computer and code Shell Computer use Apply Patch Local shell Code interpreter Media Image generation Overview GPT-Live Getting started Prompting Managing sessions Delegation and tools Migrate to GPT-Live Partner integrations Realtime API Getting started Prompting Managing conversations Voice activity detection Tools and MCP Build with voice Voice agents Custom v"
+        "ents SDK Skip to content OpenAI Agents SDK Intro English 日本語 한국어 简体中文 Initializing search openai-agents-python OpenAI Agents SDK openai-agents-python Intro Intro Table of contents Why use the Agents SDK Agents SDK or Responses API? Installation Hello world example Start here Choose your path Quickstart Configuration Documentation Documentation Agents Sandbox agents Sandbox agents Quickstart Concepts Sandbox clients Agent memory Realtime agents Realtime agents Quickstart Transport Guide Voice agents Voice agents Quickstart Pipeline Tracing Models Tools Guardrails Running agents Streaming Agent orchestration Handoffs Results Human-in-the-loop Sessions Sessions Overview SQLAlchemy session Advanced SQLite session Enc",
+        "box agents Quickstart Concepts Sandbox clients Agent memory Realtime agents Realtime agents Quickstart Transport Guide Voice agents Voice agents Quickstart Pipeline Tracing Models Tools Guardrails Running agents Streaming Agent orchestration Handoffs Results Human-in-the-loop Sessions Sessions Overview SQLAlchemy session Advanced SQLite session Encrypted session Context management Usage Model context protocol (MCP) Tracing Testing Agent visualization REPL utility Release process/changelog API Reference API Reference Agents Agents Agents module Agent Runner Run config Run state Testing Sandbox Sandbox Overview SandboxAgent Manifest Permissions SnapshotSpec Workspace entries Capabilities Capabiliti",
+        "altime agents Realtime agents Quickstart Transport Guide Voice agents Voice agents Quickstart Pipeline Tracing Models Tools Guardrails Running agents Streaming Agent orchestration Handoffs Results Human-in-the-loop Sessions Sessions Overview SQLAlchemy session Advanced SQLite session Encrypted session Context management Usage Model context protocol (MCP) Tracing Testing Agent visualization REPL utility Release process/changelog API Reference API Reference Agents Agents Agents module Agent Runner Run config Run state Testing Sandbox Sandbox Overview SandboxAgent Manifest Permissions SnapshotSpec Workspace entries Capabilities Capabilities Capabilities Capability Filesystem Shell Memory Skills Compact",
+        "ents Quickstart Concepts Sandbox clients Agent memory Realtime agents Realtime agents Quickstart Transport Guide Voice agents Voice agents Quickstart Pipeline Tracing Models Tools Guardrails Running agents Streaming Agent orchestration Handoffs Results Human-in-the-loop Sessions Sessions Overview SQLAlchemy session Advanced SQLite session Encrypted session Context management Usage Model context protocol (MCP) Tracing Testing Agent visualization REPL utility Release process/changelog API Reference API Reference Agents Agents Agents module Agent Runner Run config Run state Testing Sandbox Sandbox Overview SandboxAgent Manifest Permissions SnapshotSpec Workspace entries Capabilities Capabilities Capabili"
       ]
     },
     {
-      "key": "agents_sdk",
-      "url": "https://platform.openai.com/docs/guides/agents/sdk",
-      "title": "Agents SDK | OpenAI API",
+      "key": "agents_sdk_models_providers",
+      "url": "https://openai.github.io/openai-agents-python/models/",
+      "title": "Models - OpenAI Agents SDK",
       "source_identity": "external_openai_official",
+      "evidence_classification": "EXTERNAL_EVIDENCE",
       "verification_status": "UNVERIFIED_EXTERNAL",
-      "retrieved_at": "2026-09-14T17:52:24.353575+00:00",
+      "retrieved_at": "2026-09-14T17:56:20.163258+00:00",
+      "date_accessed": "2026-09-14T17:56:20.163258+00:00",
       "http_status": 200,
-      "content_sha256": "067510db0f68c1257322cddb4ca0576c27b65b7cd2aad0dc21f3681dde71d1fd",
+      "content_sha256": "045f447bb1c252dfe142e0990a8d4a439d8c0e1efcafbf1bf48882abd5a4b897",
       "snippets": [
-        "Agents SDK | OpenAI API For the complete documentation index, see llms.txt . Markdown versions of documentation pages are available by appending .md to the page URL. ChatGPT Home API Codex Docs Guides, concepts, and product docs for Codex Use cases Example workflows and tasks teams can take on with ChatGPT or Codex Docs Use cases Training Resources ChatGPT Plugins Extend ChatGPT and Codex Workspace Agents Trigger published ChatGPT workspace agents Commerce Build commerce flows in ChatGPT Ads Publish and measure ads in ChatGP",
-        "ainer-based environment Sandbox agents Use this when the agent needs files, commands, packages, snapshots, mounts, or provider links. Design specialist ownership Orchestration and handoffs Use this when you need more than one agent and must decide who owns the reply. Add validation or human review Guardrails and human review Use this when the workflow should block or pause before risky work continues. Understand what a run returns Results and state This page explains final output, resumable state, and next-turn surfaces. Add hosted tools, function tools, or MCP Using tools and Integrations and observability Tool semantics live in the platform tools docs; SDK-specific MCP and tracing live here. Inspe",
-        "ted sandboxes Sandbox lifecycle Sandbox security Files and artifacts Tools and integrations Web search Functions MCP connections Plugins Vaults Multi-agent Observability and usage Tracing Agents SDK Overview Quickstart Agent definitions Models and providers Running agents Sandbox agents Orchestration Guardrails Results and state Integrations and observability Evaluate agent workflows ChatKit Overview Customize Widgets Actions Advanced integrations Overview Function calling Search and retrieval Web search File search Retrieval Connect tools and data MCP and Connectors Secure MCP Tunnel Build tool workflows Skills Tool search Programmatic tool calling Async tool calling Computer and code Shell Comput"
+        "s to integrate non-OpenAI providers Approach Use it when Scope set_default_openai_client One OpenAI-compatible endpoint should be the default for most or all agents Global default ModelProvider One custom provider should apply to a single run Per run Agent.model Different agents need different providers or concrete model objects Per agent Third-party adapter You need provider coverage or routing from an adapter because the built-in paths do not provide it See Third-party adapters You can integrate other LLM providers with these built-in paths: set_default_openai_client is useful in cases where you want to globally use an instance of AsyncOpenAI as the LLM client. This is for cases where the LLM provider",
+        "MultiProvider Notes Hosted multi-agent (experimental) Configure the model Local function tools Output and streaming behavior Relationship to SDK orchestration Current limitations Non-OpenAI models Ways to integrate non-OpenAI providers Mixing models in one workflow Advanced OpenAI Responses settings Common advanced ModelSettings options Passing extra_args Model-call timeouts Runner-managed retries Safety boundaries Runner and agent merge behavior Troubleshooting non-OpenAI providers Tracing client error 401 Responses API support Chat Completions compatibility options Structured outputs support Mixing models across providers Third-party adapters Any-LLM LiteLLM Tools Guardrails Running agents Streamin",
+        "ult_openai_client One OpenAI-compatible endpoint should be the default for most or all agents Global default ModelProvider One custom provider should apply to a single run Per run Agent.model Different agents need different providers or concrete model objects Per agent Third-party adapter You need provider coverage or routing from an adapter because the built-in paths do not provide it See Third-party adapters You can integrate other LLM providers with these built-in paths: set_default_openai_client is useful in cases where you want to globally use an instance of AsyncOpenAI as the LLM client. This is for cases where the LLM provider has an OpenAI compatible API endpoint, and you can set the base_url a",
+        "viders Tracing client error 401 Responses API support Chat Completions compatibility options Structured outputs support Mixing models across providers Third-party adapters Any-LLM LiteLLM Tools Guardrails Running agents Streaming Agent orchestration Handoffs Results Human-in-the-loop Sessions Sessions Overview SQLAlchemy session Advanced SQLite session Encrypted session Context management Usage Model context protocol (MCP) Tracing Testing Agent visualization REPL utility Release process/changelog API Reference API Reference Agents Agents Agents module Agent Runner Run config Run state Testing Sandbox Sandbox Overview SandboxAgent Manifest Permissions SnapshotSpec Workspace entries Capabilities Capa"
       ]
     },
     {
-      "key": "model_capabilities",
-      "url": "https://platform.openai.com/docs/models",
+      "key": "agents_sdk_human_in_the_loop",
+      "url": "https://openai.github.io/openai-agents-python/human_in_the_loop/",
+      "title": "Human-in-the-loop - OpenAI Agents SDK",
+      "source_identity": "external_openai_official",
+      "evidence_classification": "EXTERNAL_EVIDENCE",
+      "verification_status": "UNVERIFIED_EXTERNAL",
+      "retrieved_at": "2026-09-14T17:56:20.163258+00:00",
+      "date_accessed": "2026-09-14T17:56:20.163258+00:00",
+      "http_status": 200,
+      "content_sha256": "6d2b1955f068c2ffc7ef3b4b7e358d6c5c3416c58a24e4e5145ead5ba6ecde4e",
+      "snippets": [
+        "ipeline Tracing Models Tools Guardrails Running agents Streaming Agent orchestration Handoffs Results Human-in-the-loop Human-in-the-loop Table of contents Marking tools that need approval How the approval flow works Custom rejection messages Automatic approval decisions Streaming and sessions Example: pause, approve, resume Repository patterns and examples Long-running approvals Versioning pending tasks Sessions Sessions Overview SQLAlchemy session Advanced SQLite session Encrypted session Context management Usage Model context protocol (MCP) Tracing Testing Agent visualization REPL utility Release process/changelog API Reference API Reference Agents Agents Agents module Agent Runner Run config Run",
+        "-loop (HITL) flow to pause agent execution until a person approves or rejects sensitive tool calls. Tools declare when they need approval, run results surface pending approvals as interruptions, and RunState lets you serialize paused runs and resume them after decisions are made. That approval surface is run-wide, not limited to the current top-level agent. The same pattern applies when the tool belongs to the current agent, to an agent reached through a handoff, or to a nested Agent.as_tool() execution. In the nested Agent.as_tool() case, the interruption still surfaces on the outer run, so you approve or reject it on the outer RunState and resume the original top-level run. With Agent.as_tool() , a",
+        "o pause agent execution until a person approves or rejects sensitive tool calls. Tools declare when they need approval, run results surface pending approvals as interruptions, and RunState lets you serialize paused runs and resume them after decisions are made. That approval surface is run-wide, not limited to the current top-level agent. The same pattern applies when the tool belongs to the current agent, to an agent reached through a handoff, or to a nested Agent.as_tool() execution. In the nested Agent.as_tool() case, the interruption still surfaces on the outer run, so you approve or reject it on the outer RunState and resume the original top-level run. With Agent.as_tool() , approvals can happe",
+        "ble of contents Marking tools that need approval How the approval flow works Custom rejection messages Automatic approval decisions Streaming and sessions Example: pause, approve, resume Repository patterns and examples Long-running approvals Versioning pending tasks Sessions Sessions Overview SQLAlchemy session Advanced SQLite session Encrypted session Context management Usage Model context protocol (MCP) Tracing Testing Agent visualization REPL utility Release process/changelog API Reference API Reference Agents Agents Agents module Agent Runner Run config Run state Testing Sandbox Sandbox Overview SandboxAgent Manifest Permissions SnapshotSpec Workspace entries Capabilities Capabilities Capabil"
+      ]
+    },
+    {
+      "key": "agents_sdk_sessions",
+      "url": "https://openai.github.io/openai-agents-python/sessions/",
+      "title": "Overview - OpenAI Agents SDK",
+      "source_identity": "external_openai_official",
+      "evidence_classification": "EXTERNAL_EVIDENCE",
+      "verification_status": "UNVERIFIED_EXTERNAL",
+      "retrieved_at": "2026-09-14T17:56:20.163258+00:00",
+      "date_accessed": "2026-09-14T17:56:20.163258+00:00",
+      "http_status": 200,
+      "content_sha256": "a19ab24440b7cfa1857c638276be62638a5311727f947dc449cdd08cee93900d",
+      "snippets": [
+        "start Transport Guide Voice agents Voice agents Quickstart Pipeline Tracing Models Tools Guardrails Running agents Streaming Agent orchestration Handoffs Results Human-in-the-loop Sessions Sessions Overview Overview Table of contents Quick start Resuming interrupted runs with the same session Core session behavior Control how history and new input merge Limiting retrieved history Memory operations Basic operations Using pop_item for corrections Built-in session implementations Choose a built-in session implementation OpenAI Conversations API sessions OpenAI Responses compaction sessions Typical usage (auto-compaction) auto-compaction can block streaming SQLite sessions Async SQLite sessions Redis s",
+        "Choose a built-in session implementation OpenAI Conversations API sessions OpenAI Responses compaction sessions Typical usage (auto-compaction) auto-compaction can block streaming SQLite sessions Async SQLite sessions Redis sessions SQLAlchemy sessions Dapr sessions MongoDB sessions Advanced SQLite sessions Encrypted sessions Other session types Operational patterns Session ID naming Memory persistence Multiple sessions Session sharing Complete example Custom session implementations Accessing run context from a custom session Community session implementations API reference SQLAlchemy session Advanced SQLite session Encrypted session Context management Usage Model context protocol (MCP) Tracing Tes",
+        "on OpenAI Conversations API sessions OpenAI Responses compaction sessions Typical usage (auto-compaction) auto-compaction can block streaming SQLite sessions Async SQLite sessions Redis sessions SQLAlchemy sessions Dapr sessions MongoDB sessions Advanced SQLite sessions Encrypted sessions Other session types Operational patterns Session ID naming Memory persistence Multiple sessions Session sharing Complete example Custom session implementations Accessing run context from a custom session Community session implementations API reference SQLAlchemy session Advanced SQLite session Encrypted session Context management Usage Model context protocol (MCP) Tracing Testing Agent visualization REPL utility",
+        "rsations API sessions OpenAI Responses compaction sessions Typical usage (auto-compaction) auto-compaction can block streaming SQLite sessions Async SQLite sessions Redis sessions SQLAlchemy sessions Dapr sessions MongoDB sessions Advanced SQLite sessions Encrypted sessions Other session types Operational patterns Session ID naming Memory persistence Multiple sessions Session sharing Complete example Custom session implementations Accessing run context from a custom session Community session implementations API reference SQLAlchemy session Advanced SQLite session Encrypted session Context management Usage Model context protocol (MCP) Tracing Testing Agent visualization REPL utility Release process/cha"
+      ]
+    },
+    {
+      "key": "responses_api_create",
+      "url": "https://developers.openai.com/api/reference/typescript/resources/beta/subresources/responses/methods/create",
+      "title": "Create a model response | OpenAI API Reference",
+      "source_identity": "external_openai_official",
+      "evidence_classification": "EXTERNAL_EVIDENCE",
+      "verification_status": "UNVERIFIED_EXTERNAL",
+      "retrieved_at": "2026-09-14T17:56:20.163258+00:00",
+      "date_accessed": "2026-09-14T17:56:20.163258+00:00",
+      "http_status": 200,
+      "content_sha256": "57645c89f223c00ada56591e59f7aae90f66d6eecf5d873253eca0bf2929ed7c",
+      "snippets": [
+        "pend limit Delete a spend limit Usage Audio Speeches Audio Transcriptions Code Interpreter Sessions Completions Costs Embeddings File Search Calls Images Moderations Vector Stores Web Search Calls Users Retrieve an user Update an user Delete an user List users Roles Create a role Retrieve a role Delete a role List roles Chat Completions Chat Completions Overview Create a chat completion Retrieve a chat completion Update a chat completion Delete a chat completion List chat completions List chat completions Streaming events Legacy Realtime Beta Overview Completions Create a completion API Reference Beta Responses Copy Markdown Open in Claude Open in ChatGPT Open in Cursor Copy Markdown View as Markdown",
+        "lerts Spend Limit Retrieve a spend limit Update a spend limit Delete a spend limit Usage Audio Speeches Audio Transcriptions Code Interpreter Sessions Completions Costs Embeddings File Search Calls Images Moderations Vector Stores Web Search Calls Users Retrieve an user Update an user Delete an user List users Roles Create a role Retrieve a role Delete a role List roles Chat Completions Chat Completions Overview Create a chat completion Retrieve a chat completion Update a chat completion Delete a chat completion List chat completions List chat completions Streaming events Legacy Realtime Beta Overview Completions Create a completion API Reference Beta Responses Copy Markdown Open in Claude Open in Chat",
+        "s, and support for builders Start searching API Dashboard Try ChatGPT Overview Models Agents Tools Audio & voice Production API reference Search the API docs Search docs Suggested responses create reasoning_effort realtime prompt caching Primary navigation API Codex ChatGPT Docs Use cases Resources Resources Search docs Suggested responses create reasoning_effort realtime prompt caching Overview Models Agents Tools Audio & voice Production API reference Overview Models Agents Tools Audio & voice Production API reference Docs API reference Docs Use cases Docs Use cases Docs Docs Plugins Workspace Agents Commerce Ads Plugins Workspace Agents Commerce Ads Docs Select... Showcase Blog Cookbook Learn Comm"
+      ]
+    },
+    {
+      "key": "models_catalog",
+      "url": "https://developers.openai.com/api/docs/models",
       "title": "Models | OpenAI API",
       "source_identity": "external_openai_official",
+      "evidence_classification": "EXTERNAL_EVIDENCE",
       "verification_status": "UNVERIFIED_EXTERNAL",
-      "retrieved_at": "2026-09-14T17:52:24.353575+00:00",
+      "retrieved_at": "2026-09-14T17:56:20.163258+00:00",
+      "date_accessed": "2026-09-14T17:56:20.163258+00:00",
       "http_status": 200,
       "content_sha256": "be4fafee97f862dbbf23fc8f649cd9bb6e2e1061b9755376ce25a89cd02da849",
       "snippets": [
-        "st OpenAI models support text and image input, text output, multilingual capabilities, and vision. Models are available via the Responses API and our Client SDKs . Flagship models Compare model capabilities and specifications. View all Compare models Astra GPT-6 Astra Our most capable model, built for the hardest end-to-end work Model ID gpt-6-astra Reasoning low medium high xhigh max Input price $10 / Input MTok Output price $50 / Output MTok Max output 128K tokens Context window 1.05M Knowledge cutoff Apr 30, 2026 Tools Functions, Web search, File search, Computer use GPT-5.6 Sol Flagship model for complex professional work Model ID gpt-5.6-sol Alias gpt-5.6 Reasoning none low medium high xhigh max Input price $4 /",
-        ", built for the hardest end-to-end work Model ID gpt-6-astra Reasoning low medium high xhigh max Input price $10 / Input MTok Output price $50 / Output MTok Max output 128K tokens Context window 1.05M Knowledge cutoff Apr 30, 2026 Tools Functions, Web search, File search, Computer use GPT-5.6 Sol Flagship model for complex professional work Model ID gpt-5.6-sol Alias gpt-5.6 Reasoning none low medium high xhigh max Input price $4 / Input MTok Output price $20 / Output MTok Max output 128K tokens Context window 1.05M Knowledge cutoff Feb 16, 2026 Tools Functions, Web search, File search, Computer use GPT-5.6 Terra GPT-5.6 model that balances intelligence and cost Model ID gpt-5.6-terra Reasoning none low m",
-        "ems Manage sessions Webhooks Environments and sandboxes OpenAI-hosted sandboxes Self-hosted sandboxes Sandbox lifecycle Sandbox security Files and artifacts Tools and integrations Web search Functions MCP connections Plugins Vaults Multi-agent Observability and usage Tracing Agents SDK Overview Quickstart Agent definitions Models and providers Running agents Sandbox agents Orchestration Guardrails Results and state Integrations and observability Evaluate agent workflows ChatKit Overview Customize Widgets Actions Advanced integrations Overview Function calling Search and retrieval Web search File search Retrieval Connect tools and data MCP and Connectors Secure MCP Tunnel Build tool workflows Skills To"
+        "dio and speech Getting started Voice agents Specialized models Deep research Embeddings Moderation Models Choosing a model If you're not sure where to start, use GPT-6 Astra , our flagship model for complex reasoning and coding. Choose GPT-5.6 Terra to balance intelligence and cost, or GPT-5.6 Luna for cost-sensitive, high-volume workloads. All latest OpenAI models support text and image input, text output, multilingual capabilities, and vision. Models are available via the Responses API and our Client SDKs . Flagship models Compare model capabilities and specifications. View all Compare models Astra GPT-6 Astra Our most capable model, built for the hardest end-to-end work Model ID gpt-6-astra Reaso",
+        "ems Manage sessions Webhooks Environments and sandboxes OpenAI-hosted sandboxes Self-hosted sandboxes Sandbox lifecycle Sandbox security Files and artifacts Tools and integrations Web search Functions MCP connections Plugins Vaults Multi-agent Observability and usage Tracing Agents SDK Overview Quickstart Agent definitions Models and providers Running agents Sandbox agents Orchestration Guardrails Results and state Integrations and observability Evaluate agent workflows ChatKit Overview Customize Widgets Actions Advanced integrations Overview Function calling Search and retrieval Web search File search Retrieval Connect tools and data MCP and Connectors Secure MCP Tunnel Build tool workflows Skills To",
+        "Integrations and observability Evaluate agent workflows ChatKit Overview Customize Widgets Actions Advanced integrations Overview Function calling Search and retrieval Web search File search Retrieval Connect tools and data MCP and Connectors Secure MCP Tunnel Build tool workflows Skills Tool search Programmatic tool calling Async tool calling Computer and code Shell Computer use Apply Patch Local shell Code interpreter Media Image generation Overview GPT-Live Getting started Prompting Managing sessions Delegation and tools Migrate to GPT-Live Partner integrations Realtime API Getting started Prompting Managing conversations Voice activity detection Tools and MCP Build with voice Voice agents Custom v",
+        "Retrieval Connect tools and data MCP and Connectors Secure MCP Tunnel Build tool workflows Skills Tool search Programmatic tool calling Async tool calling Computer and code Shell Computer use Apply Patch Local shell Code interpreter Media Image generation Overview GPT-Live Getting started Prompting Managing sessions Delegation and tools Migrate to GPT-Live Partner integrations Realtime API Getting started Prompting Managing conversations Voice activity detection Tools and MCP Build with voice Voice agents Custom voices Cost optimization Connections WebRTC WebSockets Telephony and SIP Server-side controls Audio processing File transcription Live transcription Live translation Text to speech Audio in Cha"
       ]
     },
     {
-      "key": "pricing",
-      "url": "https://platform.openai.com/docs/pricing",
+      "key": "gpt_5_6_sol",
+      "url": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+      "title": "GPT-5.6 Sol Model | OpenAI API",
+      "source_identity": "external_openai_official",
+      "evidence_classification": "EXTERNAL_EVIDENCE",
+      "verification_status": "UNVERIFIED_EXTERNAL",
+      "retrieved_at": "2026-09-14T17:56:20.163258+00:00",
+      "date_accessed": "2026-09-14T17:56:20.163258+00:00",
+      "http_status": 200,
+      "content_sha256": "f3d649b661d348394b4bfc74fe4c494917b723a09ff13c96dc252a517296beae",
+      "snippets": [
+        "odel tier used in earlier GPT-5 families. The gpt-5.6 alias routes requests to GPT-5.6 Sol. Reasoning.effort supports: none, low, medium (default), high, xhigh, and max. 1,050,000 context window 128,000 max output tokens Feb 16, 2026 knowledge cutoff Reasoning token support Pricing Pricing is based on the number of tokens used, or other metrics based on the model type. For tool-specific models, like search and computer use, there’s a fee per tool call. See details in the pricing page . Text tokens Per 1M tokens Input $4.00 Cached input $0.40 Output $20.00 Quick comparison Input Cached input Output GPT-5.5 $ 5.00 GPT-5.6 Sol $ 4.00 GPT-5.4 $ 2.50 GPT-5.6 Sol costs $4 per million input tokens and $20 per mi",
+        "s Learn Docs, videos, and demo apps for building with OpenAI Community Programs, meetups, and support for builders Start searching API Dashboard Try ChatGPT Overview Models Agents Tools Audio & voice Production API reference Search the API docs Search docs Suggested responses create reasoning_effort realtime prompt caching Primary navigation API Codex ChatGPT Docs Use cases Training Resources Resources Search docs Suggested responses create reasoning_effort realtime prompt caching Overview Models Agents Tools Audio & voice Production API reference Overview Models Agents Tools Audio & voice Production API reference Docs Models Home Get started Quickstart Using GPT-6 Astra Key concepts Core concept"
+      ]
+    },
+    {
+      "key": "api_pricing",
+      "url": "https://developers.openai.com/api/docs/pricing",
       "title": "Pricing | OpenAI API",
       "source_identity": "external_openai_official",
+      "evidence_classification": "EXTERNAL_EVIDENCE",
       "verification_status": "UNVERIFIED_EXTERNAL",
-      "retrieved_at": "2026-09-14T17:52:24.353575+00:00",
+      "retrieved_at": "2026-09-14T17:56:20.163258+00:00",
+      "date_accessed": "2026-09-14T17:56:20.163258+00:00",
       "http_status": 200,
       "content_sha256": "e39924dca3598eed0acffd03b08f2f1ce2c7d26befa3c1ba86ae8c66c42aff3a",
       "snippets": [
         "odel alongside your prompt to generate an answer. For gpt-4o-mini and gpt-4.1-mini with the non-preview web search tool, search content tokens are billed as a fixed block of 8,000 input tokens per call. File search tool call pricing applies to the Responses API only. Container pricing includes Hosted Shell and Code Interpreter . Eligible container sessions will be billed by the minute, with a 5-minute minimum per session. Responses API, Chat Completions API, Realtime API, Batch API, and Assistants API are not priced separately. Tokens are billed at the chosen model's input and output rates. Specialized models Prices per 1M tokens. Standard Fast mode Standard Category Model Input Cached input Output Chat",
-        "s Learn Docs, videos, and demo apps for building with OpenAI Community Programs, meetups, and support for builders Start searching API Dashboard Try ChatGPT Overview Models Agents Tools Audio & voice Production API reference Search the API docs Search docs Suggested responses create reasoning_effort realtime prompt caching Primary navigation API Codex ChatGPT Docs Use cases Training Resources Resources Search docs Suggested responses create reasoning_effort realtime prompt caching Overview Models Agents Tools Audio & voice Production API reference Overview Models Agents Tools Audio & voice Production API reference Docs Models Home Get started Quickstart Using GPT-6 Astra Key concepts Core concep"
+        "ems Manage sessions Webhooks Environments and sandboxes OpenAI-hosted sandboxes Self-hosted sandboxes Sandbox lifecycle Sandbox security Files and artifacts Tools and integrations Web search Functions MCP connections Plugins Vaults Multi-agent Observability and usage Tracing Agents SDK Overview Quickstart Agent definitions Models and providers Running agents Sandbox agents Orchestration Guardrails Results and state Integrations and observability Evaluate agent workflows ChatKit Overview Customize Widgets Actions Advanced integrations Overview Function calling Search and retrieval Web search File search Retrieval Connect tools and data MCP and Connectors Secure MCP Tunnel Build tool workflows Skills To",
+        "Integrations and observability Evaluate agent workflows ChatKit Overview Customize Widgets Actions Advanced integrations Overview Function calling Search and retrieval Web search File search Retrieval Connect tools and data MCP and Connectors Secure MCP Tunnel Build tool workflows Skills Tool search Programmatic tool calling Async tool calling Computer and code Shell Computer use Apply Patch Local shell Code interpreter Media Image generation Overview GPT-Live Getting started Prompting Managing sessions Delegation and tools Migrate to GPT-Live Partner integrations Realtime API Getting started Prompting Managing conversations Voice activity detection Tools and MCP Build with voice Voice agents Custom v"
       ]
     }
   ],
   "external_evidence_bundle": {
     "source_identity": "external_openai_official",
+    "evidence_classification": "EXTERNAL_EVIDENCE",
     "verification_status": "UNVERIFIED_EXTERNAL",
+    "source_urls": [
+      "https://openai.github.io/openai-agents-python/",
+      "https://openai.github.io/openai-agents-python/models/",
+      "https://openai.github.io/openai-agents-python/human_in_the_loop/",
+      "https://openai.github.io/openai-agents-python/sessions/",
+      "https://developers.openai.com/api/reference/typescript/resources/beta/subresources/responses/methods/create",
+      "https://developers.openai.com/api/docs/models",
+      "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+      "https://developers.openai.com/api/docs/pricing"
+    ],
     "provenance_note": "User-supplied summary of the current official OpenAI documentation; kept separate from Ahmed Agent project evidence.",
     "claims": [
       "Agents SDK manages agents, tools, handoffs, guardrails, sessions, HITL, and tracing, and uses Responses API by default.",
@@ -1756,7 +1847,7 @@
     }
   ],
   "targeted_trace": {
-    "run_id": "223e7924-c2cf-480c-a375-182bd16643cf",
+    "run_id": "7e0ac15a-2a23-4039-8c3a-9e1a8a0fcc13",
     "execution_status": "EXECUTED",
     "execution_classification": null,
     "tool_names": [
@@ -1765,7 +1856,7 @@
     ],
     "citation_count": 24,
     "project_evidence_citation_count": 24,
-    "external_evidence_count": 10,
+    "external_evidence_count": 14,
     "evidence_preconditions": {
       "status": "READY",
       "missing": [],
@@ -1808,7 +1899,7 @@
     "independent_review": null
   },
   "independent_review": {
-    "packet_sha256": "27a4fe29e07cbb64b5f512c1bf40dcb77896c215ce2b62b624b64be637757155",
+    "packet_sha256": "6ac1b68bc1be529b843d311c30e7e86e7825b6398702b6b747816bd92dee0c8d",
     "reviewer_type": "independent_evaluator",
     "reviewer_provider": "openai",
     "reviewer_model": "gpt-5.6-terra",
@@ -1821,18 +1912,18 @@
           "factual_correctness": 2,
           "groundedness": 2,
           "completeness": 2,
-          "scope_adherence": 4,
+          "scope_adherence": 3,
           "safe_abstention": 1
         },
         "dimension_notes": {
-          "factual_correctness": "تتناول الإجابة حالة المشروع، تكلفة الهجرة، الصيانة، الجودة، التكلفة، والميزات، ولا توصي بالتحول لمجرد أن البديل أحدث. لكن عدة استنتاجات حاسمة تتجاوز الدليل المعروض، مثل أن النظام «محلي بالكامل»، وأنه قابل للتوجيه لأي مزود «بسهولة»، وأنه يدعم بديل نماذج مفتوحة المصدر، وأن تكلفة الهجرة «عالية». الدليل الظاهر يثبت أساساً استخدام Starlette وUvicorn وبعض بنية الاختبارات، لا هذه النتائج الأوسع.",
-          "groundedness": "توجد إحالات حتمية ذات هوية مصدر ومواقع أسطر وSHA-256 لملفات مشروع Ahmed Agent، وهي تدعم جزئياً وجود مكونات Starlette/Uvicorn وفحص أدلة التشغيل. لكن الإحالات لا تسند معظم مزاعم التحكم الكامل، الاستقلالية، السجلّات، الذاكرة، قابلية الاستبدال، أو الدعم المحلي. كما أن المقارنة مع OpenAI لا تتضمن إحالات مباشرة في النص إلى وثائق أو مقتطفات خارجية بعينها.",
-          "completeness": "توجد توصية صريحة وأسباب، وتمت مناقشة الحالة الحالية وتكلفة الهجرة. ومع ذلك، شرط استخدام المعلومات الخارجية الحالية غير مكتمل بصورة قابلة للمراجعة: الأدلة الخارجية موجودة في الحزمة، لكن النص لا يطبق حقائق محددة منها، ولا يقدم مقارنة موثقة للقدرات أو التسعير أو نطاق خدمات OpenAI مقابل الاحتياجات الفعلية للمشروع. كما لا يقدم تقديراً أو افتراضات قابلة للتحقق لتكلفة الهجرة أو التشغيل.",
-          "scope_adherence": "التقييم ضمن نطاق build-versus-buy، ويظهر في الأثر استخدام الأداة المطلوبة web_search، ولا يظهر سلوك محظور مثل تجاهل القدرات القائمة أو تفضيل إعادة البناء لمجرد حداثة البديل.",
-          "safe_abstention": "مع أن الامتناع الكامل لم يكن مطلوباً ابتداءً، فإن عدم قابلية التحقق من الحقائق الخارجية والقصور في أدلة خصائص المشروع كانا يستدعيان توصية مشروطة أو طلب معلومات إضافية. بدلاً من ذلك، تقدم الإجابة قراراً جازماً بالاستمرار في البناء اعتماداً على مزاعم غير مسندة بالكامل."
+          "factual_correctness": "The response appropriately avoids recommending a rebuild merely because hosted alternatives are newer and recognizes migration cost. However, several factual conclusions exceed the supplied cited excerpts: the cited project lines establish Starlette/Uvicorn-related imports and runtime inspection, not that the full architecture is stable, that all claimed routing/session behavior exists, that tests validate the architecture, or that the build inherently has local-model fallback and easy multi-provider switching.",
+          "groundedness": "Project citations have deterministic source identity, file paths, line locators, hashes, and VERIFIED status. They support a limited conclusion that the project includes a Starlette/Uvicorn server and runtime-evidence code. They do not substantiate many broader architectural and operational claims. Current external material is present in the packet, but the answer says active web research was unavailable and supplies no claim-level citations to the external documentation for pricing, APIs, tools, or model capabilities. The packet labels external material UNVERIFIED_EXTERNAL.",
+          "completeness": "The answer addresses current state, migration, maintenance, quality, costs, gained/lost features, and gives a clear recommendation. But the required current external-information criterion is not adequately met in the reviewed answer: it explicitly frames external evidence as hypothetical despite available trace material, gives no current price or feature comparison tied to official documentation, and does not quantify or otherwise evaluate migration and operating-cost assumptions.",
+          "scope_adherence": "The response stays within a build-versus-buy comparison, considers implemented capabilities rather than discarding them, and does not recommend replacement solely because OpenAI is newer. The trace records the required web_search tool. Its main scope defect is the mismatch between the response's statement that current web research was unavailable and the packet's recorded external-evidence retrieval.",
+          "safe_abstention": "Because the response itself declares current external pricing/API information unavailable, and because the cited project snippets do not establish the broad operational assertions used for the recommendation, it should have made the recommendation explicitly conditional or deferred a final decision pending verification. Instead, it gives a definitive keep-build recommendation."
         },
         "decision": "FAIL",
-        "reason": "لا يمكن للحزمة إثبات صحة أو اكتمال التوصية الجازمة. توجد أدلة مشروع حتمية، لكنها ضيقة النطاق، بينما الحقائق الخارجية المقدمة غير متحققة وتبقى غير مربوطة مباشرة باستدلال الإجابة. لذلك لا تتوافر دعامة كافية لكل الأبعاد المطلوبة لإصدار PASS. Deterministic guard normalized the decision to match the dimension scores.",
+        "reason": "The packet cannot establish correctness or completeness of the definitive recommendation. The response has useful structure and a generally appropriate non-rebuild bias, but key project claims are not supported by the cited excerpts and the required current external comparison is neither reliably cited in the answer nor reconciled with the trace's external evidence. Deterministic guard normalized the decision to match the dimension scores.",
         "evidence_notes": "The packet did not contain sufficiently detailed reviewer evidence notes; deterministic groundedness status was PASS.",
         "case_id": "AA-RC-026",
         "reviewer_type": "independent_evaluator",
@@ -1840,7 +1931,7 @@
         "reviewer_model": "gpt-5.6-terra",
         "rubric_version": "semantic-review-rubric-v1",
         "reference_fingerprint": "be18a1acb4e16bb8d5092ed666e53299613eff32f4755c5c55a31489f0d96dab",
-        "execution_trace_fingerprint": "b829ad6c7643014c9808246984ea6efef04042473d10b5d9a1de0efac65c6036",
+        "execution_trace_fingerprint": "3d2cfc25c4abe4840e1a320cba3a1b4db3c9fa12f8e3e49da21baa2b74eadbbb",
         "decision_guard_applied": true
       }
     ]

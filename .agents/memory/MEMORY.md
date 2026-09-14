@@ -20,3 +20,4 @@
 - [Architecture continuity evidence](architecture-continuity-evidence.md) — fixed component-group evidence must not claim unchanged architecture without a prior snapshot.
 - [MCP Streamable HTTP lifecycle](mcp-lifespan-lifecycle.md) — auth middleware must forward lifespan events or initialize fails before a session task group exists.
 - [External evidence provenance](external-provenance.md) — web results stay bounded and explicitly unverified through traces and independent review.
+- [AA-RC-026 review boundary](aa-rc-026-review-boundary.md) — execution-ready build-vs-buy evidence can still require independent claim-level review.

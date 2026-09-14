@@ -86,7 +86,9 @@ OPENAI_DOCUMENTS: tuple[dict[str, Any], ...] = (
 
 USER_PROVIDED_OPENAI_EVIDENCE = {
     "source_identity": "external_openai_official",
+    "evidence_classification": "EXTERNAL_EVIDENCE",
     "verification_status": "UNVERIFIED_EXTERNAL",
+    "source_urls": [document["url"] for document in OPENAI_DOCUMENTS],
     "provenance_note": (
         "User-supplied summary of the current official OpenAI documentation; "
         "kept separate from Ahmed Agent project evidence."
@@ -526,6 +528,12 @@ def _integrity_record(report: dict[str, Any]) -> dict[str, Any]:
                 "bytes": len(data),
             }
         )
+    reviews = report.get("independent_review", {}).get("reviews", [])
+    independent_review_decision = (
+        reviews[0].get("decision")
+        if reviews and isinstance(reviews[0], dict)
+        else report.get("independent_review", {}).get("status", "NOT_DETERMINED")
+    )
     return {
         "schema_version": "aa-rc-026-integrity.v1",
         "case_id": "AA-RC-026",
@@ -533,6 +541,9 @@ def _integrity_record(report: dict[str, Any]) -> dict[str, Any]:
         "artifact": str(EVALUATION_ARTIFACT.relative_to(ROOT)),
         "files": files,
         "external_evidence_count": len(report["external_evidence"]),
+        "external_evidence_bundle_url_count": len(
+            report.get("external_evidence_bundle", {}).get("source_urls", [])
+        ),
         "project_architecture_fingerprint": report["project_evidence"][
             "architecture_fingerprint"
         ],
@@ -540,6 +551,8 @@ def _integrity_record(report: dict[str, Any]) -> dict[str, Any]:
         "evidence_precondition_status": report["targeted_trace"][
             "evidence_preconditions"
         ]["status"],
+        "independent_review_decision": independent_review_decision,
+        "recommendation_status": report["recommendation"]["status"],
         "semantic_status": report["semantic_evaluation"]["semantic_status"],
         "raw_trace_saved": False,
     }
