@@ -1,0 +1,400 @@
+{
+  "review_input_version": "semantic-review-input-v1",
+  "packet_sha256": "0476dec99deea9ca07ecfa17ef3817c8d73db8fa7c71990d1b86a631c66600ac",
+  "reviewer_type": "human",
+  "reviewer_id": "",
+  "independence_declaration": false,
+  "runtime_model_self_grading": false,
+  "reviews": [
+    {
+      "case_id": "AA-RC-001",
+      "reference_fingerprint": "9ef3dc5abc562fc326cd4f678653cf18e22d5750ce7a7c685f223d01ae6a10ee",
+      "execution_trace_fingerprint": "7607d7a29d6471f7509109667f814ff0a4fafdc9e46c4a26d5bb9ef453782d69",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-002",
+      "reference_fingerprint": "ff571e0332bddc9cd06e4c72506f33d92248fa6f85e824fe74ea9ddc12cbb300",
+      "execution_trace_fingerprint": "a159e005fe6e24b2b47ef0fa5ddee9d5f8321eb9d7439cadebc5170704c470a7",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-003",
+      "reference_fingerprint": "32877ae5ed40a79b8e4d7309b73948b1f77d5f84c775008f36269144caa3aecd",
+      "execution_trace_fingerprint": "6bf737ed9462c21ad998323920d5663696428e981475c3f4a490141ad69bf8fd",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-004",
+      "reference_fingerprint": "a39bde7c95d3331afd935ad0e1bf6a326c58075b06a969024b94bf697a269d26",
+      "execution_trace_fingerprint": "176f8dc49a4f0f8495aff3336fd761eb36523fa7e4ecb4f804ed34d1b530a47f",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-005",
+      "reference_fingerprint": "fac7f34cd4f51798c6f105ea99bb3fc80cd4b0a705a8fb7cda5feab0edfc1946",
+      "execution_trace_fingerprint": "e8f73f94830320024255263601aabf311ed19d8ba848d49c7192280ba63cb0ad",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-006",
+      "reference_fingerprint": "5b6d4ad9356bb7e7ece3445f69c6b2c16a665b97e4020177380fe05fda5becb2",
+      "execution_trace_fingerprint": "1c500c344460ac25f96aef0dcf23e644d722b8fe6049a2b9e2c3b7a6342f1b7f",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-007",
+      "reference_fingerprint": "e5ca75ded13e2bf33aa0237814952440300fbcdfa55bd30ae0854105909232e9",
+      "execution_trace_fingerprint": "5193d5a91af306825c220bfcd63e88f319e61c2d725ba757fae5746c5cfd0037",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-008",
+      "reference_fingerprint": "cbdd3b12a5e30a3c5f633b789a75f472c80bba773ae272bd30dfe2ae24d6ff17",
+      "execution_trace_fingerprint": "97a5e66da13f77ebfbb73c07e58e001713524fe50e444dc886f70fbf117f9970",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-009",
+      "reference_fingerprint": "b6c573fa850c986ce0a6dc6a31c881e18508bc57018544ec97852ec7d17818e5",
+      "execution_trace_fingerprint": "3e0ca5dd184a800c881b3a57053e97f3dfc1b9366e84ea095313c6f1d70e2d9e",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-010",
+      "reference_fingerprint": "2d648ad4d644818db6a305eea742e80f041d6457e34400fc79b3d4b548002505",
+      "execution_trace_fingerprint": "c50b3dd1af0e0c006209e353d9182f3d0ab2de80fefab863c35ec55c9c912fc9",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-011",
+      "reference_fingerprint": "c51389d75698c2b69ddb6c5c61346d4773248eebb5431c63add24859b7f349a0",
+      "execution_trace_fingerprint": "947c6afcfffad3a3b45fd1678afd97c8b2dcb6066df356881e86823349f16b5c",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-012",
+      "reference_fingerprint": "5c18c0172350d207733056140d9a9194f6378de7cf2470dcacebcbd943de675e",
+      "execution_trace_fingerprint": "00e9460fca8ad94833067238c760d768e59c2dcbd1d2ff2bf9b27b891961dbde",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-013",
+      "reference_fingerprint": "89c4379d404bf958cdaac59ae02c64f10c522816ef89e633a4069ed3a292993a",
+      "execution_trace_fingerprint": "e133d44dd10efdf0e52fa341919cc42ff1b8e0c6cd8e5b2b6863917a6c97ca6b",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-014",
+      "reference_fingerprint": "5df705fcbd1beb590010ae823dde2fd8d8ede2fbc32422a9af399b1a510a7ebc",
+      "execution_trace_fingerprint": "c37abc62b3e17a5277f3b1f4299fe2229ba9efe09890a5cecac6daef23a53aa0",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-015",
+      "reference_fingerprint": "dba241e4acf38bbe185f7308681169bc39a1f22031241f458b7fec56386aa45d",
+      "execution_trace_fingerprint": "167a3393427c3eb52aa8aa5b5b46d921a43ef03adad1cda73dda9873be1bfa28",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-016",
+      "reference_fingerprint": "1847edc113aa575a6371abd3a15bec5f9c891d1954a680d30ea41cd358c730f9",
+      "execution_trace_fingerprint": "befe94628f68236fe9ded4b626361dd89afd44a7726afdeb70a163d03283df95",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-017",
+      "reference_fingerprint": "e00de368aa8dd4a3b061382106d861f8c7c72ee33a846d0ac7c172df692178b1",
+      "execution_trace_fingerprint": "f1e61ea4b7a2a1a6f74798941ec0ed13c922bb8ec29a8c1fb8378545262b3e21",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-018",
+      "reference_fingerprint": "1ae3f4e1051759fc4f06bf6c29702a407d925bf4729c5a57e930c1a1f8b9c505",
+      "execution_trace_fingerprint": "3a0aa6f95cc7b60f47e2d46109bcac9003d34ce8e9f15946f42562037fe21c14",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-019",
+      "reference_fingerprint": "e3e4c6ab9e10c10b0b4d8cc40e33ce9e2db8d0c2a210e32725052657ff8b2752",
+      "execution_trace_fingerprint": "a3ea1d4db214b47ce7fd4b76b07ec005ce899e682d3aab935f4a2926a051ab8d",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-020",
+      "reference_fingerprint": "78ec8155c14c132ebe8dc545711434e0b3476c12c94077f0f22540e4832113e5",
+      "execution_trace_fingerprint": "bf28a777ebacb7a7939bbb40495e68ecbb56929efd1ac88026c3c88d988f1d73",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-021",
+      "reference_fingerprint": "1132159561000ead6879f26ee90d143aa147e7d2c94562926985e3455486cfa7",
+      "execution_trace_fingerprint": "17052728ea4f8077fea0de079b858c39c082324dbe8c90317829885b63b9afdc",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-022",
+      "reference_fingerprint": "17891261c3c0f5e94d3dface7d78c80bd2a5eb736fe771f592874e3c530f6717",
+      "execution_trace_fingerprint": "9a7f11a66ebbc05d802a784cbef625c6ef0711ba8e2233c7377ee010a0a36abd",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-023",
+      "reference_fingerprint": "16237ecf5097fe67d460bf7dd4b53b49849b4ac65cce55cc0c26dd4a001e6814",
+      "execution_trace_fingerprint": "0d942f6569fdf2fe55d534f97142fe4ad5e9cf92b0cbe0e91fa2f33d20816cf2",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-024",
+      "reference_fingerprint": "90225797f9016a7e2dadd26100a127b58f7fdaf083e798de0ee4808f5846f061",
+      "execution_trace_fingerprint": "ae4fae3e6dcbb843528cf1e4852a3da90353020d0d5b384d6b0082e7bfb6f5bd",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-025",
+      "reference_fingerprint": "bf7296a103982ffcecfd5b28133863257c92d7b02ee366ae389d32e51c78bcba",
+      "execution_trace_fingerprint": "132db7efbab8a646bb0e4b2fa8c48de2c9f730995fce9ad022e09a849d2fc5b4",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    },
+    {
+      "case_id": "AA-RC-026",
+      "reference_fingerprint": "be18a1acb4e16bb8d5092ed666e53299613eff32f4755c5c55a31489f0d96dab",
+      "execution_trace_fingerprint": "eb2f32c5a98a1649a2cb2c9e1289ed2bd95a8f4cdcda5824b8eee20e95f9ddb2",
+      "scores": {
+        "factual_correctness": null,
+        "groundedness": null,
+        "completeness": null,
+        "scope_adherence": null,
+        "safe_abstention": null
+      },
+      "decision": null,
+      "reason": "",
+      "evidence_notes": ""
+    }
+  ]
+}

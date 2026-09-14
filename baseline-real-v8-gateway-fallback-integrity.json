@@ -1,0 +1,17 @@
+{
+  "artifact_path": "baseline-real-v8-gateway-fallback.json",
+  "serialized_file_sha256": "1d5895c475a1704417a56c62a9067cf01ea361fcdd5b759f77d3ffaeb47443e2",
+  "canonical_artifact_sha256": "e7b510c3a200b8596b87327ec8cffc51d6fb538a91806703cd80aa37969807e9",
+  "normalized_evaluation_dataset_sha256": "35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1",
+  "dataset_version": "ahmed-agent-real-cases-v1",
+  "full_evaluation_run_id": "ced25508-bd34-480f-87e4-c733a52d5023",
+  "coverage": {
+    "total_selected": 26,
+    "executed": 26,
+    "execution_failed": 0,
+    "capability_gap": 0,
+    "hitl_blocked": 0,
+    "provider_rate_limited": 0
+  },
+  "semantic_grading": "NOT_RUN"
+}
