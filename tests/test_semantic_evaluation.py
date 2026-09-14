@@ -250,6 +250,51 @@ class SemanticEvaluationTests(unittest.TestCase):
             "UNVERIFIED_EXTERNAL",
         )
 
+    def test_aa_rc_026_groundedness_accepts_bound_project_and_openai_provenance(self) -> None:
+        contract_case = next(
+            case for case in self.contract["cases"] if case["case_id"] == "AA-RC-026"
+        )
+        trace = {
+            "case_id": "AA-RC-026",
+            "run_id": "aa-rc-026-grounded-run",
+            "execution_status": "EXECUTED",
+            "provider": "gemini",
+            "model": "gemini-test",
+            "evidence_preconditions": {"status": "READY"},
+            "tool_calls": [
+                {"name": "inspect_architecture_evidence", "status": "success"},
+                {"name": "web_search", "status": "success"},
+            ],
+            "citations": [
+                "project:architecture_fingerprint",
+                "https://platform.openai.com/docs/guides/tools",
+            ],
+            "sources": [
+                "project:architecture_fingerprint",
+                "https://platform.openai.com/docs/guides/tools",
+            ],
+            "evidence_provenance": [
+                {
+                    "source_identity": "Ahmed Agent current architecture",
+                    "verification_status": "VERIFIED",
+                }
+            ],
+            "external_evidence_provenance": [
+                {
+                    "url": "https://platform.openai.com/docs/guides/tools",
+                    "source_identity": "external_openai_official",
+                    "verification_status": "UNVERIFIED_EXTERNAL",
+                }
+            ],
+            "output": {"answer": "Bounded comparison with project and external evidence."},
+        }
+        result = evaluate_case(contract_case=contract_case, trace=trace)
+        self.assertEqual(result["dimensions"]["groundedness"]["status"], "PASS")
+        self.assertIn(
+            "external_openai_official",
+            result["dimensions"]["groundedness"]["evidence"],
+        )
+
     def test_review_input_template_is_independent_and_covers_all_cases(self) -> None:
         template = build_review_input_template(self.packet)
         self.assertEqual(template["reviewer_type"], "human")

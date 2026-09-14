@@ -1,0 +1,24 @@
+{
+  "schema_version": "aa-rc-026-integrity.v1",
+  "case_id": "AA-RC-026",
+  "evaluation_version": "2026-09-14.build-vs-buy.openai-only",
+  "artifact": "aa-rc-026-build-vs-buy-evaluation-2026-09-14.json",
+  "files": [
+    {
+      "file": "aa-rc-026-build-vs-buy-evaluation-2026-09-14.json",
+      "sha256": "d5be4a1b26068c22d0a23fa75aa54f65c330e29d5b113074a705f4abb8c5c265",
+      "bytes": 79370
+    },
+    {
+      "file": "semantic-evaluation-contract-v11.json",
+      "sha256": "8ebaedc9a6445c134cfb10e88ca43db9f80088d3d04b956e0973a6da60680865",
+      "bytes": 77845
+    }
+  ],
+  "external_evidence_count": 4,
+  "project_architecture_fingerprint": "e04de4f715fe33fad42297a679a6ab41ed02921a47180d883f6a0c142688d882",
+  "targeted_execution_status": "EXECUTED",
+  "evidence_precondition_status": "READY",
+  "semantic_status": "REVIEW_REQUIRED",
+  "raw_trace_saved": false
+}

@@ -173,6 +173,60 @@ class EvaluationBaselineTests(unittest.TestCase):
         self.assertIn("answer_citations", result["missing"])
         self.assertIn("tradeoff_criteria", result["missing"])
 
+    def test_aa_rc_026_requires_all_requested_comparison_dimensions_and_openai_sources(
+        self,
+    ) -> None:
+        result = validate_case_evidence_preconditions(
+            case={
+                "id": "AA-RC-026",
+                "required_tools": ["web_search"],
+            },
+            trace={
+                "tool_calls": [
+                    {
+                        "name": "inspect_architecture_evidence",
+                        "status": "success",
+                        "metadata": {
+                            "evidence_provenance": [
+                                {"source_identity": "Ahmed Agent project files"}
+                            ]
+                        },
+                    },
+                    {
+                        "name": "web_search",
+                        "status": "success",
+                        "metadata": {
+                            "external_source_urls": [
+                                "https://example.invalid/not-openai"
+                            ],
+                            "external_evidence_provenance": [
+                                {
+                                    "url": "https://example.invalid/not-openai",
+                                    "source_identity": "external_web_search",
+                                    "verification_status": "UNVERIFIED_EXTERNAL",
+                                }
+                            ],
+                        },
+                    },
+                ],
+                "citations": ["project citation"],
+                "sources": ["project citation"],
+                "output": {
+                    "answer": (
+                        "current project state, migration cost, maintenance, quality, "
+                        "features, recommendation"
+                    )
+                },
+            },
+        )
+
+        self.assertEqual(result["status"], "NOT_DETERMINED")
+        self.assertIn("official_openai_documentation", result["missing"])
+        self.assertIn("operating_cost", result["missing"])
+        self.assertIn("provider_independence", result["missing"])
+        self.assertIn("local_self_hosted_fallback", result["missing"])
+        self.assertIn("provenance_governance", result["missing"])
+
     def test_dataset_has_a_valid_seed_shape(self) -> None:
         cases = load_evaluation_cases()
         self.assertGreaterEqual(len(cases), 20)

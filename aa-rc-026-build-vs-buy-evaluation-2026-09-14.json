@@ -1,0 +1,1670 @@
+{
+  "schema_version": "aa-rc-026-targeted-evaluation.v1",
+  "case_id": "AA-RC-026",
+  "evaluation_version": "2026-09-14.build-vs-buy.openai-only",
+  "generated_at": "2026-09-14T17:47:04.504790+00:00",
+  "external_evidence_policy": {
+    "allowed_source_identity": "external_openai_official",
+    "allowed_domains": [
+      "platform.openai.com",
+      "developers.openai.com",
+      "openai.com",
+      "openai.github.io"
+    ],
+    "verification_status": "UNVERIFIED_EXTERNAL",
+    "project_evidence_must_remain_separate": true
+  },
+  "project_evidence": {
+    "status": "VERIFIED",
+    "architecture_fingerprint": "e04de4f715fe33fad42297a679a6ab41ed02921a47180d883f6a0c142688d882",
+    "groups": {
+      "runtime": {
+        "status": "VERIFIED",
+        "evidence_file_hashes": {
+          "server.py": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+          "runtime_evidence.py": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
+          "pyproject.toml": "31cece672980c65e65934f17e6135851034b1561ec2e2983214c70558ceb0ef2",
+          "tests/test_runtime_evidence.py": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc"
+        },
+        "citations": [
+          {
+            "group": "runtime",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "server.py",
+            "line_start": 13,
+            "line_end": 13,
+            "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "runtime",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "server.py",
+            "line_start": 14,
+            "line_end": 14,
+            "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "runtime",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "server.py",
+            "line_start": 15,
+            "line_end": 15,
+            "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "runtime",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "server.py",
+            "line_start": 16,
+            "line_end": 16,
+            "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "runtime",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "server.py",
+            "line_start": 1133,
+            "line_end": 1133,
+            "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "runtime",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "server.py",
+            "line_start": 1143,
+            "line_end": 1143,
+            "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "runtime",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "server.py",
+            "line_start": 1146,
+            "line_end": 1146,
+            "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "runtime",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "runtime_evidence.py",
+            "line_start": 227,
+            "line_end": 227,
+            "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "runtime",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "runtime_evidence.py",
+            "line_start": 299,
+            "line_end": 299,
+            "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "runtime",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "runtime_evidence.py",
+            "line_start": 300,
+            "line_end": 300,
+            "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "runtime",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "runtime_evidence.py",
+            "line_start": 301,
+            "line_end": 301,
+            "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "runtime",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "runtime_evidence.py",
+            "line_start": 304,
+            "line_end": 304,
+            "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          }
+        ],
+        "architecture_unchanged": {
+          "status": "NOT_ASSERTED",
+          "reason": "No prior architecture snapshot was supplied."
+        }
+      },
+      "persistence_state_recovery": {
+        "status": "VERIFIED",
+        "evidence_file_hashes": {
+          "persistence.py": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+          "tests/test_run_state.py": "168cc8193676e713d0a03af19132c7a045ade933d383aafc455121e35fae9880"
+        },
+        "citations": [
+          {
+            "group": "persistence_state_recovery",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "persistence.py",
+            "line_start": 12,
+            "line_end": 12,
+            "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "persistence_state_recovery",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "persistence.py",
+            "line_start": 19,
+            "line_end": 19,
+            "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "persistence_state_recovery",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "persistence.py",
+            "line_start": 24,
+            "line_end": 24,
+            "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "persistence_state_recovery",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "persistence.py",
+            "line_start": 25,
+            "line_end": 25,
+            "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "persistence_state_recovery",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "persistence.py",
+            "line_start": 26,
+            "line_end": 26,
+            "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "persistence_state_recovery",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "persistence.py",
+            "line_start": 35,
+            "line_end": 35,
+            "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "persistence_state_recovery",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "persistence.py",
+            "line_start": 64,
+            "line_end": 64,
+            "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "persistence_state_recovery",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "persistence.py",
+            "line_start": 78,
+            "line_end": 78,
+            "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "persistence_state_recovery",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "persistence.py",
+            "line_start": 79,
+            "line_end": 79,
+            "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "persistence_state_recovery",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "persistence.py",
+            "line_start": 94,
+            "line_end": 94,
+            "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "persistence_state_recovery",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "persistence.py",
+            "line_start": 95,
+            "line_end": 95,
+            "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "persistence_state_recovery",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "persistence.py",
+            "line_start": 103,
+            "line_end": 103,
+            "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          }
+        ],
+        "architecture_unchanged": {
+          "status": "NOT_ASSERTED",
+          "reason": "No prior architecture snapshot was supplied."
+        }
+      },
+      "policy_security": {
+        "status": "VERIFIED",
+        "evidence_file_hashes": {
+          "policy.py": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
+          "agent_core.py": "901f2c14bbfd42cc98a454d3fbcb9cfbd83edb7568785c88d4f0dd97ab92a982",
+          "tests/test_security_boundaries.py": "7fd58215057b12c815d8a4778a4f6a2016fb01f7f9acbc4786167a191e3abb68"
+        },
+        "citations": [
+          {
+            "group": "policy_security",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "policy.py",
+            "line_start": 8,
+            "line_end": 8,
+            "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "policy_security",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "policy.py",
+            "line_start": 19,
+            "line_end": 19,
+            "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "policy_security",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "policy.py",
+            "line_start": 20,
+            "line_end": 20,
+            "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "policy_security",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "policy.py",
+            "line_start": 26,
+            "line_end": 26,
+            "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "policy_security",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "policy.py",
+            "line_start": 29,
+            "line_end": 29,
+            "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "policy_security",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "policy.py",
+            "line_start": 30,
+            "line_end": 30,
+            "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "policy_security",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "policy.py",
+            "line_start": 37,
+            "line_end": 37,
+            "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "policy_security",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "policy.py",
+            "line_start": 38,
+            "line_end": 38,
+            "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "policy_security",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "policy.py",
+            "line_start": 45,
+            "line_end": 45,
+            "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "policy_security",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "policy.py",
+            "line_start": 46,
+            "line_end": 46,
+            "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "policy_security",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "policy.py",
+            "line_start": 53,
+            "line_end": 53,
+            "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "policy_security",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "policy.py",
+            "line_start": 54,
+            "line_end": 54,
+            "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          }
+        ],
+        "architecture_unchanged": {
+          "status": "NOT_ASSERTED",
+          "reason": "No prior architecture snapshot was supplied."
+        }
+      },
+      "evidence_provenance": {
+        "status": "VERIFIED",
+        "evidence_file_hashes": {
+          "evidence_core.py": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
+          "evidence_citations.py": "d484bb3fff138e197d203dd592ad65cc70dd2fb36ab4514fdcb9dc7591731338",
+          "source_status.py": "945a1ab364a4c80037734c32d1e3ccc55678019b976b8789b850e599965a0dd7",
+          "source_of_truth.py": "e7a26e2777b87e9c86e7d807ef7a310f832d7d6f5821b318eb0ad19bbe2a62f1",
+          "original_source_storage.py": "723b3e0ca1ebe6cbbfa84ad37333c5a2d85b9d2b8d6c1d463970a9b37643b4d9",
+          "tests/test_evidence_core.py": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469"
+        },
+        "citations": [
+          {
+            "group": "evidence_provenance",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evidence_core.py",
+            "line_start": 38,
+            "line_end": 38,
+            "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evidence_provenance",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evidence_core.py",
+            "line_start": 45,
+            "line_end": 45,
+            "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evidence_provenance",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evidence_core.py",
+            "line_start": 55,
+            "line_end": 55,
+            "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evidence_provenance",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evidence_core.py",
+            "line_start": 70,
+            "line_end": 70,
+            "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evidence_provenance",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evidence_core.py",
+            "line_start": 72,
+            "line_end": 72,
+            "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evidence_provenance",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evidence_core.py",
+            "line_start": 82,
+            "line_end": 82,
+            "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evidence_provenance",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evidence_core.py",
+            "line_start": 84,
+            "line_end": 84,
+            "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evidence_provenance",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evidence_core.py",
+            "line_start": 185,
+            "line_end": 185,
+            "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evidence_provenance",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evidence_core.py",
+            "line_start": 255,
+            "line_end": 255,
+            "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evidence_provenance",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evidence_core.py",
+            "line_start": 279,
+            "line_end": 279,
+            "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evidence_provenance",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evidence_core.py",
+            "line_start": 291,
+            "line_end": 291,
+            "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evidence_provenance",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evidence_core.py",
+            "line_start": 302,
+            "line_end": 302,
+            "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          }
+        ],
+        "architecture_unchanged": {
+          "status": "NOT_ASSERTED",
+          "reason": "No prior architecture snapshot was supplied."
+        }
+      },
+      "evaluation": {
+        "status": "VERIFIED",
+        "evidence_file_hashes": {
+          "evaluation_baseline.py": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
+          "tests/test_evaluation_baseline.py": "50e129136628b165039c5248234db7947ea71ed6700f7a24e07f949a94daeedd"
+        },
+        "citations": [
+          {
+            "group": "evaluation",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evaluation_baseline.py",
+            "line_start": 40,
+            "line_end": 40,
+            "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evaluation",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evaluation_baseline.py",
+            "line_start": 169,
+            "line_end": 169,
+            "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evaluation",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evaluation_baseline.py",
+            "line_start": 171,
+            "line_end": 171,
+            "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evaluation",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evaluation_baseline.py",
+            "line_start": 172,
+            "line_end": 172,
+            "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evaluation",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evaluation_baseline.py",
+            "line_start": 216,
+            "line_end": 216,
+            "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evaluation",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evaluation_baseline.py",
+            "line_start": 218,
+            "line_end": 218,
+            "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evaluation",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evaluation_baseline.py",
+            "line_start": 224,
+            "line_end": 224,
+            "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evaluation",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evaluation_baseline.py",
+            "line_start": 236,
+            "line_end": 236,
+            "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evaluation",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evaluation_baseline.py",
+            "line_start": 1294,
+            "line_end": 1294,
+            "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evaluation",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evaluation_baseline.py",
+            "line_start": 1326,
+            "line_end": 1326,
+            "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evaluation",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evaluation_baseline.py",
+            "line_start": 1351,
+            "line_end": 1351,
+            "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "evaluation",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "evaluation_baseline.py",
+            "line_start": 1572,
+            "line_end": 1572,
+            "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          }
+        ],
+        "architecture_unchanged": {
+          "status": "NOT_ASSERTED",
+          "reason": "No prior architecture snapshot was supplied."
+        }
+      },
+      "actions_integrations": {
+        "status": "VERIFIED",
+        "evidence_file_hashes": {
+          "search_fabric.py": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
+          "tests/test_search_fabric.py": "f728f5d709b789ab5604e327f4fe4ad3107c2ddec31571b4817db7ded89cbbd4"
+        },
+        "citations": [
+          {
+            "group": "actions_integrations",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "search_fabric.py",
+            "line_start": 20,
+            "line_end": 20,
+            "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "actions_integrations",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "search_fabric.py",
+            "line_start": 21,
+            "line_end": 21,
+            "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "actions_integrations",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "search_fabric.py",
+            "line_start": 22,
+            "line_end": 22,
+            "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "actions_integrations",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "search_fabric.py",
+            "line_start": 23,
+            "line_end": 23,
+            "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "actions_integrations",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "search_fabric.py",
+            "line_start": 24,
+            "line_end": 24,
+            "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "actions_integrations",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "search_fabric.py",
+            "line_start": 25,
+            "line_end": 25,
+            "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "actions_integrations",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "search_fabric.py",
+            "line_start": 29,
+            "line_end": 29,
+            "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "actions_integrations",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "search_fabric.py",
+            "line_start": 30,
+            "line_end": 30,
+            "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "actions_integrations",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "search_fabric.py",
+            "line_start": 71,
+            "line_end": 71,
+            "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "actions_integrations",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "search_fabric.py",
+            "line_start": 151,
+            "line_end": 151,
+            "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "actions_integrations",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "search_fabric.py",
+            "line_start": 153,
+            "line_end": 153,
+            "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "actions_integrations",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "search_fabric.py",
+            "line_start": 155,
+            "line_end": 155,
+            "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          }
+        ],
+        "architecture_unchanged": {
+          "status": "NOT_ASSERTED",
+          "reason": "No prior architecture snapshot was supplied."
+        }
+      },
+      "tests": {
+        "status": "VERIFIED",
+        "evidence_file_hashes": {
+          "tests/test_evidence_core.py": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
+          "tests/test_security_boundaries.py": "7fd58215057b12c815d8a4778a4f6a2016fb01f7f9acbc4786167a191e3abb68"
+        },
+        "citations": [
+          {
+            "group": "tests",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "tests/test_evidence_core.py",
+            "line_start": 1,
+            "line_end": 1,
+            "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "tests",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "tests/test_evidence_core.py",
+            "line_start": 2,
+            "line_end": 2,
+            "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "tests",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "tests/test_evidence_core.py",
+            "line_start": 3,
+            "line_end": 3,
+            "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "tests",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "tests/test_evidence_core.py",
+            "line_start": 4,
+            "line_end": 4,
+            "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "tests",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "tests/test_evidence_core.py",
+            "line_start": 5,
+            "line_end": 5,
+            "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "tests",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "tests/test_evidence_core.py",
+            "line_start": 6,
+            "line_end": 6,
+            "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "tests",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "tests/test_evidence_core.py",
+            "line_start": 7,
+            "line_end": 7,
+            "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "tests",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "tests/test_evidence_core.py",
+            "line_start": 8,
+            "line_end": 8,
+            "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "tests",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "tests/test_evidence_core.py",
+            "line_start": 9,
+            "line_end": 9,
+            "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "tests",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "tests/test_evidence_core.py",
+            "line_start": 10,
+            "line_end": 10,
+            "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "tests",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "tests/test_evidence_core.py",
+            "line_start": 11,
+            "line_end": 11,
+            "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          },
+          {
+            "group": "tests",
+            "evidence_kind": "implementation_evidence",
+            "relative_source_path": "tests/test_evidence_core.py",
+            "line_start": 12,
+            "line_end": 12,
+            "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
+            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+            "verification_status": "VERIFIED"
+          }
+        ],
+        "architecture_unchanged": {
+          "status": "NOT_ASSERTED",
+          "reason": "No prior architecture snapshot was supplied."
+        }
+      }
+    },
+    "citation_count": 243,
+    "citations": [
+      {
+        "group": "runtime",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "server.py",
+        "line_start": 13,
+        "line_end": 13,
+        "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "server.py",
+        "line_start": 14,
+        "line_end": 14,
+        "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "server.py",
+        "line_start": 15,
+        "line_end": 15,
+        "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "server.py",
+        "line_start": 16,
+        "line_end": 16,
+        "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "server.py",
+        "line_start": 1133,
+        "line_end": 1133,
+        "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "server.py",
+        "line_start": 1143,
+        "line_end": 1143,
+        "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "server.py",
+        "line_start": 1146,
+        "line_end": 1146,
+        "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "runtime_evidence.py",
+        "line_start": 227,
+        "line_end": 227,
+        "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "runtime_evidence.py",
+        "line_start": 299,
+        "line_end": 299,
+        "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "runtime_evidence.py",
+        "line_start": 300,
+        "line_end": 300,
+        "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "runtime_evidence.py",
+        "line_start": 301,
+        "line_end": 301,
+        "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "runtime_evidence.py",
+        "line_start": 304,
+        "line_end": 304,
+        "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "wiring_evidence",
+        "relative_source_path": "server.py",
+        "line_start": 97,
+        "line_end": 97,
+        "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+        "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "wiring_evidence",
+        "relative_source_path": "server.py",
+        "line_start": 1136,
+        "line_end": 1136,
+        "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+        "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "wiring_evidence",
+        "relative_source_path": "server.py",
+        "line_start": 1143,
+        "line_end": 1143,
+        "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
+        "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "wiring_evidence",
+        "relative_source_path": "runtime_evidence.py",
+        "line_start": 301,
+        "line_end": 301,
+        "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
+        "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "test_evidence",
+        "relative_source_path": "tests/test_runtime_evidence.py",
+        "line_start": 1,
+        "line_end": 1,
+        "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
+        "trust_classification": "PROJECT_TEST_EVIDENCE",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "test_evidence",
+        "relative_source_path": "tests/test_runtime_evidence.py",
+        "line_start": 2,
+        "line_end": 2,
+        "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
+        "trust_classification": "PROJECT_TEST_EVIDENCE",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "test_evidence",
+        "relative_source_path": "tests/test_runtime_evidence.py",
+        "line_start": 3,
+        "line_end": 3,
+        "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
+        "trust_classification": "PROJECT_TEST_EVIDENCE",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "test_evidence",
+        "relative_source_path": "tests/test_runtime_evidence.py",
+        "line_start": 4,
+        "line_end": 4,
+        "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
+        "trust_classification": "PROJECT_TEST_EVIDENCE",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "test_evidence",
+        "relative_source_path": "tests/test_runtime_evidence.py",
+        "line_start": 5,
+        "line_end": 5,
+        "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
+        "trust_classification": "PROJECT_TEST_EVIDENCE",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "test_evidence",
+        "relative_source_path": "tests/test_runtime_evidence.py",
+        "line_start": 6,
+        "line_end": 6,
+        "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
+        "trust_classification": "PROJECT_TEST_EVIDENCE",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "test_evidence",
+        "relative_source_path": "tests/test_runtime_evidence.py",
+        "line_start": 7,
+        "line_end": 7,
+        "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
+        "trust_classification": "PROJECT_TEST_EVIDENCE",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "test_evidence",
+        "relative_source_path": "tests/test_runtime_evidence.py",
+        "line_start": 8,
+        "line_end": 8,
+        "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
+        "trust_classification": "PROJECT_TEST_EVIDENCE",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "test_evidence",
+        "relative_source_path": "tests/test_runtime_evidence.py",
+        "line_start": 9,
+        "line_end": 9,
+        "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
+        "trust_classification": "PROJECT_TEST_EVIDENCE",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "test_evidence",
+        "relative_source_path": "tests/test_runtime_evidence.py",
+        "line_start": 10,
+        "line_end": 10,
+        "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
+        "trust_classification": "PROJECT_TEST_EVIDENCE",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "test_evidence",
+        "relative_source_path": "tests/test_runtime_evidence.py",
+        "line_start": 11,
+        "line_end": 11,
+        "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
+        "trust_classification": "PROJECT_TEST_EVIDENCE",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "runtime",
+        "evidence_kind": "test_evidence",
+        "relative_source_path": "tests/test_runtime_evidence.py",
+        "line_start": 12,
+        "line_end": 12,
+        "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
+        "trust_classification": "PROJECT_TEST_EVIDENCE",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 12,
+        "line_end": 12,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 19,
+        "line_end": 19,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 24,
+        "line_end": 24,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 25,
+        "line_end": 25,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 26,
+        "line_end": 26,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 35,
+        "line_end": 35,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 64,
+        "line_end": 64,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 78,
+        "line_end": 78,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 79,
+        "line_end": 79,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 94,
+        "line_end": 94,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 95,
+        "line_end": 95,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "implementation_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 103,
+        "line_end": 103,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "wiring_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 15,
+        "line_end": 15,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "wiring_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 24,
+        "line_end": 24,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "wiring_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 25,
+        "line_end": 25,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "wiring_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 94,
+        "line_end": 94,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "wiring_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 95,
+        "line_end": 95,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "wiring_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 103,
+        "line_end": 103,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "wiring_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 104,
+        "line_end": 104,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
+        "verification_status": "VERIFIED"
+      },
+      {
+        "group": "persistence_state_recovery",
+        "evidence_kind": "wiring_evidence",
+        "relative_source_path": "persistence.py",
+        "line_start": 163,
+        "line_end": 163,
+        "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
+        "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
+        "verification_status": "VERIFIED"
+      }
+    ],
+    "limitations": [
+      "Read-only fixed architecture groups only.",
+      "No caller-provided path or generic repository browsing.",
+      "Architecture unchanged is not asserted without a prior snapshot.",
+      "Test-file presence is not evidence that tests passed."
+    ]
+  },
+  "external_evidence": [
+    {
+      "key": "responses_api_tools",
+      "url": "https://platform.openai.com/docs/guides/tools",
+      "title": "Using tools | OpenAI API",
+      "source_identity": "external_openai_official",
+      "verification_status": "UNVERIFIED_EXTERNAL",
+      "retrieved_at": "2026-09-14T17:46:33.674974+00:00",
+      "http_status": 200,
+      "content_sha256": "85e7160156f4fa71ce1f3a30c2aa4449e37827c29f230432c96f5a1e44828e54",
+      "snippets": [
+        "Using tools | OpenAI API For the complete documentation index, see llms.txt . Markdown versions of documentation pages are available by appending .md to the page URL. ChatGPT Home API Codex Docs Guides, concepts, and product docs for Codex Use cases Example workflows and tasks teams can take on with ChatGPT or Codex Docs Use cases Training Resources ChatGPT Plugins Extend ChatGPT and Codex Workspace Agents Trigger published ChatGPT workspace agents Commerce Build commerce flows in ChatGPT Ads Publish and measure ads in ChatGP",
+        "ce Production API reference Overview Models Agents Tools Audio & voice Production API reference Docs Tools Home Get started Quickstart Using GPT-6 Astra Key concepts Core concepts Responses API Conversation state Background mode Streaming WebSocket mode Mid-turn steering Multi-agent Webhooks File inputs Compaction Counting tokens SDKs and CLI OpenAI SDK OpenAI CLI Resources Changelog Deprecations Supported countries OpenAI Crawlers Terms and policies Legacy APIs Agent Builder Overview Migration guide Node reference Safety in building agents Evals Getting started Working with evals Prompt optimizer External models Best practices Graders Fine-tuning Optimization cycle Supervised fine-tuning Vision fine-tun",
+        "ems Manage sessions Webhooks Environments and sandboxes OpenAI-hosted sandboxes Self-hosted sandboxes Sandbox lifecycle Sandbox security Files and artifacts Tools and integrations Web search Functions MCP connections Plugins Vaults Multi-agent Observability and usage Tracing Agents SDK Overview Quickstart Agent definitions Models and providers Running agents Sandbox agents Orchestration Guardrails Results and state Integrations and observability Evaluate agent workflows ChatKit Overview Customize Widgets Actions Advanced integrations Overview Function calling Search and retrieval Web search File search Retrieval Connect tools and data MCP and Connectors Secure MCP Tunnel Build tool workflows Skills To",
+        "Integrations and observability Evaluate agent workflows ChatKit Overview Customize Widgets Actions Advanced integrations Overview Function calling Search and retrieval Web search File search Retrieval Connect tools and data MCP and Connectors Secure MCP Tunnel Build tool workflows Skills Tool search Programmatic tool calling Async tool calling Computer and code Shell Computer use Apply Patch Local shell Code interpreter Media Image generation Overview GPT-Live Getting started Prompting Managing sessions Delegation and tools Migrate to GPT-Live Partner integrations Realtime API Getting started Prompting Managing conversations Voice activity detection Tools and MCP Build with voice Voice agents Custom v"
+      ]
+    },
+    {
+      "key": "agents_sdk",
+      "url": "https://platform.openai.com/docs/guides/agents/sdk",
+      "title": "Agents SDK | OpenAI API",
+      "source_identity": "external_openai_official",
+      "verification_status": "UNVERIFIED_EXTERNAL",
+      "retrieved_at": "2026-09-14T17:46:33.674974+00:00",
+      "http_status": 200,
+      "content_sha256": "067510db0f68c1257322cddb4ca0576c27b65b7cd2aad0dc21f3681dde71d1fd",
+      "snippets": [
+        "Agents SDK | OpenAI API For the complete documentation index, see llms.txt . Markdown versions of documentation pages are available by appending .md to the page URL. ChatGPT Home API Codex Docs Guides, concepts, and product docs for Codex Use cases Example workflows and tasks teams can take on with ChatGPT or Codex Docs Use cases Training Resources ChatGPT Plugins Extend ChatGPT and Codex Workspace Agents Trigger published ChatGPT workspace agents Commerce Build commerce flows in ChatGPT Ads Publish and measure ads in ChatGP",
+        "ainer-based environment Sandbox agents Use this when the agent needs files, commands, packages, snapshots, mounts, or provider links. Design specialist ownership Orchestration and handoffs Use this when you need more than one agent and must decide who owns the reply. Add validation or human review Guardrails and human review Use this when the workflow should block or pause before risky work continues. Understand what a run returns Results and state This page explains final output, resumable state, and next-turn surfaces. Add hosted tools, function tools, or MCP Using tools and Integrations and observability Tool semantics live in the platform tools docs; SDK-specific MCP and tracing live here. Inspe",
+        "ted sandboxes Sandbox lifecycle Sandbox security Files and artifacts Tools and integrations Web search Functions MCP connections Plugins Vaults Multi-agent Observability and usage Tracing Agents SDK Overview Quickstart Agent definitions Models and providers Running agents Sandbox agents Orchestration Guardrails Results and state Integrations and observability Evaluate agent workflows ChatKit Overview Customize Widgets Actions Advanced integrations Overview Function calling Search and retrieval Web search File search Retrieval Connect tools and data MCP and Connectors Secure MCP Tunnel Build tool workflows Skills Tool search Programmatic tool calling Async tool calling Computer and code Shell Comput"
+      ]
+    },
+    {
+      "key": "model_capabilities",
+      "url": "https://platform.openai.com/docs/models",
+      "title": "Models | OpenAI API",
+      "source_identity": "external_openai_official",
+      "verification_status": "UNVERIFIED_EXTERNAL",
+      "retrieved_at": "2026-09-14T17:46:33.674974+00:00",
+      "http_status": 200,
+      "content_sha256": "be4fafee97f862dbbf23fc8f649cd9bb6e2e1061b9755376ce25a89cd02da849",
+      "snippets": [
+        "st OpenAI models support text and image input, text output, multilingual capabilities, and vision. Models are available via the Responses API and our Client SDKs . Flagship models Compare model capabilities and specifications. View all Compare models Astra GPT-6 Astra Our most capable model, built for the hardest end-to-end work Model ID gpt-6-astra Reasoning low medium high xhigh max Input price $10 / Input MTok Output price $50 / Output MTok Max output 128K tokens Context window 1.05M Knowledge cutoff Apr 30, 2026 Tools Functions, Web search, File search, Computer use GPT-5.6 Sol Flagship model for complex professional work Model ID gpt-5.6-sol Alias gpt-5.6 Reasoning none low medium high xhigh max Input price $4 /",
+        ", built for the hardest end-to-end work Model ID gpt-6-astra Reasoning low medium high xhigh max Input price $10 / Input MTok Output price $50 / Output MTok Max output 128K tokens Context window 1.05M Knowledge cutoff Apr 30, 2026 Tools Functions, Web search, File search, Computer use GPT-5.6 Sol Flagship model for complex professional work Model ID gpt-5.6-sol Alias gpt-5.6 Reasoning none low medium high xhigh max Input price $4 / Input MTok Output price $20 / Output MTok Max output 128K tokens Context window 1.05M Knowledge cutoff Feb 16, 2026 Tools Functions, Web search, File search, Computer use GPT-5.6 Terra GPT-5.6 model that balances intelligence and cost Model ID gpt-5.6-terra Reasoning none low m",
+        "ems Manage sessions Webhooks Environments and sandboxes OpenAI-hosted sandboxes Self-hosted sandboxes Sandbox lifecycle Sandbox security Files and artifacts Tools and integrations Web search Functions MCP connections Plugins Vaults Multi-agent Observability and usage Tracing Agents SDK Overview Quickstart Agent definitions Models and providers Running agents Sandbox agents Orchestration Guardrails Results and state Integrations and observability Evaluate agent workflows ChatKit Overview Customize Widgets Actions Advanced integrations Overview Function calling Search and retrieval Web search File search Retrieval Connect tools and data MCP and Connectors Secure MCP Tunnel Build tool workflows Skills To"
+      ]
+    },
+    {
+      "key": "pricing",
+      "url": "https://platform.openai.com/docs/pricing",
+      "title": "Pricing | OpenAI API",
+      "source_identity": "external_openai_official",
+      "verification_status": "UNVERIFIED_EXTERNAL",
+      "retrieved_at": "2026-09-14T17:46:33.674974+00:00",
+      "http_status": 200,
+      "content_sha256": "e39924dca3598eed0acffd03b08f2f1ce2c7d26befa3c1ba86ae8c66c42aff3a",
+      "snippets": [
+        "odel alongside your prompt to generate an answer. For gpt-4o-mini and gpt-4.1-mini with the non-preview web search tool, search content tokens are billed as a fixed block of 8,000 input tokens per call. File search tool call pricing applies to the Responses API only. Container pricing includes Hosted Shell and Code Interpreter . Eligible container sessions will be billed by the minute, with a 5-minute minimum per session. Responses API, Chat Completions API, Realtime API, Batch API, and Assistants API are not priced separately. Tokens are billed at the chosen model's input and output rates. Specialized models Prices per 1M tokens. Standard Fast mode Standard Category Model Input Cached input Output Chat",
+        "s Learn Docs, videos, and demo apps for building with OpenAI Community Programs, meetups, and support for builders Start searching API Dashboard Try ChatGPT Overview Models Agents Tools Audio & voice Production API reference Search the API docs Search docs Suggested responses create reasoning_effort realtime prompt caching Primary navigation API Codex ChatGPT Docs Use cases Training Resources Resources Search docs Suggested responses create reasoning_effort realtime prompt caching Overview Models Agents Tools Audio & voice Production API reference Overview Models Agents Tools Audio & voice Production API reference Docs Models Home Get started Quickstart Using GPT-6 Astra Key concepts Core concep"
+      ]
+    }
+  ],
+  "comparison_matrix": [
+    {
+      "criterion": "current_project_state",
+      "build_assessment": "Continue the existing architecture and its evidence/provenance boundaries.",
+      "buy_assessment": "Use OpenAI components as an integration target, not as proof that Ahmed Agent should be rebuilt.",
+      "evidence_refs": [
+        "project:architecture_fingerprint",
+        "external:responses_api_tools"
+      ]
+    },
+    {
+      "criterion": "migration_cost_complexity",
+      "build_assessment": "Incremental integration preserves current persistence, policy, and evidence contracts.",
+      "buy_assessment": "Adopting Responses API tools or Agents SDK requires mapping the existing runtime, tools, approvals, persistence, and provenance boundaries.",
+      "evidence_refs": [
+        "project:runtime",
+        "project:persistence_state_recovery",
+        "project:policy_security",
+        "external:responses_api_tools",
+        "external:agents_sdk"
+      ]
+    },
+    {
+      "criterion": "maintenance_burden",
+      "build_assessment": "Retain ownership of the current execution, recovery, policy, and evidence code.",
+      "buy_assessment": "OpenAI-managed tool and agent capabilities can reduce custom orchestration, but add dependency on external API behavior and documentation.",
+      "evidence_refs": [
+        "project:persistence_state_recovery",
+        "external:agents_sdk"
+      ]
+    },
+    {
+      "criterion": "quality_control",
+      "build_assessment": "Current evidence, citation, policy, and evaluation layers preserve local control over claims and gates.",
+      "buy_assessment": "OpenAI tools and model capabilities add features, but do not replace Ahmed Agent's project-level quality and governance gates.",
+      "evidence_refs": [
+        "project:evidence_provenance",
+        "project:evaluation",
+        "external:responses_api_tools",
+        "external:model_capabilities"
+      ]
+    },
+    {
+      "criterion": "operating_cost",
+      "build_assessment": "Cost remains dependent on the providers and models selected by the current runtime; no unsupported exact spend claim is made.",
+      "buy_assessment": "OpenAI model and tool usage must be budgeted against the current official pricing page for the selected models and tools.",
+      "evidence_refs": [
+        "project:actions_integrations",
+        "external:pricing"
+      ]
+    },
+    {
+      "criterion": "features_gained_lost",
+      "build_assessment": "Keep existing capabilities and add only justified integrations.",
+      "buy_assessment": "Potential gains include OpenAI Responses tools, Agents SDK patterns, and access to the current model catalog; potential losses include local control or portability if adopted as the sole runtime.",
+      "evidence_refs": [
+        "project:runtime",
+        "project:actions_integrations",
+        "external:responses_api_tools",
+        "external:agents_sdk",
+        "external:model_capabilities"
+      ]
+    },
+    {
+      "criterion": "provider_independence",
+      "build_assessment": "Preserve the provider boundary and treat OpenAI as an option rather than the only execution path.",
+      "buy_assessment": "A full replacement increases provider coupling unless the existing provider abstraction and fallback boundary remain intact.",
+      "evidence_refs": [
+        "project:actions_integrations",
+        "project:policy_security"
+      ]
+    },
+    {
+      "criterion": "local_self_hosted_fallback",
+      "build_assessment": "Keep this as an explicit design constraint; the current evidence does not claim that OpenAI supplies a self-hosted fallback.",
+      "buy_assessment": "OpenAI official documentation supports hosted APIs/SDK usage in this comparison; it is not evidence of a local or self-hosted OpenAI fallback.",
+      "evidence_refs": [
+        "project:actions_integrations",
+        "external:agents_sdk"
+      ]
+    },
+    {
+      "criterion": "provenance_governance",
+      "build_assessment": "Retain project provenance, source identity, policy, and evaluation gates around any provider.",
+      "buy_assessment": "External tool/agent features must remain classified as external evidence and must not replace local governance or source provenance.",
+      "evidence_refs": [
+        "project:evidence_provenance",
+        "project:policy_security",
+        "external:responses_api_tools",
+        "external:agents_sdk"
+      ]
+    },
+    {
+      "criterion": "recommendation",
+      "recommendation": "Continue Ahmed Agent incrementally; do not rebuild solely because OpenAI offers newer hosted agent capabilities. Evaluate a bounded OpenAI integration only where it improves a measured gap while preserving provider independence, provenance, governance, and fallback boundaries.",
+      "evidence_refs": [
+        "project:architecture_fingerprint",
+        "external:model_capabilities",
+        "external:pricing"
+      ]
+    }
+  ],
+  "targeted_trace": {
+    "run_id": "fa41301b-2076-4502-94cc-9592c008aa93",
+    "execution_status": "EXECUTED",
+    "execution_classification": null,
+    "tool_names": [
+      "inspect_architecture_evidence",
+      "web_search"
+    ],
+    "citation_count": 24,
+    "project_evidence_citation_count": 24,
+    "external_evidence_count": 6,
+    "evidence_preconditions": {
+      "status": "READY",
+      "missing": [],
+      "observed_tool_names": [
+        "inspect_architecture_evidence",
+        "web_search"
+      ],
+      "external_documentation_urls": [
+        "https://openai.com/ar/api/pricing",
+        "https://developers.openai.com/api/docs/guides/agents/sandboxes"
+      ],
+      "official_openai_documentation_urls": [
+        "https://openai.com/ar/api/pricing",
+        "https://developers.openai.com/api/docs/guides/agents/sandboxes"
+      ]
+    },
+    "runtime_cleanup": {
+      "messages": 1,
+      "checkpoints": 1,
+      "tool_events": 1,
+      "pending_actions": 0,
+      "runs": 1,
+      "sessions": 1,
+      "audit_events_preserved": 1
+    },
+    "raw_trace_saved": false,
+    "answer_saved": false
+  },
+  "semantic_evaluation": {
+    "semantic_status": "REVIEW_REQUIRED",
+    "execution_status": "EXECUTED",
+    "execution_classification": "EXECUTION_OK",
+    "dimensions": {
+      "factual_correctness": "REVIEW_REQUIRED",
+      "groundedness": "REVIEW_REQUIRED",
+      "completeness": "REVIEW_REQUIRED",
+      "scope_adherence": "REVIEW_REQUIRED",
+      "safe_abstention": "REVIEW_REQUIRED"
+    },
+    "independent_review": null
+  },
+  "recommendation": {
+    "status": "READY",
+    "text": "Continue Ahmed Agent incrementally; do not rebuild solely because OpenAI offers newer hosted agent capabilities."
+  }
+}

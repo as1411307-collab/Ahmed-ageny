@@ -730,6 +730,21 @@ def _is_probable_documentation_url(value: object) -> bool:
     )
 
 
+def _is_official_openai_url(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    parsed = urlparse(value)
+    host = (parsed.hostname or "").casefold().rstrip(".")
+    return (
+        parsed.scheme in {"http", "https"}
+        and (
+            host == "openai.com"
+            or host.endswith(".openai.com")
+            or host == "openai.github.io"
+        )
+    )
+
+
 def validate_case_evidence_preconditions(
     *,
     case: dict[str, Any],
@@ -761,6 +776,16 @@ def validate_case_evidence_preconditions(
         for url in item.get("metadata", {}).get("external_source_urls", [])
         if isinstance(url, str)
     ]
+    external_provenance = [
+        provenance
+        for item in tool_calls
+        if isinstance(item, dict)
+        for provenance in item.get("metadata", {}).get(
+            "external_evidence_provenance",
+            [],
+        )
+        if isinstance(provenance, dict)
+    ]
     answer = str(
         (trace.get("output") or {}).get("answer")
         or trace.get("final_output")
@@ -769,29 +794,86 @@ def validate_case_evidence_preconditions(
     missing: list[str] = []
     if "inspect_architecture_evidence" not in names or not architecture_evidence:
         missing.append("architecture_evidence")
-    if "web_search" not in names or not any(
-        _is_probable_documentation_url(url) for url in external_urls
-    ):
+    documentation_urls = [
+        url for url in external_urls if _is_probable_documentation_url(url)
+    ]
+    official_openai_urls = [
+        url for url in documentation_urls if _is_official_openai_url(url)
+    ]
+    if "web_search" not in names or not documentation_urls:
         missing.append("verified_external_documentation")
+    if not official_openai_urls:
+        missing.append("official_openai_documentation")
+    if not any(
+        provenance.get("verification_status") == "UNVERIFIED_EXTERNAL"
+        and _is_official_openai_url(provenance.get("url"))
+        for provenance in external_provenance
+    ):
+        missing.append("external_provenance_classification")
     if not trace.get("citations") and not trace.get("sources"):
         missing.append("answer_citations")
-    tradeoff_groups = (
-        ("migration", "الهجرة", "ترحيل"),
-        ("cost", "التكلفة", "تكلفة"),
-        ("maintenance", "الصيانة", "صيانة"),
-        ("quality", "الجودة", "جودة"),
-        ("feature", "الميزات", "المزايا"),
-        ("recommend", "التوصية", "أوصي", "أنصح"),
-    )
-    if any(not any(marker in answer for marker in group) for group in tradeoff_groups):
+    comparison_groups = {
+        "current_project_state": (
+            "current project",
+            "current state",
+            "حالة المشروع",
+            "المشروع الحالي",
+        ),
+        "migration_cost": ("migration", "الهجرة", "ترحيل"),
+        "maintenance_burden": ("maintenance", "الصيانة", "صيانة"),
+        "quality_control": ("quality", "الجودة", "control", "تحكم", "سيطرة"),
+        "operating_cost": (
+            "operating cost",
+            "operational cost",
+            "التكلفة التشغيلية",
+            "تكلفة التشغيل",
+        ),
+        "features_gained_lost": (
+            "feature",
+            "features",
+            "الميزات",
+            "المزايا",
+            "gained",
+            "lost",
+            "المكتسبة",
+            "المفقودة",
+        ),
+        "provider_independence": (
+            "provider independence",
+            "vendor lock-in",
+            "استقلالية مزود",
+            "الاعتماد على مزود",
+        ),
+        "local_self_hosted_fallback": (
+            "self-hosted",
+            "self hosted",
+            "local fallback",
+            "بديل محلي",
+            "استضافة ذاتية",
+            "تشغيل محلي",
+        ),
+        "provenance_governance": (
+            "provenance",
+            "governance",
+            "حوكمة",
+            "سلسلة المصدر",
+        ),
+        "clear_recommendation": ("recommend", "التوصية", "أوصي", "أنصح"),
+    }
+    missing_comparison = [
+        name
+        for name, markers in comparison_groups.items()
+        if not any(marker in answer for marker in markers)
+    ]
+    missing.extend(missing_comparison)
+    if missing_comparison:
         missing.append("tradeoff_criteria")
     return {
         "status": "READY" if not missing else "NOT_DETERMINED",
         "missing": missing,
         "observed_tool_names": sorted(names),
-        "external_documentation_urls": [
-            url for url in external_urls if _is_probable_documentation_url(url)
-        ],
+        "external_documentation_urls": documentation_urls,
+        "official_openai_documentation_urls": official_openai_urls,
     }
 
 
