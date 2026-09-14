@@ -6,6 +6,57 @@ from request_routing import RequestCapability, classify_request
 
 
 class EvidenceFirstRoutingTests(unittest.TestCase):
+    def test_operational_evidence_cases_do_not_fall_back_to_general(self) -> None:
+        cases = (
+            (
+                "استخدم المنظومة كاملة، استخدم المنظومة الموحدة.",
+                RequestCapability.PROJECT_STATE,
+            ),
+            (
+                "قيّم كل المسارات ولا تمشي على رأيي لمجرد أني قلته، اختار الأفضل.",
+                RequestCapability.PROJECT_STATE,
+            ),
+            (
+                "أي كتابة أو إجراء خارجي يحتاج موافقتي الصريحة قبل التنفيذ.",
+                RequestCapability.PROJECT_STATE,
+            ),
+            (
+                "راقب تحديثات OpenAI وChatGPT الرسمية ونبهني فقط إذا تغير شيء يؤثر فعليًا على قرار build-vs-buy أو إعداد الوكيل.",
+                RequestCapability.EXTERNAL_WEB_RESEARCH,
+            ),
+            (
+                "توكن المالك ما ينحط في الرابط ولا المحادثة ولا اللوجات، ويكون محفوظ للتبويب الحالي فقط.",
+                RequestCapability.PROJECT_STATE,
+            ),
+            (
+                "لو العملية ماتت أثناء model_running لا تعيد تشغيل النموذج بشكل أعمى.",
+                RequestCapability.PROJECT_STATE,
+            ),
+            (
+                "نظف بيانات الاختبارات لكن لا تكسر audit chain ولا تحذف audit events.",
+                RequestCapability.PROJECT_STATE,
+            ),
+            (
+                "لا أريد alert في كل polling cycle، ونبّه فقط عند تغير الحالة الحقيقي.",
+                RequestCapability.PROJECT_STATE,
+            ),
+            (
+                "الـ22 contract_seed مش أسئلة استخدام حقيقية، فلا تعتبرها quality score.",
+                RequestCapability.PROJECT_STATE,
+            ),
+            (
+                "هل نضيف LangGraph أو Multi-Agent أو MCTS الآن؟",
+                RequestCapability.RUNTIME_ARCHITECTURE,
+            ),
+        )
+
+        for message, expected_capability in cases:
+            with self.subTest(message=message):
+                route = classify_request(message)
+                self.assertEqual(route.capability, expected_capability)
+                self.assertTrue(route.required_capabilities)
+                self.assertTrue(route.abstain_if_evidence_missing)
+
     def test_project_state_questions_route_to_project_evidence(self) -> None:
         route = classify_request("راجع حالة مشروع Ahmed Agent وما تم إنجازه")
         self.assertEqual(route.capability, RequestCapability.PROJECT_STATE)
