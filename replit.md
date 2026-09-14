@@ -24,6 +24,25 @@ artifact under `artifacts/api-server` is a scaffold and is not the Ahmed runtime
 - PostgreSQL FTS with optional local FastEmbed hybrid retrieval
 - Crossref, DataCite, OpenAlex, GitHub REST API, and Tavily
 
+## Reference status and deferred blueprint
+
+- Phase 0 capability coverage is complete:
+  `26 EXECUTED / 0 Capability Gaps / 0 Provider Failures / 0 HITL_BLOCKED`.
+- Semantic grading remains `NOT_RUN`.
+- Multimodal Perception & Communication is a separate deferred plane covering
+  Voice, Audio, Vision, Image, Video, Generation, Editing, and Composition.
+- Perception is separate from Generation/Output, and future adapters must be
+  provider-independent with Cloud, Local, Self-hosted, and fallback modes.
+- Controlled Self-Improvement is limited to the future governed sequence
+  `Sandbox → Baseline → Proposal → Approval → Deploy → Re-evaluate`.
+- There is no direct Self-Modifying implementation. Policy Gates, the HITL
+  Controller, and the Provenance Verifier remain outside that boundary.
+- Superpowers is an optional external development aid, not an Ahmed Agent
+  runtime capability.
+
+See [`docs/BLUEPRINT.md`](docs/BLUEPRINT.md) for the canonical architecture
+blueprint.
+
 ## Capabilities
 
 - `WEB` scope: `web_search`, `academic_search`, `github_search`, and the

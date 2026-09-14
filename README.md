@@ -5,6 +5,18 @@ providers. It combines conversation, web research, academic lookup, GitHub
 structured search, and private `MY_FILES` retrieval behind a small
 authenticated API and MCP transport.
 
+## Reference status
+
+Phase 0 is complete at the capability-coverage level:
+
+```text
+26 EXECUTED / 0 Capability Gaps / 0 Provider Failures / 0 HITL_BLOCKED
+```
+
+Semantic grading remains `NOT_RUN`. The current runtime does not implement
+Multimodal/Voice or Controlled Self-Improvement; both are deferred roadmap
+layers documented in [`docs/BLUEPRINT.md`](docs/BLUEPRINT.md).
+
 ## Runtime
 
 The active runtime is Python, not the Node scaffold:
@@ -66,6 +78,7 @@ the active Ahmed runtime.
 
 See:
 
+- [`docs/BLUEPRINT.md`](docs/BLUEPRINT.md)
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - [`docs/OPERATIONS.md`](docs/OPERATIONS.md)
 - [`replit.md`](replit.md)

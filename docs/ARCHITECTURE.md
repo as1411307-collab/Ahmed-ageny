@@ -1,5 +1,17 @@
 # Ahmed Agent architecture
 
+## Reference status
+
+- **Phase 0:** complete
+- **Reference result:** `26 EXECUTED / 0 Capability Gaps / 0 Provider Failures /
+  0 HITL_BLOCKED`
+- **Evidence decisions:** ADR-019, ADR-020, and ADR-021
+- **Semantic grading:** `NOT_RUN`; this is separate from capability coverage.
+
+The current runtime is the Immutable Core: Policy Gates, the HITL Controller,
+and the Provenance Verifier are protected architectural boundaries. The full
+roadmap and deferred-layer contract are in [`BLUEPRINT.md`](BLUEPRINT.md).
+
 ## Request flow
 
 ```text
@@ -58,8 +70,9 @@ server.py
 
 ## Deliberate boundaries
 
-- Gemini is the model provider; Tavily/Search Fabric is a separate web-search
-  capability.
+- Gemini is the live primary model provider; OpenAI-compatible ChatGPT is a
+  selectable provider when configured. Tavily/Search Fabric is a separate
+  web-search capability.
 - GitHub is read-only.
 - The current sensitive action is an internal no-side-effect test action.
 - FastEmbed is optional; FTS remains the safe fallback.
@@ -93,3 +106,36 @@ server.py
   names resolve to AgentCore tools and which require an unavailable execution
   adapter; the mapping never changes the expected behavior.
 - The registered Node artifact is not imported by the Python runtime.
+
+## Deferred architecture layers
+
+### Multimodal Perception & Communication Plane
+
+Multimodal/Voice is an independent, deferred layer and is not implemented in
+the current runtime. The planned scope includes Voice, Audio, Vision, Image,
+Video, Generation, Editing, and Composition.
+
+Perception and Generation/Output remain separate contracts:
+
+- **Perception:** bounded Voice/Audio/Vision/Image/Video inputs.
+- **Generation/Output:** text/audio/image/video generation, editing, and
+  composition.
+
+Future capabilities must use provider-independent adapters with explicit Cloud,
+Local, Self-hosted, and fallback modes. No media libraries or new providers are
+connected by this blueprint.
+
+### Controlled Self-Improvement
+
+Only controlled, proposal-based self-improvement is allowed as a future design:
+
+```text
+Sandbox → Baseline → Proposal → Approval → Deploy → Re-evaluate
+```
+
+There is no direct Self-Modifying implementation. Policy Gates, the HITL
+Controller, and the Provenance Verifier remain outside the modification
+boundary and cannot be changed by improvement proposals.
+
+Superpowers is an optional external development aid, not an Ahmed Agent
+runtime component.
