@@ -201,6 +201,9 @@ def _evidence_items_from_result(result: object) -> list[dict[str, Any]]:
                 nested = value.get(key)
                 if isinstance(nested, dict):
                     visit(nested)
+                    if key == "groups":
+                        for group in nested.values():
+                            visit(group)
             for key in ("implementation_evidence", "wiring_evidence", "test_evidence"):
                 nested = value.get(key)
                 if isinstance(nested, list):
@@ -360,7 +363,7 @@ async def prepare_evidence_first_context(
         except Exception as error:
             await add_failure("inspect_runtime_evidence", "project_runtime", error)
 
-    if route.capability == RequestCapability.RUNTIME_ARCHITECTURE:
+    if "inspect_architecture_evidence" in route.required_capabilities:
         try:
             result = await asyncio.to_thread(inspect_existing_architecture_evidence)
             await add_probe(

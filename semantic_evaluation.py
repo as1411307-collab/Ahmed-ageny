@@ -326,6 +326,14 @@ def _execution_classification(trace: dict[str, Any]) -> str:
     error = str(trace.get("execution_error") or "").casefold()
     if status == "MISSING_TRACE":
         return "MISSING_TRACE"
+    if status in {"NOT_DETERMINED", "NOT_EXECUTABLE_CAPABILITY_GAP"}:
+        return "EVIDENCE_PRECONDITION_UNMET"
+    preconditions = trace.get("evidence_preconditions")
+    if isinstance(preconditions, dict) and preconditions.get("status") == "NOT_DETERMINED":
+        return "EVIDENCE_PRECONDITION_UNMET"
+    blocker = trace.get("external_input_blocker")
+    if isinstance(blocker, dict) and blocker.get("status") == "NOT_DETERMINED":
+        return "EXTERNAL_INPUT_BLOCKER"
     if status == "HITL_BLOCKED":
         return "HITL_BLOCKED"
     if (
@@ -616,6 +624,30 @@ def _packet_observations(trace: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _packet_trace_for_independent_reviewer(trace: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "execution_status": trace.get("execution_status"),
+        "execution_error": trace.get("execution_error"),
+        "provider": trace.get("provider"),
+        "model": trace.get("model"),
+        "final_output_redacted": _redact_text(_trace_answer(trace)),
+        "tool_names": sorted(_trace_tools(trace)),
+        "citations": [
+            _redact_text(str(value), limit=600)
+            for value in trace.get("citations", [])
+            if isinstance(value, str)
+        ][:24],
+        "sources": [
+            _redact_text(str(value), limit=600)
+            for value in trace.get("sources", [])
+            if isinstance(value, str)
+        ][:24],
+        "evidence_provenance": trace.get("evidence_provenance", [])[:24],
+        "evidence_preconditions": trace.get("evidence_preconditions"),
+        "upload_e2e": trace.get("upload_e2e"),
+    }
+
+
 def build_review_packet(
     *,
     contract: dict[str, Any],
@@ -641,9 +673,13 @@ def build_review_packet(
                 ],
                 "reference_fingerprint": contract_case["reference_fingerprint"],
                 "execution_trace_fingerprint": _trace_fingerprint(trace),
+                "producer_provider": trace.get("provider")
+                or baseline.get("execution_config", {}).get("provider"),
+                "producer_model": trace.get("model"),
                 "reference_assertions": contract_case["reference_assertions"],
                 "review_questions": contract_case["review_questions"],
                 "observations": _packet_observations(trace),
+                "trace": _packet_trace_for_independent_reviewer(trace),
                 "review": {
                     "factual_correctness": None,
                     "groundedness": None,
@@ -799,7 +835,25 @@ def apply_reviews(
             result["semantic_status"] = "REVIEW_REQUIRED"
         else:
             result["independent_review"] = review
-            result["semantic_status"] = review["decision"]
+            if result.get("execution_classification") != "EXECUTION_OK":
+                result["semantic_status"] = "NOT_DETERMINED"
+                merged.append(result)
+                continue
+            deterministic_groundedness = result.get("dimensions", {}).get(
+                "groundedness",
+                {},
+            ).get("status")
+            if (
+                review["decision"] == "PASS"
+                and deterministic_groundedness != "PASS"
+            ):
+                result["semantic_status"] = (
+                    "FAIL"
+                    if deterministic_groundedness == "FAIL"
+                    else "REVIEW_REQUIRED"
+                )
+            else:
+                result["semantic_status"] = review["decision"]
         merged.append(result)
     return merged
 

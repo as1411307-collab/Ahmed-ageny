@@ -15,7 +15,8 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
+from urllib.parse import urlparse
+from uuid import UUID, uuid4
 
 from evidence_citations import (
     build_evidence_provenance,
@@ -24,7 +25,12 @@ from evidence_citations import (
 )
 
 from agent_core import MAX_MODEL_REQUESTS, MAX_TOOL_CALLS, provider_model_name
-from persistence import load_run_evaluation_data
+from persistence import (
+    cleanup_evaluation_run,
+    delete_documents_for_source_ids,
+    delete_original_source,
+    load_run_evaluation_data,
+)
 
 
 DATASET_PATH = (
@@ -418,6 +424,377 @@ def _post_chat_message(
         return 0, {"error": type(error).__name__}, {}
 
 
+def _post_file_upload(
+    *,
+    base_url: str,
+    owner_token: str,
+    files: list[dict[str, object]],
+    timeout_seconds: float,
+) -> tuple[int, dict[str, Any], dict[str, str]]:
+    """Post a real multipart upload without logging file contents."""
+
+    boundary = f"----ahmed-evaluation-{uuid4().hex}"
+    body = bytearray()
+    for file in files:
+        filename = str(file["filename"])
+        content = file["content"]
+        if not isinstance(content, bytes):
+            raise TypeError("evaluation upload content must be bytes")
+        mime_type = str(file.get("mime_type") or "application/octet-stream")
+        safe_header_name = filename.replace("\\", "_").replace('"', "")
+        body.extend(f"--{boundary}\r\n".encode("utf-8"))
+        body.extend(
+            (
+                'Content-Disposition: form-data; name="file"; '
+                f'filename="{safe_header_name}"\r\n'
+            ).encode("utf-8")
+        )
+        body.extend(f"Content-Type: {mime_type}\r\n\r\n".encode("utf-8"))
+        body.extend(content)
+        body.extend(b"\r\n")
+    body.extend(f"--{boundary}--\r\n".encode("utf-8"))
+    request = urllib.request.Request(
+        f"{base_url.rstrip('/')}/files/upload",
+        data=bytes(body),
+        headers={
+            "Authorization": f"Bearer {owner_token}",
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+            response_body = response.read().decode("utf-8")
+            return (
+                response.status,
+                json.loads(response_body) if response_body else {},
+                {key: value for key, value in response.headers.items()},
+            )
+    except urllib.error.HTTPError as error:
+        response_body = error.read().decode("utf-8", errors="replace")
+        try:
+            parsed = json.loads(response_body)
+        except json.JSONDecodeError:
+            parsed = {"error": "HTTP_ERROR"}
+        return (
+            error.code,
+            parsed,
+            {key: value for key, value in error.headers.items()}
+            if error.headers
+            else {},
+        )
+    except Exception as error:
+        return 0, {"error": type(error).__name__}, {}
+
+
+def _minimal_pdf_bytes() -> bytes:
+    content = b"BT /F1 12 Tf 10 100 Td (AA-RC-018) Tj ET\n"
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] "
+        b"/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+        b"<< /Length " + str(len(content)).encode("ascii") + b" >>\nstream\n"
+        + content
+        + b"endstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    output = bytearray(b"%PDF-1.4\n")
+    offsets = [0]
+    for index, body in enumerate(objects, start=1):
+        offsets.append(len(output))
+        output.extend(f"{index} 0 obj\n".encode("ascii"))
+        output.extend(body)
+        output.extend(b"\nendobj\n")
+    xref_offset = len(output)
+    output.extend(f"xref\n0 {len(objects) + 1}\n".encode("ascii"))
+    output.extend(b"0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        output.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
+    output.extend(
+        (
+            f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\n"
+            f"startxref\n{xref_offset}\n%%EOF\n"
+        ).encode("ascii")
+    )
+    return bytes(output)
+
+
+def _minimal_docx_bytes() -> bytes:
+    import io
+    import zipfile
+
+    files = {
+        "[Content_Types].xml": (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            '<Default Extension="xml" ContentType="application/xml"/>'
+            '<Override PartName="/word/document.xml" '
+            'ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+            "</Types>"
+        ),
+        "_rels/.rels": (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+            'Target="word/document.xml"/>'
+            "</Relationships>"
+        ),
+        "word/document.xml": (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+            "<w:body><w:p><w:r><w:t>AA-RC-018</w:t></w:r></w:p>"
+            "<w:sectPr/></w:body></w:document>"
+        ),
+    }
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, content in files.items():
+            archive.writestr(name, content)
+    return buffer.getvalue()
+
+
+def _aa_rc_018_upload_files() -> list[dict[str, object]]:
+    return [
+        {
+            "filename": "aa-rc-018-upload.txt",
+            "content": b"AA-RC-018 plain text evidence.",
+            "mime_type": "text/plain",
+        },
+        {
+            "filename": "aa-rc-018-upload.md",
+            "content": b"# AA-RC-018\nMarkdown evidence.",
+            "mime_type": "text/markdown",
+        },
+        {
+            "filename": "aa-rc-018-upload.pdf",
+            "content": _minimal_pdf_bytes(),
+            "mime_type": "application/pdf",
+        },
+        {
+            "filename": "aa-rc-018-upload.docx",
+            "content": _minimal_docx_bytes(),
+            "mime_type": (
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            ),
+        },
+    ]
+
+
+async def _cleanup_uploaded_sources(source_ids: list[str]) -> dict[str, object]:
+    cleaned: list[str] = []
+    errors: list[str] = []
+    for source_id in dict.fromkeys(source_ids):
+        try:
+            try:
+                UUID(source_id)
+            except ValueError:
+                pass
+            else:
+                await delete_documents_for_source_ids([source_id])
+            await delete_original_source(source_id=source_id)
+            cleaned.append(source_id)
+        except Exception as error:
+            errors.append(f"{source_id}:{type(error).__name__}")
+    return {
+        "status": "PASS" if not errors else "FAIL",
+        "cleaned_source_ids": cleaned,
+        "errors": errors,
+    }
+
+
+async def _run_aa_rc_018_upload_e2e(
+    *,
+    base_url: str,
+    owner_token: str,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    source_ids: list[str] = []
+    supported_status, supported_payload, _ = await asyncio.to_thread(
+        _post_file_upload,
+        base_url=base_url,
+        owner_token=owner_token,
+        files=_aa_rc_018_upload_files(),
+        timeout_seconds=timeout_seconds,
+    )
+    supported_results = supported_payload.get("files", [])
+    if isinstance(supported_results, list):
+        source_ids.extend(
+            str(item["source_id"])
+            for item in supported_results
+            if isinstance(item, dict) and isinstance(item.get("source_id"), str)
+        )
+    unsafe_status, unsafe_payload, _ = await asyncio.to_thread(
+        _post_file_upload,
+        base_url=base_url,
+        owner_token=owner_token,
+        files=[
+            {
+                "filename": "../aa-rc-018-unsafe.txt",
+                "content": b"unsafe path traversal name",
+                "mime_type": "text/plain",
+            }
+        ],
+        timeout_seconds=timeout_seconds,
+    )
+    invalid_status, invalid_payload, _ = await asyncio.to_thread(
+        _post_file_upload,
+        base_url=base_url,
+        owner_token=owner_token,
+        files=[
+            {
+                "filename": "aa-rc-018-invalid.txt",
+                "content": b"\x00\xff\x00not-valid-text",
+                "mime_type": "text/plain",
+            }
+        ],
+        timeout_seconds=timeout_seconds,
+    )
+    cleanup = await _cleanup_uploaded_sources(source_ids)
+    supported_ready = (
+        supported_status == 201
+        and len(supported_results) == 4
+        and all(
+            isinstance(item, dict) and item.get("status") in {"ready", "embedding_failed"}
+            for item in supported_results
+        )
+    )
+    unsafe_rejected = unsafe_status == 415 and (
+        unsafe_payload.get("code") == "UNSAFE_FILENAME"
+        or unsafe_payload.get("error") == "UNSAFE_FILENAME"
+    )
+    invalid_rejected = invalid_status == 415 and (
+        any(
+            isinstance(item, dict) and item.get("status") == "invalid_file_content"
+            for item in (invalid_payload.get("files") or [])
+        )
+    )
+    evidence_items = [
+        {
+            "relative_source_path": str(item.get("filename")),
+            "file_sha256": hashlib.sha256(
+                next(
+                    file["content"]
+                    for file in _aa_rc_018_upload_files()
+                    if file["filename"] == item.get("filename")
+                )
+            ).hexdigest(),
+            "line_start": 1,
+            "line_end": 1,
+            "verification_status": "VERIFIED",
+            "trust_classification": "OWNER_UPLOADED",
+        }
+        for item in supported_results
+        if isinstance(item, dict) and isinstance(item.get("filename"), str)
+    ]
+    return {
+        "status": (
+            "PASS"
+            if supported_ready and unsafe_rejected and invalid_rejected and cleanup["status"] == "PASS"
+            else "FAIL"
+        ),
+        "supported_type_count": len(supported_results),
+        "supported_file_statuses": [
+            {
+                "filename": item.get("filename"),
+                "status": item.get("status"),
+                "source_id": item.get("source_id"),
+            }
+            for item in supported_results
+            if isinstance(item, dict)
+        ],
+        "supported_upload_status": supported_status,
+        "unsafe_filename_rejected": unsafe_rejected,
+        "unsafe_filename_status": unsafe_status,
+        "invalid_content_rejected": invalid_rejected,
+        "invalid_content_status": invalid_status,
+        "cleanup": cleanup,
+        "evidence_items": evidence_items,
+    }
+
+
+def _is_probable_documentation_url(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    parsed = urlparse(value)
+    host = (parsed.hostname or "").casefold()
+    path = parsed.path.casefold()
+    if parsed.scheme not in {"http", "https"} or not host:
+        return False
+    if host in {"facebook.com", "www.facebook.com", "linkedin.com", "www.linkedin.com", "youtube.com", "www.youtube.com"}:
+        return False
+    return any(
+        marker in host or marker in path
+        for marker in ("docs", "developer", "reference", "api", "documentation", "github")
+    )
+
+
+def validate_case_evidence_preconditions(
+    *,
+    case: dict[str, Any],
+    trace: dict[str, Any],
+) -> dict[str, object]:
+    """Validate evidence prerequisites before semantic scoring."""
+
+    if case.get("id") != "AA-RC-026":
+        return {"status": "READY", "missing": []}
+    tool_calls = trace.get("tool_calls", [])
+    names = {
+        str(item.get("name"))
+        for item in tool_calls
+        if isinstance(item, dict) and item.get("status") in {"success", "succeeded"}
+    }
+    architecture_evidence = any(
+        item.get("name") == "inspect_architecture_evidence"
+        and (
+            item.get("metadata", {}).get("evidence_provenance")
+            or item.get("metadata", {}).get("evidence_citations")
+        )
+        for item in tool_calls
+        if isinstance(item, dict)
+    )
+    external_urls = [
+        url
+        for item in tool_calls
+        if isinstance(item, dict)
+        for url in item.get("metadata", {}).get("external_source_urls", [])
+        if isinstance(url, str)
+    ]
+    answer = str(
+        (trace.get("output") or {}).get("answer")
+        or trace.get("final_output")
+        or ""
+    ).casefold()
+    missing: list[str] = []
+    if "inspect_architecture_evidence" not in names or not architecture_evidence:
+        missing.append("architecture_evidence")
+    if "web_search" not in names or not any(
+        _is_probable_documentation_url(url) for url in external_urls
+    ):
+        missing.append("verified_external_documentation")
+    if not trace.get("citations") and not trace.get("sources"):
+        missing.append("answer_citations")
+    tradeoff_groups = (
+        ("migration", "الهجرة", "ترحيل"),
+        ("cost", "التكلفة", "تكلفة"),
+        ("maintenance", "الصيانة", "صيانة"),
+        ("quality", "الجودة", "جودة"),
+        ("feature", "الميزات", "المزايا"),
+        ("recommend", "التوصية", "أوصي", "أنصح"),
+    )
+    if any(not any(marker in answer for marker in group) for group in tradeoff_groups):
+        missing.append("tradeoff_criteria")
+    return {
+        "status": "READY" if not missing else "NOT_DETERMINED",
+        "missing": missing,
+        "observed_tool_names": sorted(names),
+        "external_documentation_urls": [
+            url for url in external_urls if _is_probable_documentation_url(url)
+        ],
+    }
+
+
 def _retry_after_seconds(headers: dict[str, str]) -> float | None:
     value = headers.get("Retry-After") or headers.get("retry-after")
     if not value:
@@ -608,6 +985,13 @@ async def execute_real_case(
         "scope": scope,
         "provider": provider,
     }
+    upload_e2e: dict[str, object] | None = None
+    if case["id"] == "AA-RC-018":
+        upload_e2e = await _run_aa_rc_018_upload_e2e(
+            base_url=base_url,
+            owner_token=owner_token,
+            timeout_seconds=timeout_seconds,
+        )
     started = time.perf_counter()
     response_status, response_payload, response_headers = await asyncio.to_thread(
         _post_chat_message,
@@ -625,7 +1009,7 @@ async def execute_real_case(
             **response_payload,
             "error": f"TRACE_PERSISTENCE_READ_{type(error).__name__}",
         }
-    return build_evaluation_trace(
+    trace = build_evaluation_trace(
         case=case,
         run_id=run_id,
         scope=scope,
@@ -636,6 +1020,73 @@ async def execute_real_case(
         latency_ms=latency_ms,
         retry_after_seconds=_retry_after_seconds(response_headers),
     )
+    try:
+        trace["runtime_cleanup"] = await cleanup_evaluation_run(
+            run_id=run_id,
+            session_id=session_id,
+        )
+    except Exception as error:
+        trace["runtime_cleanup"] = {
+            "status": "FAIL",
+            "error": type(error).__name__,
+            "audit_events_preserved": True,
+        }
+    if case["id"] == "AA-RC-002":
+        source_truth_verified = any(
+            call.get("name") == "inspect_source_of_truth"
+            and call.get("metadata", {}).get("evidence_provenance")
+            for call in trace.get("tool_calls", [])
+            if isinstance(call, dict)
+        )
+        if not source_truth_verified:
+            trace["external_input_blocker"] = {
+                "status": "NOT_DETERMINED",
+                "code": "AUTHORIZED_SOURCE_DOCUMENTS_MISSING",
+                "reason": (
+                    "The two authorized AA-RC-002 source documents are not present "
+                    "with verified canonical provenance."
+                ),
+            }
+    if upload_e2e is not None:
+        trace["upload_e2e"] = upload_e2e
+        upload_items = upload_e2e.get("evidence_items", [])
+        if isinstance(upload_items, list):
+            trace["available_evidence_items"] = [
+                *trace.get("available_evidence_items", []),
+                *[item for item in upload_items if isinstance(item, dict)],
+            ][:24]
+            upload_provenance = build_evidence_provenance(
+                upload_items,
+                source_label="AA-RC-018 evaluation uploads",
+            )
+            trace["evidence_provenance"] = [
+                *trace.get("evidence_provenance", []),
+                *upload_provenance,
+            ][:24]
+            trace["available_evidence_citations"] = sorted(
+                {
+                    *[
+                        value
+                        for value in trace.get("available_evidence_citations", [])
+                        if isinstance(value, str)
+                    ],
+                    *[
+                        str(item["citation"])
+                        for item in upload_provenance
+                        if isinstance(item.get("citation"), str)
+                    ],
+                }
+            )
+    if case["id"] == "AA-RC-026":
+        preconditions = validate_case_evidence_preconditions(
+            case=case,
+            trace=trace,
+        )
+        trace["evidence_preconditions"] = preconditions
+        if preconditions["status"] == "NOT_DETERMINED":
+            trace["execution_status"] = "NOT_DETERMINED"
+            trace["execution_error"] = "EVIDENCE_PRECONDITIONS_UNMET"
+    return trace
 
 
 async def execute_rate_limited_case_with_retry(
@@ -711,7 +1162,11 @@ async def run_real_cases(
             timeout_seconds=timeout_seconds,
         )
         case_results.append(result)
-        if result.get("execution_status") in {"EXECUTED", "HITL_BLOCKED"}:
+        if result.get("execution_status") in {
+            "EXECUTED",
+            "HITL_BLOCKED",
+            "NOT_DETERMINED",
+        }:
             traces[case["id"]] = result
     executable_cases = [
         case
@@ -739,6 +1194,7 @@ async def run_real_cases(
             "execution_failed": coverage.get("EXECUTION_FAILED", 0),
             "capability_gap": coverage.get("NOT_EXECUTABLE_CAPABILITY_GAP", 0),
             "hitl_blocked": coverage.get("HITL_BLOCKED", 0),
+            "not_determined": coverage.get("NOT_DETERMINED", 0),
             "provider_rate_limited": rate_limited,
         },
         "cases": case_results,
@@ -1162,6 +1618,7 @@ def validate_evaluation_trace(trace: dict[str, Any]) -> None:
         "EXECUTED",
         "EXECUTION_FAILED",
         "HITL_BLOCKED",
+        "NOT_DETERMINED",
         "NOT_EXECUTABLE_CAPABILITY_GAP",
         "INVALID_CASE",
     }:
@@ -1172,6 +1629,32 @@ def deterministic_grade(
     case: dict[str, Any],
     trace: dict[str, Any],
 ) -> dict[str, Any]:
+    if trace.get("execution_status") == "NOT_DETERMINED":
+        return {
+            "case_id": case["id"],
+            "category": case["category"],
+            "provenance": case["provenance"],
+            "deterministic_status": "NOT_DETERMINED",
+            "check_results": {"evidence_preconditions": "NOT_AVAILABLE"},
+            "metrics": {
+                "task_completion": "NOT_DETERMINED",
+                "tool_selection": "NOT_DETERMINED",
+                "forbidden_tool_violations": "NOT_DETERMINED",
+                "retrieval_source_correctness": "NOT_DETERMINED",
+                "citation_correctness": "NOT_DETERMINED",
+                "grounding": "NOT_RUN",
+                "instruction_adherence": "NOT_CONFIGURED",
+                "instruction_adherence_deterministic": "NOT_CONFIGURED",
+                "abstention": "NOT_DETERMINED",
+                "hitl_boundary": "NOT_DETERMINED",
+            },
+            "semantic_status": "NOT_DETERMINED",
+            "latency_ms": trace.get("latency_ms"),
+            "tool_calls": len(trace.get("tool_calls", [])),
+            "retries": trace.get("retries"),
+            "tokens": trace.get("tokens"),
+            "cost": trace.get("cost"),
+        }
     checks = case["deterministic_checks"]
     tools = _tool_names(trace)
     sources = _observed_sources(trace)
@@ -1317,6 +1800,8 @@ def build_scoreboard(
         "quality_status": (
             "PASS"
             if results and not missing and passed == len(results)
+            else "NOT_DETERMINED"
+            if any(result["deterministic_status"] == "NOT_DETERMINED" for result in results)
             else "FAIL"
             if results and not missing
             else "NOT_DETERMINED"

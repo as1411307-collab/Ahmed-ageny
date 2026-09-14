@@ -1923,6 +1923,78 @@ async def delete_documents_for_source_ids(source_ids: Sequence[str]) -> int:
         ) from error
 
 
+async def cleanup_evaluation_run(*, run_id: str, session_id: str) -> dict[str, int]:
+    """Remove one evaluation run while preserving its audit history."""
+
+    pool = await _get_pool()
+    try:
+        async with pool.acquire() as connection:
+            async with connection.transaction():
+                deleted_messages = await connection.fetchval(
+                    """
+                    DELETE FROM agent_messages
+                    WHERE run_id = $1::uuid
+                    RETURNING 1
+                    """,
+                    run_id,
+                )
+                deleted_checkpoints = await connection.fetchval(
+                    """
+                    DELETE FROM agent_run_checkpoints
+                    WHERE run_id = $1::uuid
+                    RETURNING 1
+                    """,
+                    run_id,
+                )
+                deleted_tool_events = await connection.fetchval(
+                    """
+                    DELETE FROM tool_events
+                    WHERE run_id = $1::uuid
+                    RETURNING 1
+                    """,
+                    run_id,
+                )
+                deleted_pending_actions = await connection.fetchval(
+                    """
+                    DELETE FROM pending_actions
+                    WHERE run_id = $1::uuid
+                    RETURNING 1
+                    """,
+                    run_id,
+                )
+                deleted_runs = await connection.fetchval(
+                    """
+                    DELETE FROM agent_runs
+                    WHERE run_id = $1::uuid
+                    RETURNING 1
+                    """,
+                    run_id,
+                )
+                deleted_sessions = await connection.fetchval(
+                    """
+                    DELETE FROM agent_sessions
+                    WHERE session_id = $1::uuid
+                      AND NOT EXISTS (
+                          SELECT 1 FROM agent_runs
+                          WHERE session_id = $1::uuid
+                      )
+                    RETURNING 1
+                    """,
+                    session_id,
+                )
+        return {
+            "messages": int(deleted_messages or 0),
+            "checkpoints": int(deleted_checkpoints or 0),
+            "tool_events": int(deleted_tool_events or 0),
+            "pending_actions": int(deleted_pending_actions or 0),
+            "runs": int(deleted_runs or 0),
+            "sessions": int(deleted_sessions or 0),
+            "audit_events_preserved": 1,
+        }
+    except Exception as error:
+        raise PersistenceError("Could not clean up the evaluation run.") from error
+
+
 async def store_document(
     *,
     document_id: str,

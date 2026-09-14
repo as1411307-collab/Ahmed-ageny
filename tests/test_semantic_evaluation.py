@@ -86,6 +86,29 @@ class SemanticEvaluationTests(unittest.TestCase):
         self.assertEqual(result["dimensions"]["groundedness"]["status"], "FAIL")
         self.assertIn("no citation", result["dimensions"]["groundedness"]["reason"])
 
+    def test_missing_authorized_source_documents_are_not_determinable(self) -> None:
+        contract_case = next(
+            case for case in self.contract["cases"] if case["case_id"] == "AA-RC-002"
+        )
+        result = evaluate_case(
+            contract_case=contract_case,
+            trace={
+                "case_id": "AA-RC-002",
+                "run_id": "missing-source-documents",
+                "execution_status": "EXECUTED",
+                "external_input_blocker": {
+                    "status": "NOT_DETERMINED",
+                    "code": "AUTHORIZED_SOURCE_DOCUMENTS_MISSING",
+                },
+                "tool_calls": [{"name": "search_my_files", "status": "success"}],
+                "citations": [],
+                "sources": [],
+                "output": {"answer": "The authorized source documents were not available."},
+            },
+        )
+        self.assertEqual(result["execution_classification"], "EXTERNAL_INPUT_BLOCKER")
+        self.assertEqual(result["semantic_status"], "NOT_DETERMINED")
+
     def test_provider_failure_is_not_scored_as_semantic_answer_failure(self) -> None:
         contract_case = self.contract["cases"][0]
         result = evaluate_case(
@@ -270,7 +293,11 @@ class SemanticEvaluationTests(unittest.TestCase):
             review_document=review_document,
         )
         first = next(item for item in merged if item["case_id"] == expected["case_id"])
-        self.assertEqual(first["semantic_status"], "PASS")
+        self.assertEqual(first["semantic_status"], "FAIL")
+        self.assertEqual(
+            first["dimensions"]["groundedness"]["status"],
+            "FAIL",
+        )
         self.assertGreater(
             sum(item["semantic_status"] == "REVIEW_REQUIRED" for item in merged),
             0,

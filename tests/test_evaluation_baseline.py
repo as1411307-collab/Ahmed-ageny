@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import asyncio
+import json
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import AsyncMock, patch
 
 from evaluation_baseline import (
     build_scoreboard,
@@ -20,10 +23,122 @@ from evaluation_baseline import (
     redact_evaluation_text,
     validate_evaluation_trace,
     validate_evaluation_cases,
+    execute_real_case,
+    validate_case_evidence_preconditions,
 )
 
 
 class EvaluationBaselineTests(unittest.TestCase):
+    def test_aa_rc_018_runs_upload_matrix_before_separate_my_files_chat(self) -> None:
+        case = next(
+            case
+            for case in load_case_document(
+                Path("real-cases-validated.json"),
+                require_baseline_size=True,
+            )[1]
+            if case["id"] == "AA-RC-018"
+        )
+        upload_calls: list[dict[str, object]] = []
+        cleanup_calls: list[str] = []
+
+        def fake_upload(**kwargs: object) -> tuple[int, dict[str, object], dict[str, str]]:
+            upload_calls.append(kwargs)
+            files = kwargs["files"]
+            names = [str(item["filename"]) for item in files]  # type: ignore[index]
+            if any("unsafe" in name or ".." in name for name in names):
+                return 415, {"error": "UNSAFE_FILENAME"}, {}
+            if any("invalid" in name for name in names):
+                return 415, {"files": [{"status": "invalid_file_content"}]}, {}
+            return (
+                201,
+                {
+                    "files": [
+                        {
+                            "filename": name,
+                            "status": "ready",
+                            "source_id": f"source-{index}",
+                        }
+                        for index, name in enumerate(names)
+                    ]
+                },
+                {},
+            )
+
+        def fake_chat(**_: object) -> tuple[int, dict[str, object], dict[str, str]]:
+            return (
+                200,
+                {
+                    "reply": (
+                        "تم فحص الملفات المرفوعة وعرض حالة كل ملف في نطاق MY_FILES."
+                    )
+                },
+                {},
+            )
+
+        async def fake_load(_: str) -> dict[str, object]:
+            return {
+                "run": {"status": "succeeded", "model_name": "test-model"},
+                "tool_events": [],
+                "pending_actions": [],
+            }
+
+        async def fake_cleanup(*, source_id: str) -> None:
+            cleanup_calls.append(source_id)
+
+        with (
+            patch(
+                "evaluation_baseline._post_file_upload",
+                side_effect=fake_upload,
+                create=True,
+            ),
+            patch("evaluation_baseline._post_chat_message", side_effect=fake_chat),
+            patch("evaluation_baseline.load_run_evaluation_data", new=fake_load),
+            patch(
+                "evaluation_baseline.delete_original_source",
+                new=fake_cleanup,
+                create=True,
+            ),
+            patch(
+                "evaluation_baseline.cleanup_evaluation_run",
+                new=AsyncMock(return_value={"audit_events_preserved": 1}),
+            ),
+        ):
+            result = asyncio.run(
+                execute_real_case(
+                    case,
+                    base_url="https://example.test",
+                    owner_token="owner-secret",
+                    provider="gemini",
+                    timeout_seconds=1,
+                )
+            )
+
+        self.assertEqual(result["upload_e2e"]["status"], "PASS")
+        self.assertEqual(result["upload_e2e"]["supported_type_count"], 4)
+        self.assertTrue(result["upload_e2e"]["unsafe_filename_rejected"])
+        self.assertTrue(result["upload_e2e"]["invalid_content_rejected"])
+        self.assertEqual(len(upload_calls), 3)
+        self.assertTrue(cleanup_calls)
+
+    def test_aa_rc_026_requires_compound_architecture_and_external_evidence(self) -> None:
+        result = validate_case_evidence_preconditions(
+            case={
+                "id": "AA-RC-026",
+                "required_tools": ["web_search"],
+            },
+            trace={
+                "tool_calls": [{"name": "web_search", "status": "success"}],
+                "citations": [],
+                "sources": [],
+                "output": {"answer": "Generic build versus buy advice."},
+            },
+        )
+        self.assertEqual(result["status"], "NOT_DETERMINED")
+        self.assertIn("architecture_evidence", result["missing"])
+        self.assertIn("verified_external_documentation", result["missing"])
+        self.assertIn("answer_citations", result["missing"])
+        self.assertIn("tradeoff_criteria", result["missing"])
+
     def test_dataset_has_a_valid_seed_shape(self) -> None:
         cases = load_evaluation_cases()
         self.assertGreaterEqual(len(cases), 20)

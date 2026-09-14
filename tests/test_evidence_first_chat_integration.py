@@ -80,6 +80,60 @@ class EvidenceFirstChatIntegrationTests(unittest.TestCase):
         self.assertIn("https://docs.example.test/current", context.model_context)
         self.assertIn("https://docs.example.test/current", context.external_sources)
 
+    def test_build_vs_buy_preflight_propagates_architecture_provenance(self) -> None:
+        architecture_result = {
+            "status": "VERIFIED",
+            "groups": {
+                "runtime": {
+                    "implementation_evidence": [
+                        {
+                            "relative_source_path": "server.py",
+                            "file_sha256": "a" * 64,
+                            "line_start": 1,
+                            "line_end": 1,
+                            "verification_status": "VERIFIED",
+                            "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
+                        }
+                    ]
+                }
+            },
+        }
+        web_result = {
+            "ok": True,
+            "results": [
+                {
+                    "title": "Official documentation",
+                    "url": "https://docs.example.test/current",
+                    "snippet": "Current official guidance.",
+                }
+            ],
+        }
+        with (
+            patch(
+                "agent_core.inspect_existing_architecture_evidence",
+                return_value=architecture_result,
+            ),
+            patch(
+                "agent_core.existing_web_search",
+                new=AsyncMock(return_value=web_result),
+            ),
+        ):
+            context = asyncio.run(
+                prepare_evidence_first_context(
+                    "قارن build-vs-buy مع حل Template جاهز.",
+                    scope="WEB",
+                )
+            )
+
+        architecture_envelope = next(
+            envelope
+            for envelope in context.evidence_envelopes
+            if envelope["target"] == "project_architecture"
+        )
+        self.assertEqual(architecture_envelope["evidence_status"], "VERIFIED")
+        self.assertTrue(architecture_envelope["evidence_provenance"])
+        self.assertIn("server.py", context.model_context)
+
     def test_general_chat_does_not_receive_unnecessary_evidence_preflight(self) -> None:
         context = asyncio.run(
             prepare_evidence_first_context(

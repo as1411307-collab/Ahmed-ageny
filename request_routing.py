@@ -76,9 +76,24 @@ def classify_request(
         "حل/template جاهز",
     )
     if _contains_any(normalized, external_web_terms):
+        requires_project_architecture = _contains_any(
+            normalized,
+            (
+                "build vs buy",
+                "build-vs-buy",
+                "template",
+                "قالب",
+                "حل جاهز",
+                "حل/template جاهز",
+            ),
+        )
         return RouteDecision(
             RequestCapability.EXTERNAL_WEB_RESEARCH,
-            ("web_search",),
+            (
+                ("inspect_architecture_evidence", "web_search")
+                if requires_project_architecture
+                else ("web_search",)
+            ),
             True,
         )
 

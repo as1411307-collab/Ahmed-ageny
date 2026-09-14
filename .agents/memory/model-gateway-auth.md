@@ -14,3 +14,9 @@ The managed AI setup helper can also stop immediately with an account-restrictio
 **Why:** Setup authorization and runtime secret presence are separate states.
 
 **How to apply:** Preserve a validated, environment-gated provider adapter and report the setup blocker; do not expose secret values or silently substitute another model.
+
+For an explicitly requested independent OpenAI evaluator, a valid `OPENAI_API_KEY` direct endpoint can be a same-provider fallback when the managed gateway is account-restricted.
+
+**Why:** The managed gateway and direct OpenAI authorization are separate paths; the evaluator must remain OpenAI and must not be replaced by the production Gemini provider.
+
+**How to apply:** Use the direct path only for the independent evaluator, keep the producer/reviewer identities distinct, and record the provider/model in the review artifact without exposing credentials.

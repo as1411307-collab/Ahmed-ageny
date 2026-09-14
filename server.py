@@ -779,7 +779,17 @@ async def files_upload(request: Request) -> Response:
 
     prepared: list[tuple[UploadFile, str, str | None, bytes]] = []
     for upload in uploads:
-        filename = sanitize_filename(upload.filename)
+        raw_filename = upload.filename or ""
+        filename = sanitize_filename(raw_filename)
+        if not filename or filename != raw_filename:
+            return JSONResponse(
+                {
+                    "error": "اسم الملف غير آمن.",
+                    "code": "UNSAFE_FILENAME",
+                    "filename": None,
+                },
+                status_code=415,
+            )
         extension = extension_for(filename)
         if not filename or extension not in SUPPORTED_EXTENSIONS:
             return JSONResponse(

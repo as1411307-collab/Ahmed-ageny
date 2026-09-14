@@ -67,7 +67,10 @@ class EvidenceFirstRoutingTests(unittest.TestCase):
             "قارن إذا أكمل بناء Ahmed Agent أو أستخدم حل/Template جاهز."
         )
         self.assertEqual(route.capability, RequestCapability.EXTERNAL_WEB_RESEARCH)
-        self.assertEqual(route.required_capabilities, ("web_search",))
+        self.assertEqual(
+            route.required_capabilities,
+            ("inspect_architecture_evidence", "web_search"),
+        )
 
     def test_project_state_questions_route_to_project_evidence(self) -> None:
         route = classify_request("راجع حالة مشروع Ahmed Agent وما تم إنجازه")

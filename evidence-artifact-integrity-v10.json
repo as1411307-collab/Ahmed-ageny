@@ -1,0 +1,94 @@
+{
+  "schema_version": "evidence-artifact-integrity.v1",
+  "generated_from": "baseline-real-v11-final-pre-review.json",
+  "files": [
+    {
+      "path": "baseline-real-v11-final-pre-review.json",
+      "sha256": "8baa74abd1b5aa4b6214bfcf8258273ddbfbb77cb90dbaea122b2c35454c0bff",
+      "bytes": 1583557
+    },
+    {
+      "path": "semantic-evaluation-contract-v10-independent.json",
+      "sha256": "8ebaedc9a6445c134cfb10e88ca43db9f80088d3d04b956e0973a6da60680865",
+      "bytes": 77845
+    },
+    {
+      "path": "semantic-review-packet-v10-independent.json",
+      "sha256": "b812256a1bcfedb60c5a2b13b32afa976d39439b4fb0bdb4c50fd90cf30834ee",
+      "bytes": 536320
+    },
+    {
+      "path": "semantic-review-input-template-v10-independent.json",
+      "sha256": "8ae424def5056aa92b24ba54a4aba4b7147a01ee38e3ea2009f5fef215d27b88",
+      "bytes": 13470
+    },
+    {
+      "path": "independent-semantic-review-v10-openai.json",
+      "sha256": "9cc998eeca3efc8e4d0e2956290f4db6c871c288fb265643b2163ba6b90f34a6",
+      "bytes": 92433
+    },
+    {
+      "path": "semantic-evaluation-v10-final.json",
+      "sha256": "b5ce8da24a10784b1406d7d2ca76777a551f3e6f1feeeede54270e6c0b7f2d3a",
+      "bytes": 213768
+    }
+  ],
+  "baseline": {
+    "case_count": 26,
+    "coverage": {
+      "total_selected": 26,
+      "executed": 25,
+      "execution_failed": 0,
+      "capability_gap": 0,
+      "hitl_blocked": 0,
+      "not_determined": 1,
+      "provider_rate_limited": 0
+    },
+    "aa_rc_002_external_input_blocker": {
+      "status": "NOT_DETERMINED",
+      "code": "AUTHORIZED_SOURCE_DOCUMENTS_MISSING",
+      "reason": "The two authorized AA-RC-002 source documents are not present with verified canonical provenance."
+    },
+    "aa_rc_018_upload_status": "PASS",
+    "aa_rc_018_unsafe_filename_status": 415,
+    "aa_rc_018_invalid_content_status": 415,
+    "aa_rc_026_preconditions": {
+      "status": "NOT_DETERMINED",
+      "missing": [
+        "verified_external_documentation",
+        "tradeoff_criteria"
+      ],
+      "observed_tool_names": [
+        "inspect_architecture_evidence",
+        "web_search"
+      ],
+      "external_documentation_urls": []
+    },
+    "cleanup_failures": []
+  },
+  "independent_review": {
+    "review_count": 26,
+    "reviewer_provider": "openai",
+    "reviewer_model": "gpt-5.6-terra",
+    "packet_sha256": "16b8d42061d46338e03c49f62a1b8bf8050fd3b9e1aecec1ca12eca135975fc0",
+    "semantic_review_packet_sha256": "16b8d42061d46338e03c49f62a1b8bf8050fd3b9e1aecec1ca12eca135975fc0",
+    "reviewer_identity_distinct": true
+  },
+  "semantic_final": {
+    "overall_status": "FAIL",
+    "counts": {
+      "PASS": 0,
+      "FAIL": 19,
+      "REVIEW_REQUIRED": 5,
+      "NOT_DETERMINED": 2
+    },
+    "aa_rc_002_status": "NOT_DETERMINED",
+    "aa_rc_026_status": "NOT_DETERMINED",
+    "review_applied": true
+  },
+  "sanitization": {
+    "secret_value_patterns": [],
+    "passed": true,
+    "redacted_source_snippets_allowed": true
+  }
+}
