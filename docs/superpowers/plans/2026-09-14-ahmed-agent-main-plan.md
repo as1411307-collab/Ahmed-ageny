@@ -65,6 +65,8 @@ implemented for all 26 real cases. Current result is
 quality baseline was promoted. See
 `docs/superpowers/reports/2026-09-14-semantic-quality-evaluation.md`.
 
+- **AA-RC-026 remediation:** pending.
+
 - Runtime model self-grading is prohibited.
 - Results are bound to case ID, execution trace fingerprint, and reference
   fingerprint.
