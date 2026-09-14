@@ -11,6 +11,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from architecture_evidence import inspect_architecture_evidence
 from evaluation_baseline import execute_real_case
@@ -26,61 +27,70 @@ DATASET_PATH = ROOT / "real-cases-validated.json"
 CONTRACT_PATH = ROOT / "semantic-evaluation-contract-v11.json"
 EVALUATION_ARTIFACT = ROOT / "aa-rc-026-build-vs-buy-evaluation-2026-09-14.json"
 INTEGRITY_ARTIFACT = ROOT / "aa-rc-026-build-vs-buy-integrity-2026-09-14.json"
+AUDIT_DIMENSIONS = (
+    "factual_correctness",
+    "groundedness",
+    "completeness",
+    "scope_adherence",
+    "safe_abstention",
+)
+PROJECT_TRUST_CLASSIFICATION = "VERIFIED_PROJECT_EVIDENCE"
+EXTERNAL_TRUST_CLASSIFICATION = "UNVERIFIED_EXTERNAL_OFFICIAL"
+_EXTERNAL_REFERENCE_KEYS = {
+    "external:agents_sdk": {"agents_sdk_evolution"},
+    "external:responses_api_tools": {"responses_api_tools"},
+    "external:model_capabilities": {"models_catalog", "model_comparison"},
+    "external:pricing": {"api_platform_pricing"},
+    "external:agentkit": {"agentkit"},
+    "external:workspace_agents": {"workspace_agents"},
+}
+
+
+class AuditabilityError(ValueError):
+    """AA-RC-026 cannot be independently reviewed without claim evidence."""
 
 OPENAI_DOCUMENTS: tuple[dict[str, Any], ...] = (
     {
-        "key": "agents_sdk_overview",
-        "url": "https://openai.github.io/openai-agents-python/",
+        "key": "agents_sdk_evolution",
+        "url": "https://openai.com/index/the-next-evolution-of-the-agents-sdk/",
         "markers": (
-            "Why use the Agents SDK",
-            "tools",
-            "handoffs",
-            "guardrails",
-            "human-in-the-loop",
-            "tracing",
-            "Responses API",
+            "Agents SDK",
+            "files",
+            "commands",
+            "long-running",
+            "sandbox",
+            "managed APIs",
         ),
     },
     {
-        "key": "agents_sdk_models_providers",
-        "url": "https://openai.github.io/openai-agents-python/models/",
-        "markers": (
-            "ModelProvider",
-            "non-OpenAI",
-            "Agent.model",
-            "LiteLLM",
-            "Any-LLM",
-        ),
-    },
-    {
-        "key": "agents_sdk_human_in_the_loop",
-        "url": "https://openai.github.io/openai-agents-python/human_in_the_loop/",
-        "markers": ("approval", "interrupt", "RunState", "resume"),
-    },
-    {
-        "key": "agents_sdk_sessions",
-        "url": "https://openai.github.io/openai-agents-python/sessions/",
-        "markers": ("session", "SQLite", "Redis", "SQLAlchemy"),
-    },
-    {
-        "key": "responses_api_create",
-        "url": "https://developers.openai.com/api/reference/typescript/resources/beta/subresources/responses/methods/create",
-        "markers": ("web search", "file search", "custom tools", "Responses"),
+        "key": "responses_api_tools",
+        "url": "https://openai.com/index/new-tools-and-features-in-the-responses-api/",
+        "markers": ("remote MCP", "File Search", "Code Interpreter", "Image Generation"),
     },
     {
         "key": "models_catalog",
         "url": "https://developers.openai.com/api/docs/models",
-        "markers": ("flagship", "web search", "file search", "computer use"),
+        "markers": ("function calling", "web search", "file search", "computer use"),
     },
     {
-        "key": "gpt_5_6_sol",
-        "url": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
-        "markers": ("Input price", "Output price", "Context window", "Tools"),
+        "key": "model_comparison",
+        "url": "https://developers.openai.com/api/docs/models/compare",
+        "markers": ("Compare models", "Input", "Output", "Context"),
     },
     {
-        "key": "api_pricing",
-        "url": "https://developers.openai.com/api/docs/pricing",
-        "markers": ("Input tokens", "Output tokens", "web search", "file search"),
+        "key": "api_platform_pricing",
+        "url": "https://openai.com/ar/api/",
+        "markers": ("API", "pricing", "أسعار", "التسعير"),
+    },
+    {
+        "key": "agentkit",
+        "url": "https://openai.com/index/introducing-agentkit/",
+        "markers": ("Agent Builder", "Evals", "November 30, 2026", "Agents SDK"),
+    },
+    {
+        "key": "workspace_agents",
+        "url": "https://help.openai.com/en/articles/20001143",
+        "markers": ("Workspace Agents", "templates", "workspace agent", "ChatGPT"),
     },
 )
 
