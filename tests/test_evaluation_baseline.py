@@ -15,6 +15,7 @@ from evaluation_baseline import (
     deterministic_grade,
     freeze_baseline_manifest,
     build_evaluation_trace,
+    authorized_source_identity_preconditions,
     import_real_cases,
     load_case_document,
     load_evaluation_cases,
@@ -29,6 +30,39 @@ from evaluation_baseline import (
 
 
 class EvaluationBaselineTests(unittest.TestCase):
+    def test_aa_rc_002_does_not_accept_unrelated_authorized_uploads(self) -> None:
+        case = next(
+            case
+            for case in load_case_document(
+                Path("tests/fixtures/evaluation_baseline/real_cases.json")
+            )[1]
+            if case["id"] == "AA-RC-002"
+        )
+        unrelated = {
+            "tool_calls": [
+                {
+                    "name": "inspect_source_of_truth",
+                    "metadata": {
+                        "source_filename": "JobRequest-(1)_(1)_1789406011025.pdf",
+                        "evidence_items": [],
+                    },
+                },
+                {
+                    "name": "inspect_source_of_truth",
+                    "metadata": {
+                        "source_filename": "JobRequest-A_(2)_(3)_1789406011025.pdf",
+                        "evidence_items": [],
+                    },
+                },
+            ]
+        }
+        result = authorized_source_identity_preconditions(
+            case=case,
+            trace=unrelated,
+        )
+        self.assertEqual(result["status"], "NOT_DETERMINED")
+        self.assertEqual(len(result["missing_sources"]), 2)
+
     def test_aa_rc_018_runs_upload_matrix_before_separate_my_files_chat(self) -> None:
         case = next(
             case

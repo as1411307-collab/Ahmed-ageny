@@ -976,6 +976,48 @@ def build_evaluation_trace(
     }
 
 
+def authorized_source_identity_preconditions(
+    *,
+    case: dict[str, Any],
+    trace: dict[str, Any],
+) -> dict[str, Any]:
+    """Require every AA-RC-002 expected source identity to be observed."""
+
+    expected = [
+        str(value).strip().casefold()
+        for value in case.get("expected_sources", [])
+        if str(value).strip()
+    ]
+    observed: list[str] = []
+    for call in trace.get("tool_calls", []):
+        if not isinstance(call, dict) or call.get("name") != "inspect_source_of_truth":
+            continue
+        metadata = call.get("metadata")
+        if not isinstance(metadata, dict):
+            continue
+        for key in ("source_filename", "source_id"):
+            value = metadata.get(key)
+            if isinstance(value, str) and value.strip():
+                observed.append(value.strip().casefold())
+        for item in metadata.get("evidence_items", []):
+            if not isinstance(item, dict):
+                continue
+            value = item.get("relative_source_path")
+            if isinstance(value, str) and value.strip():
+                observed.append(value.strip().casefold())
+    missing = [
+        source
+        for source in expected
+        if not any(source in candidate for candidate in observed)
+    ]
+    return {
+        "status": "VERIFIED" if not missing else "NOT_DETERMINED",
+        "expected_source_count": len(expected),
+        "observed_source_count": len(set(observed)),
+        "missing_sources": missing,
+    }
+
+
 async def execute_real_case(
     case: dict[str, Any],
     *,
@@ -1048,18 +1090,21 @@ async def execute_real_case(
             "audit_events_preserved": True,
         }
     if case["id"] == "AA-RC-002":
-        source_truth_verified = any(
-            call.get("name") == "inspect_source_of_truth"
-            and call.get("metadata", {}).get("evidence_provenance")
-            for call in trace.get("tool_calls", [])
-            if isinstance(call, dict)
+        source_identity_preconditions = authorized_source_identity_preconditions(
+            case=case,
+            trace=trace,
         )
-        if not source_truth_verified:
+        trace["source_identity_preconditions"] = source_identity_preconditions
+        if source_identity_preconditions["status"] != "VERIFIED":
             trace["external_input_blocker"] = {
                 "status": "NOT_DETERMINED",
-                "code": "AUTHORIZED_SOURCE_DOCUMENTS_MISSING",
+                "code": (
+                    "AUTHORIZED_SOURCE_DOCUMENTS_MISSING"
+                    if not source_identity_preconditions["observed_source_count"]
+                    else "AUTHORIZED_SOURCE_DOCUMENT_IDENTITIES_MISMATCHED"
+                ),
                 "reason": (
-                    "The two authorized AA-RC-002 source documents are not present "
+                    "The expected AA-RC-002 source identities were not all observed "
                     "with verified canonical provenance."
                 ),
             }

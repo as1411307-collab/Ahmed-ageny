@@ -115,6 +115,74 @@ class EvidenceFirstChatIntegrationTests(unittest.TestCase):
         self.assertEqual(external[0]["verification_status"], "UNVERIFIED_EXTERNAL")
         self.assertEqual(external[0]["source_identity"], "external_web_search")
 
+    def test_my_files_preflight_persists_authorized_source_identity(self) -> None:
+        source_result = {
+            "evidence_status": "VERIFIED",
+            "extracted_facts": {
+                "source_id": "source-1",
+                "original_filename": "ahmed_agent_master_v3_ar(1).md",
+                "original_integrity_status": "VERIFIED",
+            },
+            "evidence_items": [
+                {
+                    "relative_source_path": "ahmed_agent_master_v3_ar(1).md",
+                    "file_sha256": "a" * 64,
+                    "line_start": 1,
+                    "line_end": 2,
+                    "verification_status": "VERIFIED",
+                    "trust_classification": "AUTHORIZED_ORIGINAL",
+                }
+            ],
+            "evidence_citations": ["master citation"],
+            "source_label": "Ahmed Agent authorized original sources",
+        }
+        events: list[tuple[object, ...]] = []
+
+        async def record(*args: object) -> None:
+            events.append(args)
+
+        with (
+            patch(
+                "agent_core.existing_my_files_search",
+                new=AsyncMock(
+                    return_value={
+                        "results": [
+                            {
+                                "source_id": "source-1",
+                                "original_available": True,
+                                "citation": "master citation",
+                            }
+                        ]
+                    }
+                ),
+            ),
+            patch(
+                "agent_core.inspect_existing_source_of_truth",
+                new=AsyncMock(return_value=source_result),
+            ),
+        ):
+            asyncio.run(
+                prepare_evidence_first_context(
+                    "راجع الملف الفعلي وقارنه بمصادر الحوادث",
+                    scope="MY_FILES",
+                    user_id="owner",
+                    tool_event_recorder=record,
+                )
+            )
+
+        inspect_event = next(
+            event for event in events if event[0] == "inspect_source_of_truth"
+        )
+        self.assertEqual(inspect_event[3]["source_id"], "source-1")
+        self.assertEqual(
+            inspect_event[3]["source_filename"],
+            "ahmed_agent_master_v3_ar(1).md",
+        )
+        self.assertEqual(
+            inspect_event[3]["original_integrity_status"],
+            "VERIFIED",
+        )
+
     def test_build_vs_buy_preflight_propagates_architecture_provenance(self) -> None:
         architecture_result = {
             "status": "VERIFIED",

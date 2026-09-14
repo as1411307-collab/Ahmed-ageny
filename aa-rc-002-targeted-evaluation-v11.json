@@ -1,0 +1,50 @@
+{
+  "schema_version": "aa-rc-002-targeted-evaluation.v1",
+  "case_id": "AA-RC-002",
+  "execution_status": "EXECUTED",
+  "execution_classification": "EXTERNAL_INPUT_BLOCKER",
+  "source_identity_preconditions": {
+    "status": "NOT_DETERMINED",
+    "expected_source_count": 2,
+    "observed_source_count": 4,
+    "missing_sources": [
+      "ahmed_agent_master_v3_ar(1).md",
+      "ahmed agent - incident evidence"
+    ]
+  },
+  "external_input_blocker": {
+    "status": "NOT_DETERMINED",
+    "code": "AUTHORIZED_SOURCE_DOCUMENT_IDENTITIES_MISMATCHED",
+    "reason": "The expected AA-RC-002 source identities were not all observed with verified canonical provenance."
+  },
+  "inspected_sources": [
+    {
+      "name": "inspect_source_of_truth",
+      "status": "success",
+      "source_filename": "JobRequest-A_(2)_(3)_1789406011025.pdf",
+      "source_id_present": true,
+      "evidence_status": "VERIFIED",
+      "original_integrity_status": "VERIFIED",
+      "evidence_item_count": 24
+    },
+    {
+      "name": "inspect_source_of_truth",
+      "status": "success",
+      "source_filename": "JobRequest-(1)_(1)_1789406011025.pdf",
+      "source_id_present": true,
+      "evidence_status": "VERIFIED",
+      "original_integrity_status": "VERIFIED",
+      "evidence_item_count": 24
+    }
+  ],
+  "runtime_cleanup": {
+    "messages": 1,
+    "checkpoints": 1,
+    "tool_events": 1,
+    "pending_actions": 0,
+    "runs": 1,
+    "sessions": 1,
+    "audit_events_preserved": 1
+  },
+  "semantic_answer_saved": false
+}

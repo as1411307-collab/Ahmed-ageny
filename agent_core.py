@@ -327,6 +327,22 @@ async def prepare_evidence_first_context(
         )
         envelopes.append(envelope)
         payloads.append(payload)
+        extracted_facts = (
+            result.get("extracted_facts")
+            if isinstance(result, dict)
+            else None
+        )
+        source_metadata = (
+            {
+                "source_id": extracted_facts.get("source_id"),
+                "source_filename": extracted_facts.get("original_filename"),
+                "original_integrity_status": extracted_facts.get(
+                    "original_integrity_status"
+                ),
+            }
+            if isinstance(extracted_facts, dict)
+            else {}
+        )
         await _record_preflight_event(
             tool_event_recorder,
             tool_name=tool_name,
@@ -338,6 +354,11 @@ async def prepare_evidence_first_context(
                 "evidence_items": envelope["evidence_items"][:24],
                 "evidence_provenance": envelope["evidence_provenance"][:24],
                 "source_label": source_label,
+                **{
+                    key: value
+                    for key, value in source_metadata.items()
+                    if isinstance(value, str) and value
+                },
             },
         )
 
@@ -1200,6 +1221,9 @@ def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[Agent
         safe_metadata = {
             "scope": "AUTHORIZED_MY_FILES_SOURCE",
             "source_id": result.get("extracted_facts", {}).get("source_id"),
+            "source_filename": result.get("extracted_facts", {}).get(
+                "original_filename"
+            ),
             "evidence_status": result.get("evidence_status"),
             "original_integrity_status": result.get("extracted_facts", {}).get(
                 "original_integrity_status"
