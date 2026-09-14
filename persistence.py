@@ -102,6 +102,52 @@ async def _ensure_policy_schema(pool: asyncpg.Pool) -> None:
                 CREATE INDEX IF NOT EXISTS agent_run_checkpoints_run_idx
                     ON agent_run_checkpoints (run_id, checkpoint_id);
 
+                CREATE TABLE IF NOT EXISTS original_source_blobs (
+                    storage_object_key TEXT PRIMARY KEY,
+                    sha256 TEXT NOT NULL,
+                    byte_size BIGINT NOT NULL,
+                    content BYTEA NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
+
+                CREATE TABLE IF NOT EXISTS original_sources (
+                    source_id UUID PRIMARY KEY,
+                    owner_principal_id TEXT NOT NULL,
+                    source_version INTEGER NOT NULL DEFAULT 1,
+                    original_filename TEXT NOT NULL,
+                    mime_type TEXT,
+                    byte_size BIGINT NOT NULL,
+                    sha256 TEXT NOT NULL,
+                    storage_backend TEXT NOT NULL,
+                    storage_object_key TEXT NOT NULL
+                        REFERENCES original_source_blobs(storage_object_key),
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    original_available BOOLEAN NOT NULL DEFAULT TRUE,
+                    authorization_scope TEXT NOT NULL,
+                    extraction_status TEXT NOT NULL DEFAULT 'pending',
+                    UNIQUE (source_id, source_version)
+                );
+
+                CREATE INDEX IF NOT EXISTS original_sources_owner_idx
+                    ON original_sources (owner_principal_id, created_at DESC);
+
+                ALTER TABLE documents
+                    ADD COLUMN IF NOT EXISTS source_id UUID;
+                ALTER TABLE documents
+                    ADD COLUMN IF NOT EXISTS source_sha256 TEXT;
+                ALTER TABLE documents
+                    ADD COLUMN IF NOT EXISTS original_available BOOLEAN
+                    NOT NULL DEFAULT FALSE;
+                ALTER TABLE document_chunks
+                    ADD COLUMN IF NOT EXISTS source_id UUID;
+                ALTER TABLE document_chunks
+                    ADD COLUMN IF NOT EXISTS source_sha256 TEXT;
+
+                CREATE INDEX IF NOT EXISTS documents_source_idx
+                    ON documents (source_id);
+                CREATE INDEX IF NOT EXISTS document_chunks_source_idx
+                    ON document_chunks (source_id);
+
                 ALTER TABLE agent_runs
                     ADD COLUMN IF NOT EXISTS stage TEXT NOT NULL DEFAULT 'created';
                 ALTER TABLE agent_runs
@@ -1634,6 +1680,212 @@ async def find_document_by_hash(file_hash: str) -> dict[str, Any] | None:
     return dict(row) if row is not None else None
 
 
+async def create_original_source(
+    *,
+    source_id: str,
+    owner_principal_id: str,
+    original_filename: str,
+    mime_type: str | None,
+    data: bytes,
+    authorization_scope: str,
+) -> dict[str, Any]:
+    if not owner_principal_id:
+        raise ValueError("owner principal is required")
+    if not data:
+        raise ValueError("original source bytes must not be empty")
+    file_hash = hashlib.sha256(data).hexdigest()
+    storage_object_key = f"original-source/{file_hash}"
+    pool = await _get_pool()
+    try:
+        async with pool.acquire() as connection:
+            async with connection.transaction():
+                await connection.execute(
+                    """
+                    INSERT INTO original_source_blobs (
+                        storage_object_key, sha256, byte_size, content
+                    )
+                    VALUES ($1, $2, $3, $4)
+                    ON CONFLICT (storage_object_key) DO NOTHING
+                    """,
+                    storage_object_key,
+                    file_hash,
+                    len(data),
+                    data,
+                )
+                await connection.execute(
+                    """
+                    INSERT INTO original_sources (
+                        source_id,
+                        owner_principal_id,
+                        source_version,
+                        original_filename,
+                        mime_type,
+                        byte_size,
+                        sha256,
+                        storage_backend,
+                        storage_object_key,
+                        original_available,
+                        authorization_scope,
+                        extraction_status
+                    )
+                    VALUES (
+                        $1::uuid, $2, 1, $3, $4, $5, $6, 'postgres_bytea',
+                        $7, TRUE, $8, 'pending'
+                    )
+                    """,
+                    source_id,
+                    owner_principal_id,
+                    original_filename,
+                    mime_type,
+                    len(data),
+                    file_hash,
+                    storage_object_key,
+                    authorization_scope,
+                )
+    except Exception as error:
+        raise PersistenceError("Could not store the original source.") from error
+    return {
+        "source_id": source_id,
+        "source_version": 1,
+        "owner_principal_id": owner_principal_id,
+        "original_filename": original_filename,
+        "mime_type": mime_type,
+        "byte_size": len(data),
+        "sha256": file_hash,
+        "storage_backend": "postgres_bytea",
+        "original_available": True,
+        "authorization_scope": authorization_scope,
+        "extraction_status": "pending",
+    }
+
+
+async def read_authorized_original_source(
+    *,
+    source_id: str,
+    owner_principal_id: str | None,
+) -> dict[str, Any]:
+    pool = await _get_pool()
+    try:
+        row = await pool.fetchrow(
+            """
+            SELECT
+                source_id,
+                owner_principal_id,
+                source_version,
+                original_filename,
+                mime_type,
+                byte_size,
+                sha256,
+                storage_backend,
+                original_available,
+                authorization_scope,
+                extraction_status,
+                storage_object_key
+            FROM original_sources
+            WHERE source_id = $1::uuid
+            """,
+            source_id,
+        )
+    except Exception as error:
+        raise PersistenceError("Could not load the original source.") from error
+    if row is None:
+        return {"status": "NOT_FOUND"}
+    if not owner_principal_id or row["owner_principal_id"] != owner_principal_id:
+        return {"status": "DENIED"}
+    source = {
+        key: row[key]
+        for key in (
+            "source_id",
+            "owner_principal_id",
+            "source_version",
+            "original_filename",
+            "mime_type",
+            "byte_size",
+            "sha256",
+            "storage_backend",
+            "original_available",
+            "authorization_scope",
+            "extraction_status",
+        )
+    }
+    if not row["original_available"]:
+        return {"status": "NOT_FOUND", "source": source}
+    try:
+        blob = await pool.fetchrow(
+            """
+            SELECT sha256, byte_size, content
+            FROM original_source_blobs
+            WHERE storage_object_key = $1
+            """,
+            row["storage_object_key"],
+        )
+    except Exception as error:
+        raise PersistenceError("Could not load the original source blob.") from error
+    if blob is None:
+        return {"status": "AUTHORIZED", "source": source, "data": None}
+    return {
+        "status": "AUTHORIZED",
+        "source": source,
+        "data": bytes(blob["content"]),
+        "blob_sha256": blob["sha256"],
+        "blob_byte_size": int(blob["byte_size"]),
+    }
+
+
+async def update_original_source_extraction_status(
+    *,
+    source_id: str,
+    status: str,
+) -> None:
+    if not status or len(status) > 64:
+        raise ValueError("invalid original source extraction status")
+    pool = await _get_pool()
+    try:
+        await pool.execute(
+            """
+            UPDATE original_sources
+            SET extraction_status = $2
+            WHERE source_id = $1::uuid
+            """,
+            source_id,
+            status,
+        )
+    except Exception as error:
+        raise PersistenceError(
+            "Could not update original source extraction status."
+        ) from error
+
+
+async def delete_original_source(*, source_id: str) -> None:
+    pool = await _get_pool()
+    try:
+        async with pool.acquire() as connection:
+            async with connection.transaction():
+                row = await connection.fetchrow(
+                    """
+                    DELETE FROM original_sources
+                    WHERE source_id = $1::uuid
+                    RETURNING storage_object_key
+                    """,
+                    source_id,
+                )
+                if row is not None:
+                    await connection.execute(
+                        """
+                        DELETE FROM original_source_blobs blob
+                        WHERE blob.storage_object_key = $1
+                          AND NOT EXISTS (
+                              SELECT 1
+                              FROM original_sources source
+                              WHERE source.storage_object_key = blob.storage_object_key
+                          )
+                        """,
+                        row["storage_object_key"],
+                    )
+    except Exception as error:
+        raise PersistenceError("Could not remove the original source.") from error
+
+
 async def store_document(
     *,
     document_id: str,
@@ -1642,6 +1894,8 @@ async def store_document(
     file_hash: str,
     status: str,
     chunks: Sequence[Any],
+    source_id: str | None = None,
+    source_sha256: str | None = None,
 ) -> None:
     pool = await _get_pool()
     try:
@@ -1655,15 +1909,24 @@ async def store_document(
                         mime_type,
                         source_type,
                         file_hash,
-                        status
+                        status,
+                        source_id,
+                        source_sha256,
+                        original_available
                     )
-                    VALUES ($1::uuid, $2, $3, 'upload', $4, $5)
+                    VALUES (
+                        $1::uuid, $2, $3, 'upload', $4, $5, $6::uuid, $7,
+                        $8
+                    )
                     """,
                     document_id,
                     filename,
                     mime_type,
                     file_hash,
                     status,
+                    source_id,
+                    source_sha256,
+                    source_id is not None,
                 )
                 if chunks:
                     await connection.executemany(
@@ -1673,9 +1936,11 @@ async def store_document(
                             chunk_index,
                             page_number,
                             content,
-                            metadata
+                            metadata,
+                            source_id,
+                            source_sha256
                         )
-                        VALUES ($1::uuid, $2, $3, $4, $5::jsonb)
+                        VALUES ($1::uuid, $2, $3, $4, $5::jsonb, $6::uuid, $7)
                         """,
                         [
                             (
@@ -1684,6 +1949,8 @@ async def store_document(
                                 chunk.page_number,
                                 chunk.content,
                                 json.dumps(chunk.metadata, separators=(",", ":")),
+                                source_id,
+                                source_sha256,
                             )
                             for chunk in chunks
                         ],
@@ -1775,6 +2042,9 @@ async def search_fts_document_chunks(query: str, top_k: int) -> list[dict[str, A
                 d.mime_type,
                 d.source_type,
                 d.file_hash,
+                c.source_id,
+                c.source_sha256,
+                d.original_available,
                 c.chunk_index,
                 c.page_number,
                 c.content,
@@ -1816,6 +2086,9 @@ async def search_vector_document_chunks(
                 d.mime_type,
                 d.source_type,
                 d.file_hash,
+                c.source_id,
+                c.source_sha256,
+                d.original_available,
                 c.chunk_index,
                 c.page_number,
                 c.content,

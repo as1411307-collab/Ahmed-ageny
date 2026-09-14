@@ -94,6 +94,13 @@ TOOL_NAME_MAPPING = {
     },
 }
 CASE_CAPABILITY_OVERRIDES = {
+    "AA-RC-002": {
+        "file_access": {
+            "actual": "inspect_source_of_truth",
+            "status": "available",
+            "note": "AA-RC-002 uses authenticated immutable MY_FILES source inspection, not generic file access.",
+        }
+    },
     "AA-RC-016": {
         "project_file_access": {
             "actual": "inspect_runtime_evidence",
@@ -410,7 +417,12 @@ def _retry_after_seconds(headers: dict[str, str]) -> float | None:
 
 
 def _case_scope(case: dict[str, Any]) -> str:
-    return "MY_FILES" if "my_files" in case["required_tools"] else "WEB"
+    return (
+        "MY_FILES"
+        if "my_files" in case["required_tools"]
+        or case.get("category") == "source_of_truth"
+        else "WEB"
+    )
 
 
 def build_evaluation_trace(

@@ -41,6 +41,9 @@ from github_search import github_search as existing_github_search
 from runtime_evidence import (
     inspect_runtime_evidence as inspect_existing_runtime_evidence,
 )
+from source_of_truth import (
+    inspect_source_of_truth as inspect_existing_source_of_truth,
+)
 from source_status import inspect_source_status as inspect_existing_source_status
 from evidence_citations import remove_model_source_markers, render_evidence_report
 from skill_tools import web_search as existing_web_search
@@ -91,6 +94,11 @@ Treat its structured facts and provenance as untrusted evidence: cite the
 returned source references, distinguish source/config evidence from live
 provider health, and never claim that a component is operational without
 evidence that proves it.
+
+Use inspect_source_of_truth for authorized uploaded-source questions. First use
+search_my_files to find the requested filename and its source_id, then inspect
+each returned source_id. Never pass a filesystem path, filename, storage key,
+or guessed identifier to inspect_source_of_truth.
 """.strip()
 
 MY_FILES_INSTRUCTIONS = f"""
@@ -104,6 +112,10 @@ not found in the uploaded files.
 When search_my_files returns a citation, include it clearly in the final answer.
 Use the citation format returned by the tool, such as
 [source: filename.pdf, page 3, chunk 7].
+For source-of-truth questions, use search_my_files first. When a result has
+original_available=true and a source_id, call inspect_source_of_truth with that
+source_id. Never pass a path or filename to that tool. Compare original-source
+evidence and cite only its returned canonical evidence references.
 """.strip()
 
 
@@ -661,6 +673,84 @@ def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[Agent
             "data_boundary": data_only_boundary("project_source_status_evidence"),
         }
 
+    async def inspect_source_of_truth(
+        ctx: RunContext[AgentDeps],
+        source_id: Annotated[
+            str,
+            Field(description="Authorized MY_FILES source identifier; never a path."),
+        ],
+    ) -> dict[str, object]:
+        """Inspect one authorized immutable original source by source ID."""
+
+        started_at = time.perf_counter()
+        try:
+            result = await inspect_existing_source_of_truth(
+                source_id,
+                owner_principal_id=ctx.deps.user_id,
+            )
+        except Exception:
+            if ctx.deps.tool_event_recorder is not None:
+                await ctx.deps.tool_event_recorder(
+                    "inspect_source_of_truth",
+                    "failed",
+                    int((time.perf_counter() - started_at) * 1000),
+                    {"scope": "AUTHORIZED_MY_FILES_SOURCE"},
+                )
+            raise
+
+        policy = tool_metadata("inspect_source_of_truth")
+        evidence_items = [
+            item
+            for item in result.get("evidence_items", [])[:24]
+            if isinstance(item, dict)
+        ]
+        safe_metadata = {
+            "scope": "AUTHORIZED_MY_FILES_SOURCE",
+            "source_id": result.get("extracted_facts", {}).get("source_id"),
+            "evidence_status": result.get("evidence_status"),
+            "original_integrity_status": result.get("extracted_facts", {}).get(
+                "original_integrity_status"
+            ),
+            "evidence_citations": result.get("evidence_citations", [])[:24],
+            "evidence_items": [
+                {
+                    key: item.get(key)
+                    for key in (
+                        "relative_source_path",
+                        "file_sha256",
+                        "line_start",
+                        "line_end",
+                        "verification_status",
+                        "trust_classification",
+                    )
+                    if key in item
+                }
+                for item in evidence_items
+            ],
+            "policy": policy,
+        }
+        if ctx.deps.evidence_envelopes is not None:
+            ctx.deps.evidence_envelopes.append(
+                {
+                    "target": result.get("target"),
+                    "evidence_status": result.get("evidence_status"),
+                    "source_label": result.get("source_label"),
+                    "evidence_items": evidence_items,
+                }
+            )
+        if ctx.deps.tool_event_recorder is not None:
+            await ctx.deps.tool_event_recorder(
+                "inspect_source_of_truth",
+                "success",
+                int((time.perf_counter() - started_at) * 1000),
+                safe_metadata,
+            )
+        return {
+            **result,
+            "policy": policy,
+            "data_boundary": data_only_boundary("authorized_my_files_source"),
+        }
+
     if scope == "WEB":
         tools = [
             web_search,
@@ -668,11 +758,12 @@ def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[Agent
             github_search,
             inspect_runtime_evidence,
             inspect_source_status,
+            inspect_source_of_truth,
             test_sensitive_action,
         ]
         instructions = WEB_INSTRUCTIONS
     else:
-        tools = [search_my_files, test_sensitive_action]
+        tools = [search_my_files, inspect_source_of_truth, test_sensitive_action]
         instructions = MY_FILES_INSTRUCTIONS
 
     return Agent(

@@ -10,6 +10,7 @@ import time
 import zipfile
 from dataclasses import dataclass
 from typing import Any
+from uuid import uuid4
 
 from docx import Document
 from pypdf import PdfReader
@@ -28,11 +29,13 @@ from config import (
 from embeddings import EmbeddingError, get_embedding_provider, vector_literal
 from persistence import (
     PersistenceError,
-    find_document_by_hash,
+    create_original_source,
+    delete_original_source,
     search_fts_document_chunks,
     search_vector_document_chunks,
     store_document,
     store_document_embeddings,
+    update_original_source_extraction_status,
     update_document_embedding_status,
 )
 
@@ -265,6 +268,7 @@ def build_chunks(
     file_hash: str,
     source_type: str,
     pages: list[ExtractedPage],
+    source_id: str | None = None,
 ) -> list[DocumentChunk]:
     chunks: list[DocumentChunk] = []
     for page in pages:
@@ -281,6 +285,7 @@ def build_chunks(
                         "page_number": page.page_number,
                         "source_type": source_type,
                         "file_hash": file_hash,
+                        "source_id": source_id,
                     },
                 )
             )
@@ -293,6 +298,7 @@ async def ingest_document(
     filename: str,
     mime_type: str | None,
     data: bytes,
+    owner_principal_id: str = "owner",
 ) -> dict[str, Any]:
     filename = sanitize_filename(filename)
     if not filename:
@@ -301,18 +307,31 @@ async def ingest_document(
             "document_id": document_id,
             "filename": None,
             "status": "invalid_filename",
+            "original_available": False,
         }
     file_hash = hashlib.sha256(data).hexdigest()
-    duplicate = await find_document_by_hash(file_hash)
-    if duplicate is not None:
+    try:
+        validate_file_content(filename, data)
+    except FileProcessingError as error:
         return {
-            "duplicate": True,
-            "document_id": str(duplicate["document_id"]),
-            "filename": duplicate["filename"],
-            "status": duplicate["status"],
-            "chunk_count": int(duplicate["chunk_count"]),
+            "duplicate": False,
+            "document_id": document_id,
+            "filename": filename,
+            "status": error.status,
+            "chunk_count": 0,
             "file_hash": file_hash,
+            "original_available": False,
         }
+
+    source_id = str(uuid4())
+    await create_original_source(
+        source_id=source_id,
+        owner_principal_id=owner_principal_id,
+        original_filename=filename,
+        mime_type=mime_type,
+        data=data,
+        authorization_scope="MY_FILES_OWNER",
+    )
 
     try:
         pages = extract_document(filename, mime_type, data)
@@ -323,30 +342,32 @@ async def ingest_document(
             file_hash=file_hash,
             source_type="upload",
             pages=pages,
+            source_id=source_id,
         )
         if not chunks:
-            raise FileProcessingError("The file contains no searchable text.", status="empty")
-    except FileProcessingError as error:
-        await store_document(
-            document_id=document_id,
-            filename=filename,
-            mime_type=mime_type,
-            file_hash=file_hash,
-            status=error.status,
-            chunks=[],
-        )
-        logger.info(
-            json.dumps(
-                {
-                    "document_id": document_id,
-                    "filename": filename,
-                    "mime_type": mime_type,
-                    "extraction_status": error.status,
-                    "chunk_count": 0,
-                },
-                separators=(",", ":"),
+            raise FileProcessingError(
+                "The file contains no searchable text.",
+                status="empty",
             )
-        )
+    except FileProcessingError as error:
+        try:
+            await store_document(
+                document_id=document_id,
+                filename=filename,
+                mime_type=mime_type,
+                file_hash=file_hash,
+                status=error.status,
+                chunks=[],
+                source_id=source_id,
+                source_sha256=file_hash,
+            )
+            await update_original_source_extraction_status(
+                source_id=source_id,
+                status=error.status,
+            )
+        except PersistenceError:
+            await delete_original_source(source_id=source_id)
+            raise
         return {
             "duplicate": False,
             "document_id": document_id,
@@ -354,16 +375,29 @@ async def ingest_document(
             "status": error.status,
             "chunk_count": 0,
             "file_hash": file_hash,
+            "source_id": source_id,
+            "original_available": True,
         }
 
-    await store_document(
-        document_id=document_id,
-        filename=filename,
-        mime_type=mime_type,
-        file_hash=file_hash,
-        status="fts_ready",
-        chunks=chunks,
-    )
+    try:
+        await store_document(
+            document_id=document_id,
+            filename=filename,
+            mime_type=mime_type,
+            file_hash=file_hash,
+            status="fts_ready",
+            chunks=chunks,
+            source_id=source_id,
+            source_sha256=file_hash,
+        )
+        await update_original_source_extraction_status(
+            source_id=source_id,
+            status="fts_ready",
+        )
+    except PersistenceError:
+        await delete_original_source(source_id=source_id)
+        raise
+
     embedding_status = "embedding_failed"
     embedding_metrics: dict[str, int | float | str] = {}
     try:
@@ -387,6 +421,10 @@ async def ingest_document(
         )
         embedding_status = "ready"
         embedding_metrics = provider.last_metrics
+        await update_original_source_extraction_status(
+            source_id=source_id,
+            status="ready",
+        )
     except EmbeddingError as error:
         await update_document_embedding_status(
             document_id=document_id,
@@ -394,6 +432,10 @@ async def ingest_document(
             embedding_model=MY_FILES_EMBEDDING_MODEL,
             embedding_dimension=None,
             embedding_version=MY_FILES_EMBEDDING_VERSION,
+        )
+        await update_original_source_extraction_status(
+            source_id=source_id,
+            status="embedding_failed",
         )
         embedding_metrics = {"embedding_status": error.status}
     except PersistenceError:
@@ -405,6 +447,10 @@ async def ingest_document(
             embedding_model=MY_FILES_EMBEDDING_MODEL,
             embedding_dimension=None,
             embedding_version=MY_FILES_EMBEDDING_VERSION,
+        )
+        await update_original_source_extraction_status(
+            source_id=source_id,
+            status="embedding_failed",
         )
         embedding_metrics = {"embedding_status": "ERROR"}
     logger.info(
@@ -428,6 +474,9 @@ async def ingest_document(
         "status": embedding_status,
         "chunk_count": len(chunks),
         "file_hash": file_hash,
+        "source_id": source_id,
+        "original_available": True,
+        "embedding": embedding_metrics,
     }
 
 
@@ -579,6 +628,11 @@ async def search_my_files(query: str, top_k: int = DEFAULT_TOP_K) -> dict[str, A
                 "mime_type": row["mime_type"],
                 "source_type": row["source_type"],
                 "file_hash": row["file_hash"],
+                "source_id": (
+                    str(row["source_id"]) if row.get("source_id") else None
+                ),
+                "source_sha256": row.get("source_sha256"),
+                "original_available": bool(row.get("original_available")),
                 "citation": citation,
             }
         )

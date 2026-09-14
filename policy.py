@@ -64,6 +64,14 @@ TOOL_POLICIES: dict[str, ToolPolicy] = {
         external_side_effect=False,
         data_scope="PROJECT_SOURCE_STATUS_EVIDENCE",
     ),
+    "inspect_source_of_truth": ToolPolicy(
+        tool_name="inspect_source_of_truth",
+        risk_level=RiskLevel.READ_SAFE,
+        requires_approval=False,
+        reversible=True,
+        external_side_effect=False,
+        data_scope="AUTHORIZED_MY_FILES_SOURCE",
+    ),
     "test_sensitive_action": ToolPolicy(
         tool_name="test_sensitive_action",
         risk_level=RiskLevel.SENSITIVE_SIDE_EFFECT,

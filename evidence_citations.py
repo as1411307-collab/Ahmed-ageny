@@ -84,10 +84,14 @@ def render_evidence_citation(
     return citation
 
 
-def render_evidence_citations(items: Iterable[object]) -> list[str]:
+def render_evidence_citations(
+    items: Iterable[object],
+    *,
+    source_label: str = "Ahmed Agent project files",
+) -> list[str]:
     citations: list[str] = []
     for item in list(items)[:_MAX_ITEMS]:
-        citation = render_evidence_citation(item)
+        citation = render_evidence_citation(item, source_label=source_label)
         if citation and citation not in citations:
             citations.append(citation)
     return citations
@@ -141,7 +145,13 @@ def render_evidence_report(envelopes: Iterable[dict[str, Any]]) -> str:
         status = envelope.get("evidence_status")
         if not isinstance(target, str) or not isinstance(status, str):
             continue
-        citations = render_evidence_citations(envelope.get("evidence_items", []))
+        source_label = envelope.get("source_label")
+        if not isinstance(source_label, str):
+            source_label = "Ahmed Agent project files"
+        citations = render_evidence_citations(
+            envelope.get("evidence_items", []),
+            source_label=source_label,
+        )
         if citations:
             sections.append(f"{target}: " + " ".join(citations))
         else:

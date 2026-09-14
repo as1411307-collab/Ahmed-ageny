@@ -795,6 +795,7 @@ async def files_upload(request: Request) -> Response:
                 filename=filename,
                 mime_type=mime_type,
                 data=data,
+                owner_principal_id=owner.user_id,
             )
             results.append(result)
     except PersistenceError as error:
