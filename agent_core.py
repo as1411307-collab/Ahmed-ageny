@@ -49,6 +49,8 @@ from source_of_truth import (
 )
 from source_status import inspect_source_status as inspect_existing_source_status
 from evidence_citations import remove_model_source_markers, render_evidence_report
+from evidence_citations import render_evidence_citations
+from request_routing import RouteDecision, RequestCapability, classify_request
 from skill_tools import web_search as existing_web_search
 
 
@@ -169,6 +171,14 @@ class AgentDeps:
         Callable[[str, str, int, dict[str, Any] | None], Awaitable[None]] | None
     ) = None
     evidence_envelopes: list[dict[str, Any]] | None = None
+
+
+@dataclass(frozen=True)
+class EvidenceFirstContext:
+    route: RouteDecision
+    model_context: str
+    evidence_envelopes: tuple[dict[str, Any], ...]
+    external_sources: tuple[str, ...]
 
 
 @dataclass(frozen=True)
