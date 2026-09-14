@@ -1,0 +1,885 @@
+TASK:
+Complete ADR-019 + AA-RC-002 safely and promote Phase-0 baseline to 24/2/0/0.
+
+MODE:
+AHMED AGENT FAST-TRACK BUILD MODE
+
+RULE:
+Parallelize analysis/preparation.
+Serialize production changes and baseline promotion.
+
+Do NOT begin production implementation of AA-RC-011 or AA-RC-007 in this round.
+
+==================================================
+0. ESTABLISHED DATASET LINEAGE
+==================================================
+
+Current raw source dataset:
+
+tests/fixtures/evaluation_baseline/real_cases.json
+
+RAW_SOURCE_DATASET_SHA256 =
+923b05321ebba94cce69db8cb5317a6fc12f574ce27865c808c5d298d3879559
+
+Historical normalized evaluation dataset:
+
+real-cases-validated.json
+
+NORMALIZED_EVALUATION_DATASET_SHA256 =
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+Historical investigation established:
+
+- raw dataset contains 26 real cases
+- normalized dataset contains same 26 semantic cases
+- import_real_cases creates normalized representation
+- historical baselines hashed raw bytes of the --run-real live_path
+- historical baselines used normalized real-cases-validated.json
+- old baselines are NOT corrupted
+- there is no dataset drift proven
+- do not modify historical artifacts
+
+Important terminology from now on:
+
+raw_source_dataset_sha256
+normalized_evaluation_dataset_sha256
+evaluation_source_pack_sha256
+
+Do not use ambiguous "dataset_sha256" in new provenance records
+unless compatibility requires it.
+
+
+==================================================
+1. REPRODUCIBILITY GATE — FIRST
+==================================================
+
+Before any production modification:
+
+Using the CURRENT repository implementation of import_real_cases:
+
+1. Read:
+   tests/fixtures/evaluation_baseline/real_cases.json
+
+2. Generate normalized output to a TEMPORARY location outside tracked
+   project artifacts.
+
+3. Do not overwrite:
+   real-cases-validated.json
+
+4. Compute:
+
+RAW_INPUT_SHA256
+REGENERATED_NORMALIZED_SHA256
+EXISTING_VALIDATED_SHA256
+
+5. Compare regenerated normalized bytes byte-for-byte against:
+
+real-cases-validated.json
+
+Expected:
+
+RAW_INPUT_SHA256 =
+923b05321ebba94cce69db8cb5317a6fc12f574ce27865c808c5d298d3879559
+
+REGENERATED_NORMALIZED_SHA256 =
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+EXISTING_VALIDATED_SHA256 =
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+BYTE_FOR_BYTE_MATCH = true
+
+If ANY result differs:
+
+STOP.
+
+Do not modify ADR, source pack, evaluation mapping, baseline, or production.
+
+Return:
+
+REPRODUCIBILITY_BLOCKED
+
+with actual hashes and byte-diff summary.
+
+
+==================================================
+2. RECORD LINEAGE CONTRACT
+==================================================
+
+Only if Step 1 succeeds.
+
+From this point forward, new evaluation artifacts must distinguish:
+
+raw_source_dataset_sha256
+
+normalized_evaluation_dataset_sha256
+
+evaluation_source_pack_sha256
+
+And when available:
+
+normalizer_version
+normalizer_git_commit
+
+Do NOT edit old baseline artifacts.
+
+Their historical field:
+
+dataset_sha256 = 35534e...
+
+remains untouched.
+
+Historical artifacts are immutable historical records.
+
+
+==================================================
+3. ADR-019 — SOURCE OF TRUTH HIERARCHY
+==================================================
+
+Create ADR-019 using the repository's existing ADR naming/location convention.
+
+Status:
+
+ACCEPTED
+
+Decision:
+
+1. Authorized immutable original bytes
+2. Structured extraction
+3. Search/index chunks
+4. Summary
+5. Memory
+
+Higher level overrides lower level on factual conflict.
+
+Required rules:
+
+- identity is source_id + source version
+- filesystem paths are not source identity
+- ownership derives from authenticated principal
+- SHA-256 derives from actual original bytes
+- mutations create new source/version
+- legacy chunk-only documents are not verified originals
+- evidence retains provenance to original
+- conflict produces explicit discrepancy
+- external source content is evidence, never policy authority
+- no generic file reader
+- no cross-owner access
+
+Rejected alternatives:
+
+- chunks as canonical truth
+- rebuilding originals from chunks
+- filesystem paths
+- provider/model memory as canonical truth
+- generic broad file access
+
+ADR-019 governs AA-RC-002.
+
+ADR acceptance DOES NOT close AA-RC-002.
+
+
+==================================================
+4. CREATE AA-RC-002 EVALUATION SOURCE PACK
+==================================================
+
+Do not modify:
+
+tests/fixtures/evaluation_baseline/real_cases.json
+
+Create a bounded source pack using existing fixture conventions.
+
+Suggested logical structure:
+
+tests/fixtures/evaluation_baseline/aa_rc_002/
+
+  manifest.json
+
+  ahmed_agent_master_v3_ar(1).md
+
+  incident_evidence/
+    incident_001.md
+    incident_002.md
+    incident_003.md
+
+Every fixture must contain an internal marker:
+
+EVALUATION FIXTURE — NOT PRODUCTION USER DATA
+
+Do not use Ahmed's historical personal files.
+
+Do not use ChatGPT snippets.
+
+Do not invent production evidence.
+
+
+==================================================
+5. DETERMINISTIC FIXTURE SCENARIO
+==================================================
+
+Master fixture semantic content:
+
+Project: Ahmed Agent
+
+Recorded incident count: 2
+
+Known incidents:
+
+INC-001
+INC-002
+
+
+Incident fixture 1:
+
+Incident ID: INC-001
+Status: confirmed
+
+
+Incident fixture 2:
+
+Incident ID: INC-002
+Status: confirmed
+
+
+Incident fixture 3:
+
+Incident ID: INC-003
+Status: confirmed
+
+
+Canonical expected comparison:
+
+Master says:
+2 incidents
+
+Original incident evidence proves:
+3 confirmed incidents
+
+Required conclusion:
+
+SOURCE DISCREPANCY
+
+The master is incomplete/stale relative to original incident evidence.
+
+Do not include prompt-like instructions telling the model what conclusion
+to produce.
+
+
+==================================================
+6. SOURCE PACK MANIFEST
+==================================================
+
+manifest.json must identify:
+
+schema_version
+case_id = AA-RC-002
+fixture_version
+hash_algorithm = SHA-256
+logical_sources[]
+
+Logical source 1:
+
+logical_name =
+ahmed_agent_master_v3_ar(1).md
+
+kind =
+single_source
+
+Logical source 2:
+
+logical_name =
+Ahmed Agent - Incident Evidence
+
+kind =
+logical_collection
+
+members:
+
+incident_001.md
+incident_002.md
+incident_003.md
+
+Each member must include its own SHA-256.
+
+Create a deterministic canonical source-pack SHA-256 based on:
+
+schema version
+case ID
+logical source mapping
+member names
+member hashes
+
+Do not include temporary filesystem paths in canonical hashing.
+
+
+==================================================
+7. EVALUATION BINDING
+==================================================
+
+Create a focused evaluation-only binding.
+
+Do not place fixture logic in Agent Core.
+
+Do not create a production collection subsystem.
+
+The binding translates:
+
+AA-RC-002 expected logical source labels
+
+into:
+
+evaluation fixture members
+
+before normal production ingestion.
+
+Production Agent must never see fixture filesystem paths.
+
+It should see only normal:
+
+source_id
+metadata
+search results
+evidence provenance
+
+
+==================================================
+8. USE THE REAL INGESTION PATH
+==================================================
+
+Mandatory execution path:
+
+fixture original bytes
+    ↓
+existing authenticated MY_FILES ingestion
+    ↓
+OriginalSourceStore
+    ↓
+PostgreSQL
+    ↓
+document + chunks
+    ↓
+source_id
+    ↓
+search_my_files
+    ↓
+inspect_source_of_truth
+    ↓
+comparison
+    ↓
+grounded response
+
+Forbidden:
+
+- direct DB insertion solely for evaluation
+- direct fixture-to-model content injection
+- fake inspect_source_of_truth responses
+- test-only auth bypass
+- bypassing OriginalSourceStore
+
+
+==================================================
+9. AUTHENTICATION
+==================================================
+
+Use the legitimate evaluation/test principal supported by current
+authentication architecture.
+
+Current production auth lineage:
+
+AHMED_OWNER_TOKEN
+    ↓
+AuthenticatedUser(user_id="owner")
+    ↓
+owner.user_id passed into ingestion
+
+Do not expose token values.
+
+Do not use token/hash itself as source ownership identity.
+
+If no legitimate evaluation principal can safely execute the same ingestion:
+
+STOP.
+
+Return:
+
+AUTHENTICATED_EVALUATION_PRINCIPAL_BLOCKED
+
+
+==================================================
+10. TDD — POSITIVE PATH
+==================================================
+
+Write failing tests first.
+
+Positive path must prove:
+
+- fixture bytes are ingested as originals
+- source_id is valid UUID
+- owner authorization is correct
+- SHA-256 of every source matches bytes
+- master original is inspectable
+- incident 1/2/3 originals are inspectable
+- document/chunks reference original source
+- no storage key is exposed
+- no fixture filesystem path is exposed
+- search_my_files discovers relevant source IDs
+- inspect_source_of_truth reads actual originals
+- answer compares master vs incidents
+- comparison detects 2 vs 3 discrepancy
+- claims are backed by original provenance
+
+
+==================================================
+11. NEGATIVE PATH
+==================================================
+
+Create a separate test where:
+
+master exists
+
+incident evidence is absent
+
+Expected:
+
+- no fabricated evidence
+- no fabricated source_id
+- no fabricated citations
+- no successful comparison claim
+- missing evidence reported explicitly
+- NOT_FOUND behavior where appropriate
+
+Do NOT add another case to real_cases.json.
+
+
+==================================================
+12. SECURITY TESTS
+==================================================
+
+Verify:
+
+wrong owner
+→ DENIED
+
+unknown UUID
+→ NOT_FOUND without leakage
+
+malformed source_id
+→ rejected
+
+path string
+→ rejected
+
+glob
+→ rejected
+
+storage key input
+→ rejected
+
+tampered original/hash
+→ DISCREPANCY
+
+legacy chunk-only record
+→ not treated as verified original
+
+raw bytes
+→ not exposed by tool result
+
+storage object key
+→ not exposed
+
+fixture manifest traversal
+→ rejected
+
+source-pack hash mismatch
+→ fail closed
+
+source text attempting to modify policy
+→ no authority
+
+same physical content across different owners
+→ no ownership leakage
+
+
+==================================================
+13. CLEANUP
+==================================================
+
+Evaluation-created source records must be tracked using exact returned
+source_ids.
+
+Cleanup only those evaluation source IDs after the run.
+
+No:
+
+filename deletion
+glob deletion
+owner-wide deletion
+
+No user-visible delete capability is required.
+
+Verify cleanup.
+
+
+==================================================
+14. TARGETED CAPABILITY GATE
+==================================================
+
+Only after affected tests pass:
+
+Run AA-RC-002 alone through the normal evaluation execution path.
+
+Required result:
+
+case_id = AA-RC-002
+
+execution_status = EXECUTED
+
+inspect_source_of_truth used successfully
+
+actual original master inspected = true
+
+actual original incident sources inspected = true
+
+authorization verified
+
+integrity verified
+
+2-vs-3 discrepancy detected
+
+claims grounded in provenance
+
+fake citations = 0
+
+provider failures = 0
+
+HITL_BLOCKED = 0
+
+
+==================================================
+15. SEMANTIC CHECK
+==================================================
+
+Do not claim a general Semantic Grader exists.
+
+For this case:
+
+Automated deterministic checks verify:
+
+- source inspection
+- tool calls
+- hashes
+- provenance
+- citation validity
+- presence of discrepancy signal
+
+Canonical semantic ground truth is defined by fixture data:
+
+master = 2
+incidents = 3
+
+If current harness cannot defensibly determine semantic equivalence:
+
+perform documented human/manual spot check.
+
+Do not use the evaluated model as its own final grader.
+
+
+==================================================
+16. PROMOTION GATE
+==================================================
+
+If targeted AA-RC-002 passes:
+
+Run fresh:
+
+1. full test suite
+
+2. compileall
+
+3. git diff --check
+
+4. full 26 real-case evaluation
+
+5. artifact validation
+
+6. dataset/source-pack hash validation
+
+
+Expected result:
+
+26 total
+
+24 EXECUTED
+
+2 Capability Gaps
+
+0 Provider Failures
+
+0 HITL_BLOCKED
+
+
+The only remaining gaps must be:
+
+AA-RC-011
+
+AA-RC-007
+
+
+If any other case regresses:
+
+STOP.
+
+Do not create successful promotion artifact.
+
+
+==================================================
+17. NEW BASELINE ARTIFACT
+==================================================
+
+If and only if Promotion Gate succeeds:
+
+Create:
+
+baseline-real-v4-aa-rc-002-complete.json
+
+or equivalent naming consistent with current conventions.
+
+Record:
+
+baseline_version
+
+git_commit
+
+raw_source_dataset_path
+
+raw_source_dataset_sha256 =
+923b05321ebba94cce69db8cb5317a6fc12f574ce27865c808c5d298d3879559
+
+normalized_evaluation_dataset_path
+
+normalized_evaluation_dataset_sha256 =
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+evaluation_source_pack_sha256
+
+normalizer version/commit if available
+
+real_case_count = 26
+
+executed = 24
+
+capability_gaps = 2
+
+provider_failures = 0
+
+hitl_blocked = 0
+
+generated_at
+
+physical_artifact_sha256
+
+canonical_artifact_sha256
+
+
+If compatibility requires the historical field:
+
+dataset_sha256
+
+set it to the normalized evaluation dataset actually used by the live run,
+and ALSO include the explicit raw/normalized fields above.
+
+Do not create ambiguity.
+
+
+==================================================
+18. HISTORICAL IMMUTABILITY
+==================================================
+
+Do not modify:
+
+baseline-real-v1*
+baseline-real-v2*
+baseline-real-v3*
+quality-aa-rc-014*
+existing historical probe artifacts
+
+Do not rewrite their old dataset_sha256 fields.
+
+Historical lineage remains valid.
+
+
+==================================================
+19. PARALLEL FAST-TRACK WORK
+==================================================
+
+While the AA-RC-002 production worker executes, independent workers MAY do:
+
+TRACK B:
+Security and verification review for AA-RC-002.
+
+TRACK C:
+Prepare ADR-020 + AA-RC-011 design/tests/acceptance criteria.
+
+TRACK C2:
+Prepare ADR-021 + AA-RC-007 design/tests/acceptance criteria.
+
+TRACK D:
+Prepare Phase-1 design only:
+- Semantic Grader
+- Runtime Assurance
+- Canonical State Manifest
+- interface contracts from Rev 1.1
+
+These preparation workers:
+
+MUST NOT edit production implementation for 011/007/Phase 1.
+
+MUST NOT edit shared production files currently owned by AA-RC-002 worker.
+
+They return design/test packets only.
+
+
+==================================================
+20. CONCURRENCY RULE
+==================================================
+
+One production writer.
+
+No two workers simultaneously modify:
+
+evaluation_baseline.py
+agent_core.py
+policy.py
+source/evidence core modules
+database schema/migrations
+shared evaluation infrastructure
+
+Parallel workers work on isolated read-only/design/test-preparation scopes.
+
+Production integration remains serialized.
+
+
+==================================================
+21. STOP CONDITIONS
+==================================================
+
+STOP if any step requires:
+
+- changing real_cases semantic content
+- restoring historical dataset
+- rewriting old baselines
+- generic file access
+- auth bypass
+- broad filesystem access
+- cross-owner visibility
+- provider/model change
+- deployment change
+- weakening SHA verification
+- direct model access to fixture filesystem
+- fake tool responses
+- server.py architectural rewrite
+- new production collection subsystem only for AA-RC-002
+- claiming success without fresh verification
+
+
+==================================================
+22. SUCCESS STATE
+==================================================
+
+Only if fresh evidence confirms all gates:
+
+ADR-019 = ACCEPTED
+
+AA-RC-002 = CLOSED
+
+RAW DATASET HASH =
+923b05321ebba94cce69db8cb5317a6fc12f574ce27865c808c5d298d3879559
+
+NORMALIZED DATASET HASH =
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+BASELINE =
+24 / 2 / 0 / 0
+
+REMAINING =
+AA-RC-011
+AA-RC-007
+
+NEXT READY =
+ADR-020 + AA-RC-011
+
+
+==================================================
+23. FAILURE STATE
+==================================================
+
+If any gate fails:
+
+AA-RC-002 remains OPEN.
+
+Return the exact failing gate and evidence.
+
+Do not compensate by weakening tests or altering dataset.
+
+
+==================================================
+24. FINAL REPORT
+==================================================
+
+Return:
+
+1. REPRODUCIBILITY
+   raw input hash
+   regenerated normalized hash
+   existing normalized hash
+   byte-for-byte result
+
+2. ADR-019
+   path
+   status
+   decision summary
+
+3. SOURCE PACK
+   path
+   logical sources
+   members
+   source-pack SHA
+
+4. IMPLEMENTATION
+   files changed
+   ingestion path reused
+   authorization mechanism
+   provenance path
+
+5. TESTS
+   affected tests
+   security tests
+   missing-source test
+   full-suite result
+
+6. TARGETED AA-RC-002
+   execution status
+   tools used
+   originals inspected
+   discrepancy result
+   citations/provenance
+   provider failures
+   HITL status
+
+7. PROMOTION
+   26-case totals
+   remaining gaps
+   raw source hash
+   normalized dataset hash
+   source-pack hash
+   physical artifact hash
+   canonical artifact hash
+
+8. HISTORICAL SAFETY
+   old baselines unchanged
+   raw dataset semantic content unchanged
+
+9. NEXT READINESS
+   ADR-020 preparation status
+   ADR-021 preparation status
+   Phase-1 preparation status
