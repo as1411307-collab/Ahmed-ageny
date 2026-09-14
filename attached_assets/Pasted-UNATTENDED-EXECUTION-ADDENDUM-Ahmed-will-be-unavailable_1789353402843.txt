@@ -1,0 +1,297 @@
+UNATTENDED EXECUTION ADDENDUM
+Ahmed will be unavailable for several hours.
+
+Continue autonomously ONLY within the scope and approval gates already defined
+in the previous Phase-0 Fast-Track instruction.
+
+This addendum does NOT expand scope.
+
+==================================================
+1. DO NOT WAIT FOR ROUTINE APPROVAL
+==================================================
+
+Do not pause for routine confirmation between:
+
+ADR-019 + AA-RC-002
+→ ADR-020 + AA-RC-011
+→ ADR-021 + AA-RC-007
+
+when all required targeted and promotion gates pass.
+
+Continue automatically within the approved sequence.
+
+==================================================
+2. HARD BLOCKER BEHAVIOR
+==================================================
+
+If a HARD STOP condition is reached:
+
+- stop production work on that capability
+- do not improvise a workaround
+- do not weaken tests
+- do not broaden permissions
+- do not alter the dataset to obtain a passing result
+- do not switch provider/model
+- do not deploy
+- do not ask repeated questions waiting for Ahmed
+
+Instead:
+
+1. preserve the current safe state
+2. collect exact diagnostic evidence
+3. record:
+   - failing gate
+   - command/result
+   - root cause if proven
+   - what remains unknown
+   - safest next options
+4. continue ONLY independent read-only/design preparation work that cannot
+   affect the blocked production path
+5. then stop production and leave a clear blocker report for Ahmed
+
+==================================================
+3. NO GUESS-AND-FIX
+==================================================
+
+For every unexpected failure:
+
+Evidence
+→ reproduce
+→ root-cause investigation
+→ minimal hypothesis
+→ targeted test
+→ minimal fix
+→ fresh verification
+
+Never:
+
+symptom
+→ guess
+→ edit several things
+→ hope tests pass
+
+If root cause is not established, do not modify production code.
+
+==================================================
+4. RETRY / COST CONTROL
+==================================================
+
+Do not enter retry loops.
+
+Use existing task/provider retry budgets.
+
+For an unexpected command/test failure:
+
+- investigate first
+- retry only when evidence justifies it
+- do not repeatedly run the full 26-case evaluation while debugging
+
+Full regression is reserved for Promotion Gate only.
+
+For provider rate limits/outages:
+
+- use the existing configured retry/backoff policy
+- do NOT replace the provider
+- if retry budget is exhausted, mark promotion BLOCKED
+- continue independent local/read-only preparation if safe
+
+==================================================
+5. CHECKPOINT AFTER EACH SUCCESSFUL PROMOTION
+==================================================
+
+After each successful Level-3 promotion:
+
+AA-RC-002
+AA-RC-011
+AA-RC-007
+
+record a durable checkpoint containing:
+
+- git commit/state
+- capability closed
+- full test result
+- baseline counts
+- artifact name
+- physical artifact SHA-256
+- canonical artifact SHA-256
+- raw_source_dataset_sha256
+- normalized_evaluation_dataset_sha256
+- evaluation_source_pack_sha256 where applicable
+- remaining gaps
+
+If normal project workflow permits Git commits, create a focused checkpoint
+commit after a successful promotion.
+
+Do NOT:
+
+- force push
+- deploy
+- rebase shared history
+- use git reset --hard
+- rewrite historical commits
+- rewrite historical baseline artifacts
+
+==================================================
+6. PRESERVE EXISTING WORK
+==================================================
+
+Do not revert or overwrite unrelated existing work.
+
+Before each next production capability:
+
+- inspect current git status/diff
+- identify changes produced by the previous capability
+- re-read shared infrastructure that changed
+- integrate with current state rather than assuming the pre-run state
+
+Never discard unknown changes merely to obtain a clean working tree.
+
+==================================================
+7. TEST FAILURE DISCIPLINE
+==================================================
+
+A failing test is evidence, not an obstacle to remove.
+
+Do not:
+
+- delete a failing test
+- weaken assertions to make it green
+- mark tests skipped without a documented existing policy reason
+- change expected values merely to match current output
+
+If a test expectation is proven incorrect:
+
+document the evidence and classify it as a contract issue before modifying it.
+
+If that modification changes an approved requirement, STOP for Ahmed.
+
+==================================================
+8. SECURITY / SECRETS
+==================================================
+
+Never print, persist, commit, or include in artifacts:
+
+- AHMED_OWNER_TOKEN
+- provider API keys
+- database credentials
+- connection strings containing secrets
+- private authentication material
+
+Redact sensitive values from diagnostics.
+
+Do not modify secrets/configuration merely to make a test work.
+
+==================================================
+9. DATABASE / DEPLOYMENT
+==================================================
+
+No new database architecture change or migration unless it is already
+explicitly required by the approved capability plan.
+
+If an unexpected migration/schema redesign becomes necessary:
+
+STOP.
+
+No production deploy/publish/release during this unattended session.
+
+Deployment evidence inspection is allowed for AA-RC-011.
+Deployment mutation is not.
+
+==================================================
+10. SUCCESS CLAIM STANDARD
+==================================================
+
+Never infer completion from code changes.
+
+A capability is CLOSED only after:
+
+targeted gate PASS
++
+security/policy/provenance checks PASS
++
+fresh Level-3 Promotion Gate PASS
++
+artifact/hash verification PASS
+
+Use fresh command output.
+
+Do not rely on earlier reported test counts as current proof.
+
+==================================================
+11. PHASE-0 END STATE
+==================================================
+
+If all three capabilities succeed:
+
+AA-RC-002 = CLOSED
+AA-RC-011 = CLOSED
+AA-RC-007 = CLOSED
+
+Target:
+
+26 EXECUTED
+0 Capability Gaps
+0 Provider Failures
+0 HITL_BLOCKED
+
+Then:
+
+STOP production work.
+
+Do NOT begin Phase 1 implementation.
+
+Phase-1 design/preparation material may be completed and reported,
+but Phase-1 production requires Ahmed's next approval.
+
+==================================================
+12. WHEN AHMED RETURNS
+==================================================
+
+Leave ONE consolidated report rather than many repetitive summaries.
+
+Report:
+
+CURRENT COMMIT/STATE
+
+MILESTONE 1
+ADR-019 / AA-RC-002
+result
+tests
+artifact
+hashes
+
+MILESTONE 2
+ADR-020 / AA-RC-011
+result
+tests
+artifact
+hashes
+
+MILESTONE 3
+ADR-021 / AA-RC-007
+result
+tests
+artifact
+hashes
+
+PHASE-0 FINAL:
+executed / gaps / provider failures / HITL
+
+DATASET LINEAGE:
+raw source hash
+normalized evaluation hash
+source-pack hash(es)
+
+SECURITY:
+any findings
+
+BLOCKERS:
+none, or exact unresolved blocker
+
+PHASE-1 PREPARATION:
+ready / partial / blocked
+
+NEXT SAFE ACTION:
+one specific recommendation
+
+Do not claim completion unless fresh verification supports it.
