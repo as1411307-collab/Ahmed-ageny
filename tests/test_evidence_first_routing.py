@@ -1,0 +1,46 @@
+from __future__ import annotations
+
+import unittest
+
+from request_routing import RequestCapability, classify_request
+
+
+class EvidenceFirstRoutingTests(unittest.TestCase):
+    def test_project_state_questions_route_to_project_evidence(self) -> None:
+        route = classify_request("راجع حالة مشروع Ahmed Agent وما تم إنجازه")
+        self.assertEqual(route.capability, RequestCapability.PROJECT_STATE)
+        self.assertIn("inspect_runtime_evidence", route.required_capabilities)
+
+    def test_runtime_and_architecture_questions_route_to_evidence_core(self) -> None:
+        route = classify_request("ما هو runtime الفعلي وهل المعمارية الحالية runnable؟")
+        self.assertEqual(route.capability, RequestCapability.RUNTIME_ARCHITECTURE)
+        self.assertIn("inspect_runtime_evidence", route.required_capabilities)
+        self.assertIn("inspect_architecture_evidence", route.required_capabilities)
+
+    def test_source_status_questions_use_bounded_source_status(self) -> None:
+        route = classify_request("افحص حالة search provider وpage fetcher والجاهز منهما")
+        self.assertEqual(route.capability, RequestCapability.SOURCE_STATUS)
+        self.assertEqual(
+            route.required_capabilities,
+            ("inspect_source_status",),
+        )
+
+    def test_uploaded_file_questions_stay_in_my_files(self) -> None:
+        route = classify_request("قارن الملف الرئيسي مع أدلة الحوادث المرفوعة")
+        self.assertEqual(route.capability, RequestCapability.MY_FILES)
+        self.assertIn("search_my_files", route.required_capabilities)
+        self.assertNotIn("web_search", route.required_capabilities)
+
+    def test_explicit_web_research_requires_real_web_search(self) -> None:
+        route = classify_request("ابحث على الويب عن أحدث توثيق وقارن المصادر")
+        self.assertEqual(route.capability, RequestCapability.EXTERNAL_WEB_RESEARCH)
+        self.assertIn("web_search", route.required_capabilities)
+
+    def test_missing_evidence_requires_explicit_abstention(self) -> None:
+        route = classify_request("هل تم حفظ الملاحظات؟ تحقق قبل أن تؤكد")
+        self.assertTrue(route.abstain_if_evidence_missing)
+        self.assertNotIn("web_search", route.required_capabilities)
+
+
+if __name__ == "__main__":
+    unittest.main()
