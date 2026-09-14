@@ -7,6 +7,7 @@ import html
 import json
 import re
 import time
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -37,78 +38,203 @@ AUDIT_DIMENSIONS = (
 PROJECT_TRUST_CLASSIFICATION = "VERIFIED_PROJECT_EVIDENCE"
 EXTERNAL_TRUST_CLASSIFICATION = "UNVERIFIED_EXTERNAL_OFFICIAL"
 _EXTERNAL_REFERENCE_KEYS = {
-    "external:agents_sdk": {"agents_sdk_evolution"},
+    "external:agents_sdk": {
+        "agents_api_announcement",
+        "agent_environments",
+        "agents_sdk_overview",
+        "agents_sdk_evolution",
+        "agents_sdk_models",
+        "human_in_the_loop",
+        "sessions",
+    },
     "external:responses_api_tools": {"responses_api_tools"},
-    "external:model_capabilities": {"models_catalog", "model_comparison"},
-    "external:pricing": {"api_platform_pricing"},
+    "external:model_capabilities": {
+        "models_catalog",
+        "model_comparison",
+        "gpt_5_6_sol",
+        "gpt_5_6_terra",
+        "gpt_5_6_luna",
+    },
+    "external:pricing": {
+        "api_platform_pricing",
+        "gpt_5_6_sol",
+        "gpt_5_6_terra",
+        "gpt_5_6_luna",
+    },
     "external:agentkit": {"agentkit"},
-    "external:workspace_agents": {"workspace_agents"},
 }
 
 
 class AuditabilityError(ValueError):
     """AA-RC-026 cannot be independently reviewed without claim evidence."""
 
-OPENAI_DOCUMENTS: tuple[dict[str, Any], ...] = (
+OPENAI_EXTERNAL_EVIDENCE_SNAPSHOT: tuple[dict[str, Any], ...] = (
+    {
+        "key": "agents_api_announcement",
+        "url": "https://openai.com/index/introducing-the-agents-api/",
+        "title": "Introducing the Agents API",
+        "content_claims": [
+            "The Agents API is a public beta.",
+            "Agent environments can be OpenAI-hosted or self-hosted.",
+        ],
+    },
+    {
+        "key": "agent_environments",
+        "url": "https://developers.openai.com/api/docs/guides/agents",
+        "title": "OpenAI Agents API and agent environments",
+        "content_claims": [
+            "Agent environments include openai_hosted and self_hosted types.",
+            "Hosted environments can expose files, plugins, and skills with connection status.",
+        ],
+    },
     {
         "key": "agents_sdk_evolution",
         "url": "https://openai.com/index/the-next-evolution-of-the-agents-sdk/",
-        "markers": (
-            "Agents SDK",
-            "files",
-            "commands",
-            "long-running",
-            "sandbox",
-            "managed APIs",
-        ),
+        "title": "The next evolution of the Agents SDK",
+        "content_claims": [
+            "Agents SDK supports agents, tools, handoffs, guardrails, sessions, HITL, and tracing.",
+            "Agents SDK supports sandbox work across files and tools.",
+            "Agents SDK uses the Responses API by default, while Responses API can also be used directly when the application owns orchestration, state, and tool dispatch.",
+        ],
+    },
+    {
+        "key": "agents_sdk_overview",
+        "url": "https://openai.github.io/openai-agents-python/",
+        "title": "OpenAI Agents SDK overview",
+        "content_claims": [
+            "Agents SDK provides agents, tools, handoffs, guardrails, sessions, human-in-the-loop, and tracing.",
+            "Agents SDK uses the Responses API by default and can be combined with direct Responses API calls.",
+        ],
+    },
+    {
+        "key": "agents_sdk_models",
+        "url": "https://openai.github.io/openai-agents-python/models/",
+        "title": "OpenAI Agents SDK models and providers",
+        "content_claims": [
+            "Non-OpenAI providers can be selected through ModelProvider per run or Agent.model per agent.",
+            "Third-party adapters can differ in supported capabilities and behavior.",
+        ],
+    },
+    {
+        "key": "human_in_the_loop",
+        "url": "https://openai.github.io/openai-agents-python/human_in_the_loop/",
+        "title": "OpenAI Agents SDK human-in-the-loop",
+        "content_claims": [
+            "Agents SDK documents human-in-the-loop pauses and approvals for tool execution.",
+        ],
+    },
+    {
+        "key": "sessions",
+        "url": "https://openai.github.io/openai-agents-python/sessions/",
+        "title": "OpenAI Agents SDK sessions",
+        "content_claims": [
+            "Agents SDK sessions persist conversation state for agent runs.",
+        ],
     },
     {
         "key": "responses_api_tools",
-        "url": "https://openai.com/index/new-tools-and-features-in-the-responses-api/",
-        "markers": ("remote MCP", "File Search", "Code Interpreter", "Image Generation"),
+        "url": "https://developers.openai.com/api/reference/cli/resources/responses/methods/create",
+        "title": "Responses API create",
+        "content_claims": [
+            "Responses API supports built-in web search, file search, computer use, MCP, and function tools.",
+        ],
     },
     {
         "key": "models_catalog",
         "url": "https://developers.openai.com/api/docs/models",
-        "markers": ("function calling", "web search", "file search", "computer use"),
+        "title": "OpenAI models catalog",
+        "content_claims": [
+            "The OpenAI models catalog documents model capabilities and supported tools.",
+        ],
     },
     {
         "key": "model_comparison",
         "url": "https://developers.openai.com/api/docs/models/compare",
-        "markers": ("Compare models", "Input", "Output", "Context"),
+        "title": "OpenAI model comparison",
+        "content_claims": [
+            "Model comparison documents input, output, context, and capability differences.",
+        ],
+    },
+    {
+        "key": "gpt_5_6_sol",
+        "url": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+        "title": "GPT-5.6 Sol",
+        "content_claims": [
+            "Snapshot pricing on 2026-09-15 is $4 per million input tokens and $20 per million output tokens.",
+            "The model supports web, file, computer, and related tools as documented.",
+        ],
+    },
+    {
+        "key": "gpt_5_6_terra",
+        "url": "https://developers.openai.com/api/docs/models/gpt-5.6-terra",
+        "title": "GPT-5.6 Terra",
+        "content_claims": [
+            "Snapshot pricing on 2026-09-15 is $2 per million input tokens and $12 per million output tokens.",
+        ],
+    },
+    {
+        "key": "gpt_5_6_luna",
+        "url": "https://developers.openai.com/api/docs/models/gpt-5.6-luna",
+        "title": "GPT-5.6 Luna",
+        "content_claims": [
+            "Snapshot pricing on 2026-09-15 is $0.20 per million input tokens and $1.20 per million output tokens.",
+        ],
     },
     {
         "key": "api_platform_pricing",
-        "url": "https://openai.com/ar/api/",
-        "markers": ("API", "pricing", "أسعار", "التسعير"),
+        "url": "https://openai.com/api/pricing/",
+        "title": "OpenAI API pricing",
+        "content_claims": [
+            "API prices vary by selected model and tool and can change over time.",
+            "The model prices in this snapshot are dated 2026-09-15 and are not permanent facts outside this evaluation.",
+        ],
     },
     {
         "key": "agentkit",
         "url": "https://openai.com/index/introducing-agentkit/",
-        "markers": ("Agent Builder", "Evals", "November 30, 2026", "Agents SDK"),
-    },
-    {
-        "key": "workspace_agents",
-        "url": "https://help.openai.com/en/articles/20001143",
-        "markers": ("Workspace Agents", "templates", "workspace agent", "ChatGPT"),
+        "title": "Introducing AgentKit",
+        "content_claims": [
+            "Agent Builder and Evals are scheduled for retirement in 2026.",
+            "The announcement recommends Agents SDK or Workspace Agents for the relevant workflows.",
+        ],
     },
 )
+
+OPENAI_DOCUMENTS: tuple[dict[str, Any], ...] = tuple(
+    {
+        "key": item["key"],
+        "url": item["url"],
+        "markers": tuple(item["content_claims"]),
+    }
+    for item in OPENAI_EXTERNAL_EVIDENCE_SNAPSHOT
+)
+SNAPSHOT_ACCESSED_AT = "2026-09-15T00:00:00+00:00"
+SNAPSHOT_PROVENANCE_CLASSIFICATION = "OFFICIAL_EXTERNAL"
+SNAPSHOT_HASH = hashlib.sha256(
+    json.dumps(
+        OPENAI_EXTERNAL_EVIDENCE_SNAPSHOT,
+        ensure_ascii=False,
+        sort_keys=True,
+    ).encode("utf-8")
+).hexdigest()
 
 USER_PROVIDED_OPENAI_EVIDENCE = {
     "source_identity": "external_openai_official",
     "evidence_classification": "EXTERNAL_EVIDENCE",
+    "provenance_classification": SNAPSHOT_PROVENANCE_CLASSIFICATION,
     "verification_status": "UNVERIFIED_EXTERNAL",
     "source_urls": [document["url"] for document in OPENAI_DOCUMENTS],
+    "snapshot_accessed_at": SNAPSHOT_ACCESSED_AT,
+    "snapshot_sha256": SNAPSHOT_HASH,
     "provenance_note": (
-        "User-supplied summary of the current official OpenAI documentation; "
-        "kept separate from Ahmed Agent project evidence."
+        "Orchestrator-supplied snapshot of current official external documentation "
+        "dated 2026-09-15; prices are time-bounded and kept separate from Ahmed "
+        "Agent project evidence."
     ),
     "claims": [
-        "Agents SDK manages agents, tools, handoffs, guardrails, sessions, HITL, and tracing, and uses Responses API by default.",
-        "Agents SDK Models documentation supports non-OpenAI providers through ModelProvider at run or Agent.model scope, with adapters such as LiteLLM and Any-LLM.",
-        "Responses API supports built-in web search, file search, MCP, and function tools.",
-        "Current OpenAI models support Responses and web/file/computer tools according to the current Models documentation.",
-        "OpenAI pricing varies by selected model and tool; the supplied bundle identifies Luna as lower cost, Terra as middle, and Sol as higher cost.",
+        claim
+        for source in OPENAI_EXTERNAL_EVIDENCE_SNAPSHOT
+        for claim in source["content_claims"]
     ],
 }
 
