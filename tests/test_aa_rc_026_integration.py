@@ -125,7 +125,7 @@ class AaRc026IntegrationTests(IsolatedAsyncioTestCase):
                 ]
             }
 
-        async def fake_fetch_external() -> list[dict]:
+        def fake_fetch_external() -> list[dict]:
             return _external_evidence()
 
         with (
