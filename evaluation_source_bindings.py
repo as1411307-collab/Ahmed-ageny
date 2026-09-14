@@ -13,10 +13,27 @@ SOURCE_PACK_ROOT = (
     / "evaluation_baseline"
     / "aa_rc_002"
 )
+MY_FILES_MANIFEST_ROOT = (
+    Path(__file__).parent
+    / "tests"
+    / "fixtures"
+    / "evaluation_baseline"
+    / "aa_rc_002_my_files"
+)
 MANIFEST_NAME = "manifest.json"
 EXPECTED_SCHEMA_VERSION = "aa-rc-002-source-pack.v1"
+EXPECTED_MY_FILES_SCHEMA_VERSION = "aa-rc-002-my-files-manifest.v1"
 EXPECTED_CASE_ID = "AA-RC-002"
 EXPECTED_HASH_ALGORITHM = "SHA-256"
+EXPECTED_MY_FILES_BINDING = "MY_FILES_OWNER"
+EXPECTED_SUCCESS_CRITERIA = [
+    "source_of_truth",
+    "canonical_provenance",
+    "source_identity",
+    "version_hash_integrity",
+    "conflict_handling",
+    "primary_source_over_memory_or_summary",
+]
 _MARKER = "EVALUATION FIXTURE — NOT PRODUCTION USER DATA"
 
 
@@ -82,6 +99,144 @@ def canonical_source_pack_bytes(manifest: dict[str, Any]) -> bytes:
 
 def source_pack_sha256(manifest: dict[str, Any]) -> str:
     return hashlib.sha256(canonical_source_pack_bytes(manifest)).hexdigest()
+
+
+def _canonical_my_files_payload(manifest: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_version": manifest["schema_version"],
+        "case_id": manifest["case_id"],
+        "fixture_version": manifest["fixture_version"],
+        "hash_algorithm": manifest["hash_algorithm"],
+        "source_binding": manifest["source_binding"],
+        "supersedes_source_pack_sha256": manifest[
+            "supersedes_source_pack_sha256"
+        ],
+        "success_criteria": manifest["success_criteria"],
+        "logical_sources": [
+            {
+                "logical_name": source["logical_name"],
+                "kind": source["kind"],
+                "source_id": source["source_id"],
+                "source_version": source["source_version"],
+                "original_filename": source["original_filename"],
+                "members": [
+                    {
+                        "name": member["name"],
+                        "sha256": member["sha256"],
+                    }
+                    for member in source["members"]
+                ],
+            }
+            for source in manifest["logical_sources"]
+        ],
+    }
+
+
+def my_files_manifest_bytes(manifest: dict[str, Any]) -> bytes:
+    return json.dumps(
+        _canonical_my_files_payload(manifest),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+
+def my_files_manifest_sha256(manifest: dict[str, Any]) -> str:
+    return hashlib.sha256(my_files_manifest_bytes(manifest)).hexdigest()
+
+
+def load_aa_rc_002_my_files_manifest(
+    root: Path = MY_FILES_MANIFEST_ROOT,
+) -> dict[str, Any]:
+    """Load the dated live-source binding without copying source bytes."""
+
+    root = root.resolve()
+    try:
+        manifest = json.loads(
+            (root / MANIFEST_NAME).read_text(encoding="utf-8")
+        )
+    except (OSError, json.JSONDecodeError) as error:
+        raise EvaluationSourcePackError(
+            "MY_FILES source manifest cannot be read."
+        ) from error
+    if not isinstance(manifest, dict):
+        raise EvaluationSourcePackError("MY_FILES source manifest must be an object.")
+    for key in (
+        "schema_version",
+        "case_id",
+        "fixture_version",
+        "hash_algorithm",
+        "source_binding",
+        "supersedes_source_pack_sha256",
+        "success_criteria",
+        "logical_sources",
+        "source_pack_sha256",
+    ):
+        if key not in manifest:
+            raise EvaluationSourcePackError(f"MY_FILES manifest is missing {key}.")
+    if manifest["schema_version"] != EXPECTED_MY_FILES_SCHEMA_VERSION:
+        raise EvaluationSourcePackError("Unsupported MY_FILES manifest schema.")
+    if manifest["case_id"] != EXPECTED_CASE_ID:
+        raise EvaluationSourcePackError("MY_FILES manifest case ID is incorrect.")
+    if manifest["hash_algorithm"] != EXPECTED_HASH_ALGORITHM:
+        raise EvaluationSourcePackError("MY_FILES manifest hash algorithm is incorrect.")
+    if manifest["source_binding"] != EXPECTED_MY_FILES_BINDING:
+        raise EvaluationSourcePackError("MY_FILES manifest binding is incorrect.")
+    if manifest["success_criteria"] != EXPECTED_SUCCESS_CRITERIA:
+        raise EvaluationSourcePackError("MY_FILES success criteria were weakened.")
+    superseded = manifest["supersedes_source_pack_sha256"]
+    if (
+        not isinstance(superseded, str)
+        or len(superseded) != 64
+        or any(char not in "0123456789abcdef" for char in superseded)
+    ):
+        raise EvaluationSourcePackError("Historical source-pack hash is invalid.")
+    if not isinstance(manifest["logical_sources"], list) or not manifest[
+        "logical_sources"
+    ]:
+        raise EvaluationSourcePackError("MY_FILES logical sources are required.")
+    if my_files_manifest_sha256(manifest) != manifest["source_pack_sha256"]:
+        raise EvaluationSourcePackError("MY_FILES manifest hash mismatch.")
+
+    seen_source_ids: set[str] = set()
+    seen_names: set[str] = set()
+    for source in manifest["logical_sources"]:
+        if not isinstance(source, dict):
+            raise EvaluationSourcePackError("MY_FILES logical source is invalid.")
+        logical_name = source.get("logical_name")
+        kind = source.get("kind")
+        source_id = source.get("source_id")
+        source_version = source.get("source_version")
+        original_filename = source.get("original_filename")
+        members = source.get("members")
+        if (
+            not isinstance(logical_name, str)
+            or kind != "single_source"
+            or not isinstance(source_id, str)
+            or not isinstance(source_version, int)
+            or source_version < 1
+            or not isinstance(original_filename, str)
+            or not isinstance(members, list)
+            or len(members) != 1
+        ):
+            raise EvaluationSourcePackError("MY_FILES source metadata is invalid.")
+        if source_id in seen_source_ids or original_filename in seen_names:
+            raise EvaluationSourcePackError("MY_FILES source is duplicated.")
+        seen_source_ids.add(source_id)
+        seen_names.add(original_filename)
+        member = members[0]
+        if (
+            not isinstance(member, dict)
+            or member.get("name") != original_filename
+            or not isinstance(member.get("sha256"), str)
+            or len(member["sha256"]) != 64
+            or any(char not in "0123456789abcdef" for char in member["sha256"])
+        ):
+            raise EvaluationSourcePackError("MY_FILES source hash metadata is invalid.")
+    return {
+        "manifest": manifest,
+        "source_pack_sha256": manifest["source_pack_sha256"],
+    }
 
 
 def load_aa_rc_002_source_pack(

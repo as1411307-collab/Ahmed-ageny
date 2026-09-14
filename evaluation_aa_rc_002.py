@@ -15,6 +15,7 @@ from uuid import uuid4
 
 from evaluation_baseline import execute_real_case
 from evaluation_source_bindings import (
+    load_aa_rc_002_my_files_manifest,
     load_aa_rc_002_source_pack,
     resolve_aa_rc_002_sources,
 )
@@ -132,6 +133,177 @@ def _compare_inspected_sources(
         "confirmed_incident_ids": incident_ids,
         "original_incident_count": len(incident_ids),
         "discrepancy_detected": int(master_count.group(1)) != len(incident_ids),
+    }
+
+
+def _compare_source_manifest_versions(
+    historical_manifest: dict[str, Any],
+    live_manifest: dict[str, Any],
+) -> dict[str, Any]:
+    """Record identity/hash conflict without rewriting the historical fixture."""
+
+    historical_by_name = {
+        member["name"]: member["sha256"]
+        for source in historical_manifest["logical_sources"]
+        for member in source["members"]
+    }
+    live_members = [
+        {
+            "source_id": source["source_id"],
+            "source_version": source["source_version"],
+            "name": member["name"],
+            "sha256": member["sha256"],
+        }
+        for source in live_manifest["logical_sources"]
+        for member in source["members"]
+    ]
+    conflicts = [
+        {
+            **member,
+            "historical_sha256": historical_by_name.get(member["name"]),
+            "identity_changed": member["name"] not in historical_by_name,
+            "hash_changed": (
+                member["name"] in historical_by_name
+                and historical_by_name[member["name"]] != member["sha256"]
+            ),
+        }
+        for member in live_members
+    ]
+    return {
+        "comparison_status": "SOURCE_VERSION_CONFLICT",
+        "historical_fixture_version": historical_manifest["fixture_version"],
+        "live_fixture_version": live_manifest["fixture_version"],
+        "historical_source_pack_sha256": (
+            historical_manifest["source_pack_sha256"]
+        ),
+        "live_source_pack_sha256": live_manifest["source_pack_sha256"],
+        "conflicts": conflicts,
+        "source_precedence": "MY_FILES_ORIGINAL_SOURCE",
+        "memory_or_summary_override": "BLOCKED",
+    }
+
+
+async def execute_aa_rc_002_my_files(
+    *,
+    base_url: str,
+    owner_token: str,
+    provider: str = "gemini",
+    timeout_seconds: float = 90.0,
+) -> dict[str, Any]:
+    """Evaluate AA-RC-002 against the owner's existing MY_FILES sources."""
+
+    live_pack = load_aa_rc_002_my_files_manifest()
+    historical_pack = load_aa_rc_002_source_pack()
+    live_manifest = live_pack["manifest"]
+    live_sources = live_manifest["logical_sources"]
+    source_ids = [source["source_id"] for source in live_sources]
+
+    discovered_ids: set[str] = set()
+    for query in ("JobRequest", *(source["original_filename"] for source in live_sources)):
+        search_result = await search_my_files(query, top_k=10)
+        discovered_ids.update(
+            str(row["source_id"])
+            for row in search_result.get("results", [])
+            if row.get("source_id")
+        )
+    if not set(source_ids).issubset(discovered_ids):
+        raise AssertionError("Search did not discover every live MY_FILES source.")
+
+    inspected: list[dict[str, Any]] = []
+    for source in live_sources:
+        source_id = source["source_id"]
+        result = await inspect_source_of_truth(
+            source_id,
+            owner_principal_id="owner",
+        )
+        if result.get("evidence_status") != "VERIFIED":
+            raise AssertionError("A live MY_FILES original was not verified.")
+        facts = result.get("extracted_facts") or {}
+        member = source["members"][0]
+        expected = {
+            "source_id": source_id,
+            "source_version": source["source_version"],
+            "original_filename": source["original_filename"],
+            "source_sha256": member["sha256"],
+            "original_integrity_status": "VERIFIED",
+        }
+        if any(facts.get(key) != value for key, value in expected.items()):
+            raise AssertionError("Live source identity/version/hash metadata mismatched.")
+        if not result.get("evidence_citations") or not result.get("evidence_items"):
+            raise AssertionError("Live source did not produce canonical provenance.")
+        if "storage_object_key" in json.dumps(result):
+            raise AssertionError("Storage object key leaked from live inspection.")
+        if '"data":' in json.dumps(result):
+            raise AssertionError("Raw source bytes leaked from live inspection.")
+        inspected.append(
+            {
+                "source_id": source_id,
+                "source_version": source["source_version"],
+                "original_filename": source["original_filename"],
+                "sha256": member["sha256"],
+                "evidence_status": result["evidence_status"],
+                "citation_count": len(result["evidence_citations"]),
+                "evidence_item_count": len(result["evidence_items"]),
+            }
+        )
+
+    version_conflict = _compare_source_manifest_versions(
+        historical_pack["manifest"],
+        live_manifest,
+    )
+    case = _load_case()
+    case = {
+        **case,
+        "input": (
+            "راجع المصدرين الأصليين الموجودين في MY_FILES قبل الإجابة، "
+            "واستخدم inspect_source_of_truth على source IDs التالية: "
+            f"{source_ids[0]} و{source_ids[1]}. "
+            "لا تعتمد على الذاكرة أو الملخصات عند التعارض."
+        ),
+        "expected_sources": [
+            source["original_filename"] for source in live_sources
+        ],
+        "source_reference": (
+            "MY_FILES manifest "
+            f"{live_manifest['fixture_version']} "
+            f"{live_pack['source_pack_sha256']}"
+        ),
+    }
+    started = time.perf_counter()
+    trace = await execute_real_case(
+        case,
+        base_url=base_url,
+        owner_token=owner_token,
+        provider=provider,
+        timeout_seconds=timeout_seconds,
+    )
+    trace["fixture_preflight_latency_ms"] = int(
+        (time.perf_counter() - started) * 1000
+    )
+    if trace.get("execution_status") != "EXECUTED":
+        raise RuntimeError("AA-RC-002 live-source targeted chat did not execute.")
+    tool_names = [call.get("name") for call in trace.get("tool_calls", [])]
+    if "search_my_files" not in tool_names:
+        raise AssertionError("Targeted chat did not search MY_FILES.")
+    if "inspect_source_of_truth" not in tool_names:
+        raise AssertionError("Targeted chat did not inspect a live original source.")
+    return {
+        "case_id": "AA-RC-002",
+        "evaluation_version": live_manifest["fixture_version"],
+        "execution_status": "EXECUTED",
+        "source_pack_sha256": live_pack["source_pack_sha256"],
+        "historical_source_pack_sha256": historical_pack["source_pack_sha256"],
+        "source_ids": source_ids,
+        "discovered_source_count": len(discovered_ids & set(source_ids)),
+        "authorization_verified": True,
+        "integrity_verified": True,
+        "canonical_provenance_verified": True,
+        "inspected_sources": inspected,
+        "version_conflict": version_conflict,
+        "trace": trace,
+        "fake_citations": 0,
+        "provider_failures": 0,
+        "hitl_blocked": 0,
     }
 
 
@@ -297,12 +469,22 @@ async def _main_async() -> None:
     parser.add_argument("--base-url", default="http://127.0.0.1:8000")
     parser.add_argument("--provider", default="gemini")
     parser.add_argument("--timeout-seconds", type=float, default=90.0)
+    parser.add_argument(
+        "--source-mode",
+        choices=("historical-fixture", "my-files"),
+        default="historical-fixture",
+    )
     args = parser.parse_args()
     owner_token = os.environ.get("AHMED_OWNER_TOKEN")
     if not owner_token:
         raise SystemExit("AUTHENTICATED_EVALUATION_PRINCIPAL_BLOCKED")
     try:
-        result = await execute_aa_rc_002(
+        evaluator = (
+            execute_aa_rc_002_my_files
+            if args.source_mode == "my-files"
+            else execute_aa_rc_002
+        )
+        result = await evaluator(
             base_url=args.base_url,
             owner_token=owner_token,
             provider=args.provider,

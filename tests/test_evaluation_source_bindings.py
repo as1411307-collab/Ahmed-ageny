@@ -9,6 +9,7 @@ from pathlib import Path
 from evaluation_source_bindings import (
     EvaluationSourcePackError,
     canonical_source_pack_bytes,
+    load_aa_rc_002_my_files_manifest,
     load_aa_rc_002_source_pack,
     resolve_aa_rc_002_sources,
     source_pack_sha256,
@@ -19,6 +20,52 @@ PACK_ROOT = Path("tests/fixtures/evaluation_baseline/aa_rc_002")
 
 
 class EvaluationSourceBindingTests(unittest.TestCase):
+    def test_my_files_manifest_is_a_new_version_and_preserves_historical_pack(self) -> None:
+        historical = load_aa_rc_002_source_pack()
+        live = load_aa_rc_002_my_files_manifest()
+
+        self.assertEqual(
+            historical["manifest"]["fixture_version"],
+            "2026-09-14.v1",
+        )
+        self.assertEqual(live["manifest"]["fixture_version"], "2026-09-14.v2")
+        self.assertEqual(
+            live["manifest"]["supersedes_source_pack_sha256"],
+            historical["source_pack_sha256"],
+        )
+        self.assertEqual(len(live["manifest"]["logical_sources"]), 2)
+        self.assertEqual(
+            [
+                source["source_id"]
+                for source in live["manifest"]["logical_sources"]
+            ],
+            [
+                "68c95924-16fd-4cde-bd45-fd263141a3da",
+                "82084c28-b7ea-4f3b-9d08-979671fec10a",
+            ],
+        )
+        self.assertEqual(
+            [
+                source["members"][0]["sha256"]
+                for source in live["manifest"]["logical_sources"]
+            ],
+            [
+                "33de413a950e0685612775d3c495fb200d84e15fbe23d8de5ede52446b1efbac",
+                "9a397abf8dbb5337e7aed2211d449f7c2a05bc7c2789369d7b97993b8f6b5f0b",
+            ],
+        )
+        self.assertEqual(
+            live["manifest"]["success_criteria"],
+            [
+                "source_of_truth",
+                "canonical_provenance",
+                "source_identity",
+                "version_hash_integrity",
+                "conflict_handling",
+                "primary_source_over_memory_or_summary",
+            ],
+        )
+
     def test_pack_is_deterministic_and_resolves_four_original_members(self) -> None:
         pack = load_aa_rc_002_source_pack()
         members = resolve_aa_rc_002_sources()

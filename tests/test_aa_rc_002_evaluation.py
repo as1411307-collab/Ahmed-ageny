@@ -3,7 +3,10 @@ from __future__ import annotations
 import unittest
 
 from agent_core import MAX_TOOL_CALLS
-from evaluation_aa_rc_002 import _compare_inspected_sources
+from evaluation_aa_rc_002 import (
+    _compare_inspected_sources,
+    _compare_source_manifest_versions,
+)
 
 
 def _verified(filename: str, content: str, source_id: str) -> dict[str, object]:
@@ -18,6 +21,39 @@ def _verified(filename: str, content: str, source_id: str) -> dict[str, object]:
 
 
 class AaRc002EvaluationTests(unittest.TestCase):
+    def test_live_manifest_records_real_identity_and_hash_conflict(self) -> None:
+        result = _compare_source_manifest_versions(
+            {
+                "fixture_version": "2026-09-14.v1",
+                "source_pack_sha256": "a" * 64,
+                "logical_sources": [
+                    {
+                        "members": [
+                            {"name": "old.md", "sha256": "b" * 64},
+                        ]
+                    }
+                ],
+            },
+            {
+                "fixture_version": "2026-09-14.v2",
+                "source_pack_sha256": "c" * 64,
+                "logical_sources": [
+                    {
+                        "source_id": "source-1",
+                        "source_version": 1,
+                        "members": [
+                            {"name": "new.pdf", "sha256": "d" * 64},
+                        ],
+                    }
+                ],
+            },
+        )
+
+        self.assertEqual(result["comparison_status"], "SOURCE_VERSION_CONFLICT")
+        self.assertTrue(result["conflicts"][0]["identity_changed"])
+        self.assertEqual(result["source_precedence"], "MY_FILES_ORIGINAL_SOURCE")
+        self.assertEqual(result["memory_or_summary_override"], "BLOCKED")
+
     def test_tool_budget_covers_all_source_inspections(self) -> None:
         self.assertGreaterEqual(MAX_TOOL_CALLS, 5)
 

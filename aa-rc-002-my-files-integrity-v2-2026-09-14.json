@@ -1,0 +1,37 @@
+{
+  "schema_version": "aa-rc-002-integrity.v2",
+  "artifact_set": "AA-RC-002 MY_FILES v2",
+  "case_id": "AA-RC-002",
+  "evaluation_version": "2026-09-14.v2",
+  "generated_at": "2026-09-14T17:36:06.294864+00:00",
+  "files": [
+    {
+      "file": "tests/fixtures/evaluation_baseline/aa_rc_002_my_files/manifest.json",
+      "sha256": "0f80554dfa0499254913944216d198fb5e05fc56efc8dee98ebd6cb4fc322e30",
+      "bytes": 1522
+    },
+    {
+      "file": "aa-rc-002-my-files-evaluation-v2-2026-09-14.json",
+      "sha256": "eb73e062a413fea94953d6824e27e06a28236f5244fa20b19bfaa68917ce08dd",
+      "bytes": 3118
+    }
+  ],
+  "historical_reference": {
+    "manifest_path": "tests/fixtures/evaluation_baseline/aa_rc_002/manifest.json",
+    "fixture_version": "2026-09-14.v1",
+    "source_pack_sha256": "e9785be9ec1f133704bd63cec8c3ee3fb976437020e24f1d69fc9d9e12311ede",
+    "preserved_unchanged": true
+  },
+  "live_outcome": {
+    "execution_status": "EXECUTED",
+    "execution_classification": "EXECUTION_OK",
+    "authorization_verified": true,
+    "canonical_provenance_verified": true,
+    "integrity_verified": true,
+    "source_identity_preconditions": "VERIFIED",
+    "version_conflict_status": "SOURCE_VERSION_CONFLICT",
+    "source_precedence": "MY_FILES_ORIGINAL_SOURCE",
+    "memory_or_summary_override": "BLOCKED",
+    "raw_trace_saved": false
+  }
+}

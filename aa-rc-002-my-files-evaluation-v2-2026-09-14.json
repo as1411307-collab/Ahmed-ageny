@@ -1,0 +1,89 @@
+{
+  "schema_version": "aa-rc-002-targeted-evaluation.v2",
+  "case_id": "AA-RC-002",
+  "evaluation_version": "2026-09-14.v2",
+  "execution_status": "EXECUTED",
+  "source_pack_sha256": "f83d1e1739f18252793f4afbcd441d8542b80de938a82735b7f8a4d845ba7055",
+  "historical_source_pack_sha256": "e9785be9ec1f133704bd63cec8c3ee3fb976437020e24f1d69fc9d9e12311ede",
+  "source_ids": [
+    "68c95924-16fd-4cde-bd45-fd263141a3da",
+    "82084c28-b7ea-4f3b-9d08-979671fec10a"
+  ],
+  "discovered_source_count": 2,
+  "authorization_verified": true,
+  "integrity_verified": true,
+  "canonical_provenance_verified": true,
+  "inspected_sources": [
+    {
+      "source_id": "68c95924-16fd-4cde-bd45-fd263141a3da",
+      "source_version": 1,
+      "original_filename": "JobRequest-(1)_(1)_1789406011025.pdf",
+      "sha256": "33de413a950e0685612775d3c495fb200d84e15fbe23d8de5ede52446b1efbac",
+      "evidence_status": "VERIFIED",
+      "citation_count": 24,
+      "evidence_item_count": 24
+    },
+    {
+      "source_id": "82084c28-b7ea-4f3b-9d08-979671fec10a",
+      "source_version": 1,
+      "original_filename": "JobRequest-A_(2)_(3)_1789406011025.pdf",
+      "sha256": "9a397abf8dbb5337e7aed2211d449f7c2a05bc7c2789369d7b97993b8f6b5f0b",
+      "evidence_status": "VERIFIED",
+      "citation_count": 24,
+      "evidence_item_count": 24
+    }
+  ],
+  "version_conflict": {
+    "comparison_status": "SOURCE_VERSION_CONFLICT",
+    "historical_fixture_version": "2026-09-14.v1",
+    "live_fixture_version": "2026-09-14.v2",
+    "historical_source_pack_sha256": "e9785be9ec1f133704bd63cec8c3ee3fb976437020e24f1d69fc9d9e12311ede",
+    "live_source_pack_sha256": "f83d1e1739f18252793f4afbcd441d8542b80de938a82735b7f8a4d845ba7055",
+    "conflicts": [
+      {
+        "source_id": "68c95924-16fd-4cde-bd45-fd263141a3da",
+        "source_version": 1,
+        "name": "JobRequest-(1)_(1)_1789406011025.pdf",
+        "sha256": "33de413a950e0685612775d3c495fb200d84e15fbe23d8de5ede52446b1efbac",
+        "historical_sha256": null,
+        "identity_changed": true,
+        "hash_changed": false
+      },
+      {
+        "source_id": "82084c28-b7ea-4f3b-9d08-979671fec10a",
+        "source_version": 1,
+        "name": "JobRequest-A_(2)_(3)_1789406011025.pdf",
+        "sha256": "9a397abf8dbb5337e7aed2211d449f7c2a05bc7c2789369d7b97993b8f6b5f0b",
+        "historical_sha256": null,
+        "identity_changed": true,
+        "hash_changed": false
+      }
+    ],
+    "source_precedence": "MY_FILES_ORIGINAL_SOURCE",
+    "memory_or_summary_override": "BLOCKED"
+  },
+  "execution_classification": "EXECUTION_OK",
+  "source_identity_preconditions": {
+    "status": "VERIFIED",
+    "expected_source_count": 2,
+    "observed_source_count": 4,
+    "missing_sources": []
+  },
+  "external_input_blocker": null,
+  "tool_names": [
+    "search_my_files",
+    "inspect_source_of_truth",
+    "inspect_source_of_truth"
+  ],
+  "runtime_cleanup": {
+    "messages": 1,
+    "checkpoints": 1,
+    "tool_events": 1,
+    "pending_actions": 0,
+    "runs": 1,
+    "sessions": 1,
+    "audit_events_preserved": 1
+  },
+  "semantic_answer_saved": false,
+  "raw_trace_saved": false
+}
