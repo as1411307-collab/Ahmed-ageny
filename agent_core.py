@@ -60,6 +60,7 @@ GEMINI_MODEL = AHMED_PRIMARY_MODEL
 OPENAI_MODEL = AHMED_OPENAI_MODEL
 ProviderName = Literal["gemini", "openai"]
 SUPPORTED_PROVIDER_NAMES = frozenset({"gemini", "openai"})
+TRANSIENT_PROVIDER_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
 MAX_MESSAGE_HISTORY_ITEMS = 50
 MAX_MESSAGE_HISTORY_BYTES = 1_000_000
 # Source-of-truth comparisons need one search plus one inspection for each
@@ -682,6 +683,54 @@ def _provider_error_code(error: Exception) -> str | None:
     return None
 
 
+def _transient_provider_failure_reason(error: Exception) -> str | None:
+    status_code = getattr(error, "status_code", None)
+    if status_code == 429:
+        return "RATE_LIMITED"
+    if status_code in TRANSIENT_PROVIDER_STATUS_CODES:
+        return f"HTTP_{status_code}"
+    return None
+
+
+def _ready_fallback(
+    candidates: Sequence[ProviderCandidate],
+    *,
+    excluded: set[str],
+) -> ProviderCandidate | None:
+    for candidate in candidates:
+        if candidate.name in excluded:
+            continue
+        if provider_health(candidate.name)["status"] == "READY":  # type: ignore[arg-type]
+            return candidate
+    return None
+
+
+async def _record_provider_fallback(
+    tool_event_recorder: (
+        Callable[[str, str, int, dict[str, Any] | None], Awaitable[None]] | None
+    ),
+    *,
+    requested_provider: str,
+    actual_provider: str,
+    switch_reason: str,
+) -> None:
+    if tool_event_recorder is None:
+        return
+    try:
+        await tool_event_recorder(
+            "model_provider_fallback",
+            "success",
+            0,
+            {
+                "requested_provider": requested_provider,
+                "actual_provider": actual_provider,
+                "switch_reason": switch_reason,
+            },
+        )
+    except Exception:
+        logger.warning("Provider fallback trace persistence failed")
+
+
 def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[AgentDeps, str]:
     async def web_search(
         ctx: RunContext[AgentDeps],
@@ -1264,16 +1313,32 @@ async def run_ahmed(
     if scope not in {"WEB", "MY_FILES"}:
         raise ValueError("invalid agent scope")
 
-    health = provider_health(provider)
+    candidates = [candidate] + [
+        configured_candidate
+        for configured_candidate in providers.values()
+        if configured_candidate.name != candidate.name
+    ]
+    attempted_providers: set[str] = set()
+    active_candidate = candidate
+    health = provider_health(active_candidate.name)  # type: ignore[arg-type]
     if health["status"] == "RATE_LIMITED":
-        raise AgentCoreError(
-            f"{provider} is temporarily rate limited.",
-            provider=candidate.name,
-            status_code=429,
-            provider_code="RATE_LIMITED",
-            provider_status="RATE_LIMITED",
+        fallback = _ready_fallback(candidates, excluded={active_candidate.name})
+        if fallback is None:
+            raise AgentCoreError(
+                f"{provider} is temporarily rate limited.",
+                provider=active_candidate.name,
+                status_code=429,
+                provider_code="RATE_LIMITED",
+                provider_status="RATE_LIMITED",
+            )
+        await _record_provider_fallback(
+            tool_event_recorder,
+            requested_provider=provider,
+            actual_provider=fallback.name,
+            switch_reason="RATE_LIMITED_PRECHECK",
         )
-    agent = _build_agent(candidate.model, scope)
+        active_candidate = fallback
+
     preflight_context = await prepare_evidence_first_context(
         user_message,
         scope=scope,
@@ -1284,7 +1349,9 @@ async def run_ahmed(
     if preflight_context.model_context:
         model_message = f"{user_message}\n\n{preflight_context.model_context}"
     last_error: Exception | None = None
-    for attempt in range(GEMINI_429_MAX_RETRIES + 1):
+    for _ in range(GEMINI_429_MAX_RETRIES + 1):
+        attempted_providers.add(active_candidate.name)
+        agent = _build_agent(active_candidate.model, scope)
         attempt_started = time.perf_counter()
         try:
             evidence_envelopes: list[dict[str, Any]] = list(
@@ -1318,18 +1385,33 @@ async def run_ahmed(
                         if getattr(part, "content", None) == original_output:
                             part.content = final_output
             _mark_provider_ready(
-                provider,
+                active_candidate.name,  # type: ignore[arg-type]
                 int((time.perf_counter() - attempt_started) * 1000)
             )
             return result
         except ModelHTTPError as error:
             last_error = error
-            if error.status_code == 429:
-                _mark_provider_429(provider)
-                if _provider_state_for(provider).status == "RATE_LIMITED":
-                    break
-                if attempt < GEMINI_429_MAX_RETRIES:
-                    await asyncio.sleep(_retry_after_seconds(error, attempt))
+            reason = _transient_provider_failure_reason(error)
+            if reason is not None:
+                if error.status_code == 429:
+                    _mark_provider_429(active_candidate.name)  # type: ignore[arg-type]
+                fallback = _ready_fallback(
+                    candidates,
+                    excluded=attempted_providers,
+                )
+                if fallback is not None:
+                    await _record_provider_fallback(
+                        tool_event_recorder,
+                        requested_provider=provider,
+                        actual_provider=fallback.name,
+                        switch_reason=reason,
+                    )
+                    active_candidate = fallback
+                    continue
+                if len(attempted_providers) <= GEMINI_429_MAX_RETRIES:
+                    await asyncio.sleep(
+                        _retry_after_seconds(error, len(attempted_providers) - 1)
+                    )
                     continue
             break
         except Exception as error:
@@ -1338,7 +1420,7 @@ async def run_ahmed(
 
     logger.warning(
         "Agent provider failed provider=%s error_type=%s",
-        candidate.name,
+        active_candidate.name,
         type(last_error).__name__ if last_error else "UnknownError",
     )
 
@@ -1349,22 +1431,22 @@ async def run_ahmed(
         else None
     )
     if status_code == 429:
-        _open_rate_limit(provider)
+        _open_rate_limit(active_candidate.name)  # type: ignore[arg-type]
         provider_status = "RATE_LIMITED"
         provider_code = "RATE_LIMITED"
     elif status_code in {401, 403} or provider_code == "oauth.v2.ApiKeyNotApproved":
-        _provider_state_for(provider).status = "UNAUTHORIZED"
+        _provider_state_for(active_candidate.name).status = "UNAUTHORIZED"  # type: ignore[arg-type]
         provider_status = "UNAUTHORIZED"
     else:
-        _provider_state_for(provider).status = "ERROR"
+        _provider_state_for(active_candidate.name).status = "ERROR"  # type: ignore[arg-type]
         provider_status = "ERROR"
-    state = _provider_state_for(provider)
+    state = _provider_state_for(active_candidate.name)  # type: ignore[arg-type]
     state.last_failure = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     state.last_failure_code = provider_code or provider_status
     state.last_latency_ms = None
     raise AgentCoreError(
         "All configured model providers failed.",
-        provider=candidate.name,
+        provider=active_candidate.name,
         status_code=status_code,
         provider_code=provider_code,
         provider_status=provider_status,
