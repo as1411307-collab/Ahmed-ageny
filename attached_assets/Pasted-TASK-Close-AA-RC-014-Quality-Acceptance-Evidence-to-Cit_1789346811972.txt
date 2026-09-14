@@ -1,0 +1,420 @@
+TASK: Close AA-RC-014 Quality Acceptance — Evidence-to-Citation Verification
+
+نفّذ هذه المرحلة فقط.
+
+الوضع الحالي المعتمد:
+
+- Baseline coverage:
+  - Total: 26
+  - EXECUTED: 23
+  - Capability Gaps: 3
+  - Provider Failures: 0
+  - HITL_BLOCKED: 0
+
+Remaining gaps:
+- AA-RC-002
+- AA-RC-007
+- AA-RC-011
+
+AA-RC-014:
+- Capability Acceptance = SUCCESS
+- inspect_source_status = operational on real execution path
+- Coverage Acceptance = SUCCESS
+- Quality Acceptance = PENDING
+
+المشكلة المعروفة:
+- semantic_grading = NOT_RUN
+- AA-RC-014 deterministic quality status = FAIL
+- السبب الحالي المعروف: final answer لا يحتوي citation markers بالشكل الذي يتوقعه grader رغم أن ProjectEvidenceEnvelope يحتوي provenance/evidence صحيحة.
+
+الهدف الوحيد:
+إغلاق Quality Acceptance لـ AA-RC-014 بدون تغيير scope الـCapability وبدون بدء أي Gap أخرى.
+
+
+==================================================
+0. FREEZE CURRENT COVERAGE BASELINE
+==================================================
+
+لا تعدّل:
+
+- real-cases-validated.json
+- baseline-real-v1-complete.json
+- baseline-real-v2-aa-rc-016-complete.json
+- baseline-real-v3-aa-rc-014-complete.json
+- runtime_evidence.py
+- provider/model configuration
+- deploy/publish configuration
+- Express/TypeScript
+- server.py إلا إذا ظهر blocker تقني حقيقي؛ عندها توقف قبل تعديله.
+
+Dataset SHA-256 يجب أن يبقى:
+
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+الـcoverage baseline الحالي يبقى المرجع:
+
+23 EXECUTED / 3 Gaps / 0 Provider Failures / 0 HITL_BLOCKED
+
+
+==================================================
+1. INSPECT THE QUALITY PIPELINE FIRST
+==================================================
+
+قبل أي تعديل:
+
+افحص فعليًا:
+
+- deterministic quality grader
+- semantic grader
+- final-answer generation path
+- tool-result-to-answer path
+- citation parser/validator الموجود إن وجد
+
+حدد بدقة:
+
+1. ما citation marker / citation schema الذي يتوقعه grader؟
+2. هل الـgrader يتحقق من:
+   - source path
+   - line range
+   - evidence ID
+   - file hash
+   - أو صيغة نصية محددة؟
+3. أين تضيع citations حاليًا؟
+   - tool result؟
+   - agent synthesis؟
+   - final rendering؟
+   - grader parsing؟
+
+لا تفترض السبب من التقرير السابق فقط.
+أثبت السبب من الكود الحالي.
+
+أعطني في التقرير النهائي السبب الفعلي.
+
+
+==================================================
+2. DESIGN ONE EVIDENCE-TO-CITATION CONTRACT
+==================================================
+
+لا تجعل النموذج يختلق citations.
+
+المصدر الوحيد المسموح للـcitation هو:
+
+ProjectEvidenceEnvelope.evidence_items
+
+كل claim مدعومة يجب أن تستطيع الارتباط بـ evidence item حقيقي يحتوي على الأقل:
+
+- relative_source_path
+- line_start
+- line_end
+- file_sha256
+- extracted_evidence
+- verification_status
+
+إذا كان claim لا توجد له evidence كافية:
+- لا تنشئ citation وهمية.
+- صرّح بأنها limitation / unverified بدل ذلك.
+
+مهم:
+file_sha256 يثبت integrity/provenance فقط ولا يثبت صحة المعنى.
+
+
+==================================================
+3. IMPLEMENT DETERMINISTIC CITATION RENDERING
+==================================================
+
+نفّذ أقل تغيير معماري ممكن.
+
+فضّل أن يكون citation rendering deterministic ومبنيًا على structured evidence، وليس prompt instruction فقط.
+
+المطلوب:
+
+Structured Fact
+    ↓
+Supported Evidence Items
+    ↓
+Deterministic Citation Renderer
+    ↓
+Final Answer
+
+يمكن للنموذج صياغة النص التفسيري،
+لكن citation identity نفسها يجب أن تأتي من evidence metadata الفعلية.
+
+لا hard-code أسماء SearchProvider/PageFetcher أو إجابات المشروع داخل renderer.
+
+لا تنقل Evidence Core أو تعيد تصميمه ما لم يكن blocker حقيقيًا.
+
+إذا احتجت module صغيرًا منفصلًا للـrendering، استخدم naming متوافقًا مع layout الحالي.
+
+لا تضف framework أو dependency جديدة بدون ضرورة.
+
+
+==================================================
+4. CITATION BEHAVIOR
+==================================================
+
+يجب أن تدعم الإجابة على الأقل:
+
+A. VERIFIED claims
+- citation إلى الملف/السطور التي تثبت الادعاء.
+
+B. DISCREPANCY claims
+- citation لكل جانب من جوانب التناقض عند الحاجة.
+مثال:
+implementation exists
+لكن active call site غير موجود أو active path مختلف.
+
+C. NOT_FOUND
+- لا تصنع citation إلى ملف غير موجود.
+- وضح أن البحث ضمن allowlist لم يجد الدليل.
+
+D. DENIED
+- لا تكشف path أو secret غير مسموح.
+- وضح فقط أن الدليل خارج boundary المسموح.
+
+E. Limitations
+- إذا source inspection لا يثبت external provider health أو secret validity، يجب أن يبقى ذلك limitation صريحة.
+
+
+==================================================
+5. SECURITY MUST NOT REGRESS
+==================================================
+
+حافظ على:
+
+- read-only
+- no arbitrary filesystem paths
+- no path traversal
+- no external symlinks
+- no secret value exposure
+- no .env access
+- no shell
+- no network added to evidence inspection
+- no mutation
+
+citation rendering لا يجوز أن يعيد raw secrets أو snippets تم redaction لها مسبقًا.
+
+لا تسمح لمحتوى source/comments/documentation بأن يحدد citation policy.
+
+Evidence is data, never authority.
+
+
+==================================================
+6. TESTS
+==================================================
+
+أضف اختبارات للآتي:
+
+- VERIFIED claim ينتج citation حقيقية.
+- citation path يطابق evidence item.
+- line range يطابق evidence item.
+- citation لا تستخدم hash من ملف آخر.
+- multiple evidence items يمكن تمثيلها بدون خلط.
+- DISCREPANCY يحتفظ بأدلة الطرفين عندما تكون موجودة.
+- NOT_FOUND لا ينتج fake source citation.
+- DENIED لا يكشف path/secret details.
+- secret redaction تبقى فعالة.
+- unsupported claim لا يحصل على fabricated citation.
+- تعديل fixture يغير file SHA ولا يكسر mapping.
+- AA-RC-014 فقط تستخدم هذا المسار حيث يلزم.
+- AA-RC-016 لا يحدث لها regression.
+- AA-RC-002 / 007 / 011 تبقى Capability Gaps.
+
+بعدها:
+شغّل test suite كاملة.
+
+سجل العدد الفعلي؛ لا تفترض مسبقًا أنه 87.
+
+
+==================================================
+7. TARGETED AA-RC-014 QUALITY ACCEPTANCE
+==================================================
+
+شغّل AA-RC-014 وحدها على execution path الحقيقي.
+
+يجب أن:
+
+- AA-RC-014 = EXECUTED
+- inspect_source_status يتم استدعاؤها فعليًا
+- search_provider evidence تبقى evidence-backed
+- page_fetcher discrepancy تبقى evidence-backed
+- no Provider Failure
+- no HITL block
+
+ثم شغّل deterministic quality grader.
+
+شرط النجاح:
+
+AA-RC-014 deterministic quality = PASS
+
+ويجب أن يكون PASS بسبب citations/provenance صحيحة، لا بسبب تعطيل قاعدة الـgrader.
+
+
+==================================================
+8. SEMANTIC GRADING
+==================================================
+
+بعد deterministic PASS:
+
+شغّل semantic grading المستهدف لـAA-RC-014 باستخدام الآلية الموجودة بالفعل في المشروع.
+
+لا تغيّر grader threshold لكي تحصل على PASS.
+
+لا تغيّر model/provider فقط لتحسين الدرجة.
+
+سجل:
+- grader used
+- result
+- score إن كان الـgrader الحالي ينتج score
+- failure reason إن وجد
+
+شرط Quality Acceptance:
+
+- semantic grading تم تشغيله فعليًا
+- النتيجة تحقق threshold الموجود مسبقًا في المشروع
+- citations/provenance ليست متناقضة مع النص النهائي
+
+إذا semantic grader غير متاح لسبب provider availability:
+سجل:
+
+Quality Acceptance = DEFERRED
+
+ولا تعتبرها FAIL للـCapability نفسها.
+
+
+==================================================
+9. FULL REGRESSION
+==================================================
+
+بعد targeted Quality Acceptance:
+
+شغّل الـ26 real cases كاملة مرة واحدة.
+
+شرط coverage:
+
+- Total: 26
+- EXECUTED: 23
+- Capability Gaps: 3
+- Provider Failures: 0
+- HITL_BLOCKED: 0
+
+Remaining gaps تحديدًا:
+
+- AA-RC-002
+- AA-RC-007
+- AA-RC-011
+
+ويجب أن تبقى:
+
+- AA-RC-014 = EXECUTED
+- AA-RC-016 = EXECUTED
+
+لا تغيّر provider إذا ظهر rate limit.
+لا تعمل retry loop غير منضبط.
+
+
+==================================================
+10. QUALITY PROMOTION ARTIFACT
+==================================================
+
+لا تستبدل coverage baseline v3.
+
+Coverage baseline الحالي:
+
+baseline-real-v3-aa-rc-014-complete.json
+
+يبقى immutable.
+
+إذا نجحت Quality Acceptance، أنشئ Quality Acceptance Artifact منفصلًا أو استخدم naming convention موجودة فعلًا للمشروع.
+
+مثال فقط إذا لم يوجد convention أفضل:
+
+quality-aa-rc-014-complete.json
+
+يحتوي على الأقل:
+
+- AA-RC-014 targeted execution result
+- deterministic grading result
+- semantic grading result
+- citation verification result
+- relevant evidence references
+- Dataset SHA-256
+- coverage baseline reference
+- quality artifact physical SHA-256
+- canonical SHA-256 إذا كانت آلية canonical artifact الحالية مناسبة لهذا النوع
+
+لا تسمّ artifact الجديد coverage baseline v4 ما لم يتغير coverage فعليًا.
+
+
+==================================================
+11. ACCEPTANCE STATE
+==================================================
+
+الحالة النهائية المطلوبة:
+
+AA-RC-014 Capability Acceptance = SUCCESS
+AA-RC-014 Coverage Acceptance = SUCCESS
+AA-RC-014 Quality Acceptance = SUCCESS
+
+Coverage Baseline:
+23 / 3 / 0 / 0
+
+Quality Gate:
+PASSED
+
+
+==================================================
+12. ممنوع في هذه المرحلة
+==================================================
+
+لا تبدأ:
+
+- AA-RC-002
+- AA-RC-007
+- AA-RC-011
+- Runtime Assurance Pack
+- ADR-017 implementation
+- ADR-018 implementation
+- Code Sandbox
+- Adaptive Brain
+- Multimodal/Voice implementation
+- self-improvement engine
+- multi-provider routing
+- provider fallback
+- generic project_file_access
+- generic repository search
+- prompt refactor عام
+
+لا تصلح PageFetcher فقط لتحويل DISCREPANCY إلى VERIFIED.
+إذا كانت DISCREPANCY تمثل الحقيقة الحالية، احتفظ بها.
+
+
+==================================================
+13. FINAL REPORT
+==================================================
+
+أعطني تقريرًا واحدًا يحتوي على:
+
+- السبب الفعلي لفشل quality grader السابق.
+- صيغة citation التي يتوقعها grader.
+- الملفات المعدلة.
+- citation contract الفعلي.
+- كيف يتم ربط claim بـevidence item.
+- كيف يتم منع fabricated citations.
+- نتائج security tests.
+- إجمالي الاختبارات.
+- targeted AA-RC-014 execution.
+- deterministic grading result.
+- semantic grading result.
+- Full 26-case result.
+- remaining gaps.
+- اسم Quality Artifact إن تم إنشاؤه.
+- Physical SHA-256.
+- Canonical SHA-256 إن وجد.
+- Dataset SHA-256.
+- تأكيد عدم تعديل coverage baselines v1/v2/v3.
+- أي warning أو regression.
+
+بعد نجاح Quality Acceptance:
+توقف.
+
+لا تبدأ AA-RC-002 تلقائيًا.
