@@ -6,6 +6,7 @@ import json
 import re
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 
 ROOT = Path(__file__).parent
@@ -121,6 +122,36 @@ def _redact_text(value: str, *, limit: int = 600) -> str:
     if len(redacted) > limit:
         return redacted[:limit].rstrip() + "…"
     return redacted
+
+
+def _safe_external_provenance(
+    values: Any,
+) -> list[dict[str, str]]:
+    if not isinstance(values, list):
+        return []
+    safe: list[dict[str, str]] = []
+    for value in values[:24]:
+        if not isinstance(value, dict):
+            continue
+        raw_url = value.get("url")
+        if not isinstance(raw_url, str):
+            continue
+        parsed = urlsplit(raw_url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            continue
+        safe_url = urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
+        safe.append(
+            {
+                "url": safe_url,
+                "title": _redact_text(str(value.get("title") or ""), limit=300),
+                "snippet": _redact_text(str(value.get("snippet") or ""), limit=1200),
+                "source_identity": str(
+                    value.get("source_identity") or "external_web_search"
+                )[:100],
+                "verification_status": "UNVERIFIED_EXTERNAL",
+            }
+        )
+    return safe
 
 
 def _reject_secret_fields(value: Any, path: str = "root") -> None:
@@ -643,6 +674,9 @@ def _packet_trace_for_independent_reviewer(trace: dict[str, Any]) -> dict[str, A
             if isinstance(value, str)
         ][:24],
         "evidence_provenance": trace.get("evidence_provenance", [])[:24],
+        "external_evidence_provenance": _safe_external_provenance(
+            trace.get("external_evidence_provenance")
+        ),
         "evidence_preconditions": trace.get("evidence_preconditions"),
         "upload_e2e": trace.get("upload_e2e"),
     }

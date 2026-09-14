@@ -1,0 +1,16 @@
+{
+  "schema_version": "operational-evidence.v11",
+  "execution_trace_linkage": {
+    "status_code": 200,
+    "run_id": "71c46892-1ddb-49b4-bafb-89e0b80a54e4",
+    "checkpoint_count": 5,
+    "stages": [
+      "context_loaded",
+      "model_running",
+      "response_ready",
+      "response_persisted",
+      "completed"
+    ],
+    "same_run_id": true
+  }
+}

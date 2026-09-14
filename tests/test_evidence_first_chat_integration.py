@@ -80,6 +80,41 @@ class EvidenceFirstChatIntegrationTests(unittest.TestCase):
         self.assertIn("https://docs.example.test/current", context.model_context)
         self.assertIn("https://docs.example.test/current", context.external_sources)
 
+    def test_web_preflight_persists_structured_unverified_external_provenance(self) -> None:
+        web_result = {
+            "ok": True,
+            "results": [
+                {
+                    "title": "Official documentation",
+                    "url": "https://docs.example.test/current?tracking=secret",
+                    "snippet": "Current official guidance.",
+                }
+            ],
+        }
+        events: list[tuple[object, ...]] = []
+
+        async def record(*args: object) -> None:
+            events.append(args)
+
+        with patch(
+            "agent_core.existing_web_search",
+            new=AsyncMock(return_value=web_result),
+        ):
+            asyncio.run(
+                prepare_evidence_first_context(
+                    "ابحث على الويب عن أحدث التوثيق الرسمي",
+                    scope="WEB",
+                    tool_event_recorder=record,
+                )
+            )
+
+        metadata = events[0][3]
+        self.assertIsInstance(metadata, dict)
+        external = metadata["external_evidence_provenance"]
+        self.assertEqual(external[0]["url"], "https://docs.example.test/current")
+        self.assertEqual(external[0]["verification_status"], "UNVERIFIED_EXTERNAL")
+        self.assertEqual(external[0]["source_identity"], "external_web_search")
+
     def test_build_vs_buy_preflight_propagates_architecture_provenance(self) -> None:
         architecture_result = {
             "status": "VERIFIED",

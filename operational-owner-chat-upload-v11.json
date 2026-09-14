@@ -1,0 +1,24 @@
+{
+  "schema_version": "operational-evidence.v11",
+  "owner_chat_unauthenticated": {
+    "status_code": 401,
+    "code": "AUTHENTICATION_REQUIRED"
+  },
+  "owner_chat_authenticated": {
+    "status_code": 200,
+    "reply_present": true,
+    "session_id": "05e4f939-d464-4a2f-a60d-f56cde203046",
+    "run_id": "71c46892-1ddb-49b4-bafb-89e0b80a54e4"
+  },
+  "owner_upload": {
+    "status_code": 201,
+    "ready_count": 1,
+    "cleanup": {
+      "status": "PASS",
+      "cleaned_source_ids": [
+        "bf743d6e-5062-44b8-afae-810fea93bd5f"
+      ],
+      "errors": []
+    }
+  }
+}

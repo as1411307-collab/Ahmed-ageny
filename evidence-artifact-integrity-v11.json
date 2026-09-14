@@ -1,0 +1,94 @@
+{
+  "schema_version": "evidence-artifact-integrity.v1",
+  "artifact_set": "v11",
+  "files": [
+    {
+      "file": "baseline-real-v11-final-pre-review.json",
+      "sha256": "8baa74abd1b5aa4b6214bfcf8258273ddbfbb77cb90dbaea122b2c35454c0bff",
+      "bytes": 1583557
+    },
+    {
+      "file": "semantic-evaluation-contract-v11.json",
+      "sha256": "8ebaedc9a6445c134cfb10e88ca43db9f80088d3d04b956e0973a6da60680865",
+      "bytes": 77845
+    },
+    {
+      "file": "semantic-review-packet-v11.json",
+      "sha256": "1e071d6a2208e3bd7e5f62aa06e1d402183ac60b483d9c10015a0a52d5cc903f",
+      "bytes": 537464
+    },
+    {
+      "file": "semantic-review-input-template-v11.json",
+      "sha256": "2773dc4805ee7822dd1cd7aa40a771b8c9c0bbb90aef773b4984048c572dc18f",
+      "bytes": 13470
+    },
+    {
+      "file": "independent-semantic-review-v11-openai.json",
+      "sha256": "5d0ac62af64bb5e2be4813116a5f983fb7ab9d72c9b4601bab8e80a2eedd6fca",
+      "bytes": 95922
+    },
+    {
+      "file": "semantic-evaluation-v11-pre-review.json",
+      "sha256": "80f027e80fe544e938e3f4c6f6acee77b7b04c8d99c575e0da5cc86c2ce38580",
+      "bytes": 180413
+    },
+    {
+      "file": "semantic-evaluation-v11-final.json",
+      "sha256": "e555df1de0df263fb1fc30e5f0859239f58aa8f9c18217d7f70151b43b000fc5",
+      "bytes": 214814
+    },
+    {
+      "file": "operational-evidence-v11.json",
+      "sha256": "b8b5b4080c631860b50edfbe9629466da55c477cff8a5de4f4880bd906e884cc",
+      "bytes": 1409
+    },
+    {
+      "file": "operational-owner-chat-upload-v11.json",
+      "sha256": "8b0005fe1fdf5fecc42bf6d069d989548289a7f68317848a8d1039ca517d2617",
+      "bytes": 574
+    },
+    {
+      "file": "operational-mcp-handshake-v11.json",
+      "sha256": "21185a514ffb1704b27bf4293171cf2086044469a4797128b35cdd7175a21390",
+      "bytes": 168
+    },
+    {
+      "file": "operational-execution-trace-v11.json",
+      "sha256": "b9bfdb8af06571ee99c6532a11bb90f6a8be097ccb10a25c76a2929a575d74ad",
+      "bytes": 356
+    },
+    {
+      "file": "operational-provider-fallback-v11.json",
+      "sha256": "d52817e8d93041f44905f6d86d545da014e09ec2fb9d7b31a904ba9c0b302807",
+      "bytes": 464
+    },
+    {
+      "file": "security-audit-v11.json",
+      "sha256": "d33ba7ccecaf8524dc4cfe21c2442d7641cc2f112ff9d1fc45299603e069c91e",
+      "bytes": 537
+    }
+  ],
+  "semantic_outcome": {
+    "overall_status": "FAIL",
+    "counts": {
+      "PASS": 0,
+      "FAIL": 19,
+      "REVIEW_REQUIRED": 5,
+      "NOT_DETERMINED": 2
+    },
+    "review_applied": true,
+    "review_packet_sha256": "54166085c30d29f341fec14e5a2a46f9b4f647e979935abf6223f66fe9f6ae25"
+  },
+  "operational_outcome": {
+    "owner_chat_status": 200,
+    "owner_upload_status": 201,
+    "mcp_initialize_status": 200,
+    "trace_linked": true,
+    "fallback_fault_injection": "PASS"
+  },
+  "external_blockers_preserved": [
+    "AUTHORIZED_SOURCE_DOCUMENTS_MISSING",
+    "AA-RC-026 external documentation/tradeoff evidence not supplied"
+  ],
+  "notes": "Artifact hashes cover the v11 semantic, operational, and security evidence generated on the isolated branch."
+}

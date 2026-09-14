@@ -893,6 +893,21 @@ def build_evaluation_trace(
             for item in evidence_provenance
         }.values()
     )[:24]
+    external_evidence_provenance = [
+        provenance
+        for event in tool_events
+        for provenance in safe_event_metadata(event).get(
+            "external_evidence_provenance",
+            [],
+        )
+        if isinstance(provenance, dict)
+    ]
+    external_evidence_provenance = list(
+        {
+            json.dumps(item, ensure_ascii=False, sort_keys=True): item
+            for item in external_evidence_provenance
+        }.values()
+    )[:24]
     if not available_evidence_citations:
         available_evidence_citations = sorted(
             {
@@ -940,6 +955,7 @@ def build_evaluation_trace(
         "available_evidence_citations": available_evidence_citations,
         "available_evidence_items": available_evidence_items,
         "evidence_provenance": evidence_provenance,
+        "external_evidence_provenance": external_evidence_provenance,
         "pending_action_events": pending_events,
         "approval_requested": bool(pending_events),
         "executed_without_approval": any(

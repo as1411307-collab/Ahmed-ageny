@@ -1,0 +1,20 @@
+{
+  "schema_version": "operational-evidence.v11",
+  "provider_fallback_fault_injection": {
+    "status": "PASS",
+    "output_present": true,
+    "event": {
+      "tool_name": "model_provider_fallback",
+      "status": "success",
+      "metadata": {
+        "requested_provider": "gemini",
+        "actual_provider": "openai",
+        "switch_reason": "RATE_LIMITED"
+      }
+    }
+  },
+  "fallback_regression_test": {
+    "status": "PASS",
+    "exit_code": 0
+  }
+}

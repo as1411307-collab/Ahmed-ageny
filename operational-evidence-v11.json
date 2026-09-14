@@ -1,0 +1,59 @@
+{
+  "schema_version": "operational-evidence.v11",
+  "owner_chat_unauthenticated": {
+    "status_code": 401,
+    "code": "AUTHENTICATION_REQUIRED"
+  },
+  "owner_chat_authenticated": {
+    "status_code": 200,
+    "reply_present": true,
+    "session_id": "05e4f939-d464-4a2f-a60d-f56cde203046",
+    "run_id": "71c46892-1ddb-49b4-bafb-89e0b80a54e4"
+  },
+  "execution_trace_linkage": {
+    "status_code": 200,
+    "run_id": "71c46892-1ddb-49b4-bafb-89e0b80a54e4",
+    "checkpoint_count": 5,
+    "stages": [
+      "context_loaded",
+      "model_running",
+      "response_ready",
+      "response_persisted",
+      "completed"
+    ],
+    "same_run_id": true
+  },
+  "owner_upload": {
+    "status_code": 201,
+    "ready_count": 1,
+    "cleanup": {
+      "status": "PASS",
+      "cleaned_source_ids": [
+        "bf743d6e-5062-44b8-afae-810fea93bd5f"
+      ],
+      "errors": []
+    }
+  },
+  "mcp_handshake": {
+    "status_code": 200,
+    "has_jsonrpc_result": true,
+    "session_header_present": true
+  },
+  "provider_fallback_fault_injection": {
+    "status": "PASS",
+    "output_present": true,
+    "event": {
+      "tool_name": "model_provider_fallback",
+      "status": "success",
+      "metadata": {
+        "requested_provider": "gemini",
+        "actual_provider": "openai",
+        "switch_reason": "RATE_LIMITED"
+      }
+    }
+  },
+  "fallback_regression_test": {
+    "status": "PASS",
+    "exit_code": 0
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "schema_version": "operational-evidence.v11",
+  "mcp_handshake": {
+    "status_code": 200,
+    "has_jsonrpc_result": true,
+    "session_header_present": true
+  }
+}

@@ -9,6 +9,7 @@ import time
 from dataclasses import dataclass
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Annotated, Any, Literal
+from urllib.parse import urlsplit, urlunsplit
 from uuid import uuid4
 
 from pydantic import Field
@@ -286,6 +287,13 @@ def _render_external_sources(sources: tuple[str, ...]) -> str:
     return "\n".join(lines)
 
 
+def _safe_external_provenance_url(value: str) -> str | None:
+    parsed = urlsplit(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return None
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
+
+
 async def prepare_evidence_first_context(
     user_message: str,
     *,
@@ -468,11 +476,23 @@ async def prepare_evidence_first_context(
                 if isinstance(item, dict) and isinstance(item.get("url"), str)
             ]
             external_sources.extend(item["url"] for item in safe_results)
+            external_evidence_provenance = [
+                {
+                    "url": safe_url,
+                    "title": str(item.get("title") or "")[:300],
+                    "snippet": str(item.get("snippet") or "")[:1200],
+                    "source_identity": "external_web_search",
+                    "verification_status": "UNVERIFIED_EXTERNAL",
+                }
+                for item in safe_results
+                if (safe_url := _safe_external_provenance_url(item["url"]))
+            ]
             payloads.append(
                 {
                     "target": "external web research",
                     "status": "VERIFIED" if safe_results else "NOT_FOUND",
                     "citations": [item["url"] for item in safe_results],
+                    "external_evidence_provenance": external_evidence_provenance[:8],
                     "facts": {
                         "result_count": len(safe_results),
                         "results": safe_results,
@@ -487,6 +507,7 @@ async def prepare_evidence_first_context(
                     "scope": "WEB",
                     "external_source_urls": external_sources[:8],
                     "evidence_citations": external_sources[:8],
+                    "external_evidence_provenance": external_evidence_provenance[:8],
                     "result_count": len(safe_results),
                 },
             )

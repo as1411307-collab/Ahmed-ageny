@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import semantic_evaluation
 from semantic_evaluation import (
     DIMENSIONS,
     SemanticEvaluationError,
@@ -217,6 +218,37 @@ class SemanticEvaluationTests(unittest.TestCase):
         self.assertNotIn("AHMED_OWNER_TOKEN", serialized)
         for case in self.packet["cases"]:
             self.assertTrue(case["observations"]["sensitive_content_redacted"])
+
+    def test_packet_preserves_bounded_external_provenance_without_verifying_it(self) -> None:
+        trace = {
+            "case_id": "AA-RC-026",
+            "run_id": "external-provenance-run",
+            "execution_status": "EXECUTED",
+            "provider": "gemini",
+            "model": "gemini-test",
+            "output": {"answer": "A cited answer."},
+            "tool_calls": [{"name": "web_search", "status": "success"}],
+            "citations": ["https://docs.example.test/current?tracking=secret"],
+            "sources": ["https://docs.example.test/current?tracking=secret"],
+            "external_evidence_provenance": [
+                {
+                    "url": "https://docs.example.test/current?tracking=secret",
+                    "title": "Official documentation",
+                    "snippet": "Current official guidance.",
+                    "source_identity": "external_web_search",
+                    "verification_status": "UNVERIFIED_EXTERNAL",
+                }
+            ],
+        }
+        packet_trace = semantic_evaluation._packet_trace_for_independent_reviewer(trace)
+        self.assertEqual(
+            packet_trace["external_evidence_provenance"][0]["url"],
+            "https://docs.example.test/current",
+        )
+        self.assertEqual(
+            packet_trace["external_evidence_provenance"][0]["verification_status"],
+            "UNVERIFIED_EXTERNAL",
+        )
 
     def test_review_input_template_is_independent_and_covers_all_cases(self) -> None:
         template = build_review_input_template(self.packet)
