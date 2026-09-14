@@ -59,6 +59,20 @@ class EvaluationBaselineTests(unittest.TestCase):
         )
         self.assertEqual(
             resolve_case_tool_expectation(
+                "AA-RC-011",
+                "project_file_access",
+            )["actual"],
+            "inspect_runtime_evidence",
+        )
+        self.assertEqual(
+            resolve_case_tool_expectation(
+                "AA-RC-007",
+                "project_file_access",
+            )["actual"],
+            "inspect_architecture_evidence",
+        )
+        self.assertEqual(
+            resolve_case_tool_expectation(
                 "AA-RC-014",
                 "project_file_access",
             )["actual"],
@@ -78,7 +92,7 @@ class EvaluationBaselineTests(unittest.TestCase):
         self.assertNotIn("AA-RC-016", gap_case_ids)
         self.assertEqual(
             gap_case_ids,
-            {"AA-RC-007", "AA-RC-011"},
+            set(),
         )
         case = next(
             case for case in load_evaluation_cases()

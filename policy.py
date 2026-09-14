@@ -56,6 +56,14 @@ TOOL_POLICIES: dict[str, ToolPolicy] = {
         external_side_effect=False,
         data_scope="PROJECT_RUNTIME_EVIDENCE",
     ),
+    "inspect_architecture_evidence": ToolPolicy(
+        tool_name="inspect_architecture_evidence",
+        risk_level=RiskLevel.READ_SAFE,
+        requires_approval=False,
+        reversible=True,
+        external_side_effect=False,
+        data_scope="PROJECT_ARCHITECTURE_EVIDENCE",
+    ),
     "inspect_source_status": ToolPolicy(
         tool_name="inspect_source_status",
         risk_level=RiskLevel.READ_SAFE,

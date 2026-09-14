@@ -149,10 +149,12 @@ does not reduce a mixed dataset to one unqualified average.
 
 Case tool names are semantic expectations and are mapped without rewriting the
 case. `my_files` maps to the actual `search_my_files` AgentCore tool;
-`web_search` maps directly. `file_access` and `project_file_access` currently
-have no AgentCore execution tool, while `deploy` and `publish` are platform
-boundaries rather than model tools. Such cases cannot be live-executed by the
-current harness until an execution adapter exists.
+`web_search` maps directly. `file_access` remains unavailable. The
+`project_file_access` expectation is case-specific: AA-RC-007 uses the fixed
+architecture-group evidence adapter, AA-RC-011 and AA-RC-016 use bounded
+runtime evidence, and AA-RC-014 uses fixed source-status evidence. These
+adapters are read-only and are not generic repository browsers. `deploy` and
+`publish` remain platform boundaries rather than model tools.
 
 For a persisted run, inspect its owner-only state trace with:
 

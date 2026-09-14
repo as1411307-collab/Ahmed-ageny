@@ -1,0 +1,18 @@
+{
+  "artifact_path": "baseline-real-v5-aa-rc-011-complete.json",
+  "serialized_file_sha256": "6988675f69c9f42d68d08182cd45c456b38b18178dcf80b5e6fc360a28f81523",
+  "physical_artifact_sha256": "b349b74d1075eea5e737411c206c371149ab48906155e0aba782980351c7bff0",
+  "canonical_artifact_sha256": "73d56193cf977de9913ca80e4e9a375b19713ed1db7738306729de950cfb00e1",
+  "raw_source_dataset_sha256": "923b05321ebba94cce69db8cb5317a6fc12f574ce27865c808c5d298d3879559",
+  "normalized_evaluation_dataset_sha256": "35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1",
+  "evaluation_source_pack_sha256": "e9785be9ec1f133704bd63cec8c3ee3fb976437020e24f1d69fc9d9e12311ede",
+  "full_evaluation_run_id": "87a7b233-180a-4419-ab23-aac227225d31",
+  "coverage": {
+    "total_selected": 26,
+    "executed": 25,
+    "execution_failed": 0,
+    "capability_gap": 1,
+    "hitl_blocked": 0,
+    "provider_rate_limited": 0
+  }
+}

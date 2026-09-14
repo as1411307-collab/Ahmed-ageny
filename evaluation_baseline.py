@@ -101,6 +101,20 @@ CASE_CAPABILITY_OVERRIDES = {
             "note": "AA-RC-002 uses authenticated immutable MY_FILES source inspection, not generic file access.",
         }
     },
+    "AA-RC-011": {
+        "project_file_access": {
+            "actual": "inspect_runtime_evidence",
+            "status": "available",
+            "note": "AA-RC-011 uses bounded deployment/runtime evidence, not general project file access.",
+        }
+    },
+    "AA-RC-007": {
+        "project_file_access": {
+            "actual": "inspect_architecture_evidence",
+            "status": "available",
+            "note": "AA-RC-007 uses fixed architecture-group evidence, not generic project file access.",
+        }
+    },
     "AA-RC-016": {
         "project_file_access": {
             "actual": "inspect_runtime_evidence",

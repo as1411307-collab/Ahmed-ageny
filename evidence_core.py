@@ -168,6 +168,7 @@ def _is_globally_allowlisted(relative_path: str) -> bool:
     if _is_denied_relative_path(relative_path):
         return False
     if relative_path in {
+        ".replit",
         "package.json",
         "pyproject.toml",
         "requirements.txt",
