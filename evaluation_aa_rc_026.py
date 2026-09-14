@@ -248,13 +248,15 @@ def build_comparison_matrix() -> list[dict[str, Any]]:
         {
             "criterion": "migration_cost_complexity",
             "build_assessment": "Incremental integration preserves current persistence, policy, and evidence contracts.",
-            "buy_assessment": "Adopting Responses API tools or Agents SDK requires mapping the existing runtime, tools, approvals, persistence, and provenance boundaries.",
+            "buy_assessment": "Adopting Responses API tools, Agents SDK primitives, or Workspace Agents requires mapping the existing runtime, tools, approvals, persistence, and provenance boundaries; Agent Builder retirement is an explicit migration risk.",
             "evidence_refs": [
                 "project:runtime",
                 "project:persistence_state_recovery",
                 "project:policy_security",
                 "external:responses_api_tools",
                 "external:agents_sdk",
+                "external:agentkit",
+                "external:workspace_agents",
             ],
         },
         {
@@ -290,6 +292,7 @@ def build_comparison_matrix() -> list[dict[str, Any]]:
                 "external:responses_api_tools",
                 "external:agents_sdk",
                 "external:model_capabilities",
+                "external:workspace_agents",
             ],
         },
         {
@@ -318,9 +321,307 @@ def build_comparison_matrix() -> list[dict[str, Any]]:
         {
             "criterion": "recommendation",
             "recommendation": "Continue Ahmed Agent incrementally; do not rebuild solely because OpenAI offers newer hosted agent capabilities. Evaluate a bounded OpenAI integration only where it improves a measured gap while preserving provider independence, provenance, governance, and fallback boundaries.",
-            "evidence_refs": ["project:architecture_fingerprint", "external:model_capabilities", "external:pricing"],
+            "evidence_refs": [
+                "project:architecture_fingerprint",
+                "external:model_capabilities",
+                "external:pricing",
+                "external:agentkit",
+            ],
         },
     ]
+
+
+def _canonical_url(value: str) -> str:
+    parts = urlsplit(value.strip())
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+
+
+def _project_claim_sources(
+    architecture: dict[str, Any],
+    source_ref: str,
+) -> list[dict[str, Any]]:
+    if source_ref == "project:architecture_fingerprint":
+        return [
+            {
+                "source_id": source_ref,
+                "source_type": "project",
+                "locator": {
+                    "architecture_fingerprint": architecture.get(
+                        "architecture_fingerprint"
+                    )
+                },
+                "trust_classification": PROJECT_TRUST_CLASSIFICATION,
+                "verification_status": "VERIFIED",
+            }
+        ]
+    group_name = source_ref.removeprefix("project:")
+    group = architecture.get("groups", {}).get(group_name)
+    if not isinstance(group, dict):
+        raise AuditabilityError(
+            f"AA-RC-026 project source group is missing: {source_ref}"
+        )
+    citations = group.get("citations", [])
+    if not citations:
+        raise AuditabilityError(
+            f"AA-RC-026 project source has no locator citations: {source_ref}"
+        )
+    return [
+        {
+            "source_id": source_ref,
+            "source_type": "project",
+            "locator": {
+                "path": citation.get("relative_source_path"),
+                "line_start": citation.get("line_start"),
+                "line_end": citation.get("line_end"),
+                "file_sha256": citation.get("file_sha256"),
+                "extracted_evidence": citation.get("extracted_evidence"),
+            },
+            "trust_classification": citation.get(
+                "trust_classification", PROJECT_TRUST_CLASSIFICATION
+            ),
+            "verification_status": citation.get("verification_status", "VERIFIED"),
+        }
+        for citation in citations[:3]
+    ]
+
+
+def _external_claim_sources(
+    external: list[dict[str, Any]],
+    source_ref: str,
+) -> list[dict[str, Any]]:
+    keys = _EXTERNAL_REFERENCE_KEYS.get(source_ref)
+    if not keys:
+        raise AuditabilityError(
+            f"AA-RC-026 external source reference is not registered: {source_ref}"
+        )
+    sources = [item for item in external if item.get("key") in keys]
+    if not sources:
+        raise AuditabilityError(
+            f"AA-RC-026 approved external source is missing: {source_ref}"
+        )
+    return [
+        {
+            "source_id": source_ref,
+            "source_key": item.get("key"),
+            "source_type": "external",
+            "url": item.get("url"),
+            "title": item.get("title"),
+            "accessed_at": item.get("date_accessed") or item.get("retrieved_at"),
+            "locator": {
+                "url": item.get("url"),
+                "content_sha256": item.get("content_sha256"),
+                "snippet_count": len(item.get("snippets", [])),
+            },
+            "trust_classification": EXTERNAL_TRUST_CLASSIFICATION,
+            "verification_status": item.get(
+                "verification_status", "UNVERIFIED_EXTERNAL"
+            ),
+        }
+        for item in sources
+    ]
+
+
+def build_claim_level_evidence_map(
+    *,
+    architecture: dict[str, Any],
+    external: list[dict[str, Any]],
+    comparison_matrix: list[dict[str, Any]],
+) -> dict[str, Any]:
+    claims: list[dict[str, Any]] = []
+    for row in comparison_matrix:
+        criterion = str(row.get("criterion") or "").strip()
+        if not criterion:
+            raise AuditabilityError("AA-RC-026 material claim is missing criterion.")
+        for field in ("build_assessment", "buy_assessment", "recommendation"):
+            text = row.get(field)
+            if not isinstance(text, str) or not text.strip():
+                continue
+            evidence_refs = row.get("evidence_refs", [])
+            if not isinstance(evidence_refs, list) or not evidence_refs:
+                raise AuditabilityError(
+                    f"AA-RC-026 claim has no evidence refs: {criterion}.{field}"
+                )
+            source_refs: list[dict[str, Any]] = []
+            for source_ref in evidence_refs:
+                if not isinstance(source_ref, str):
+                    raise AuditabilityError(
+                        f"AA-RC-026 claim has invalid source ref: {criterion}.{field}"
+                    )
+                if source_ref.startswith("project:"):
+                    source_refs.extend(_project_claim_sources(architecture, source_ref))
+                elif source_ref.startswith("external:"):
+                    source_refs.extend(_external_claim_sources(external, source_ref))
+                else:
+                    raise AuditabilityError(
+                        f"AA-RC-026 claim has unclassified source ref: {source_ref}"
+                    )
+            if not source_refs:
+                raise AuditabilityError(
+                    f"AA-RC-026 claim has no resolved sources: {criterion}.{field}"
+                )
+            claim_id = f"{criterion}.{field}"
+            claim_sources = {item["source_type"] for item in source_refs}
+            claims.append(
+                {
+                    "claim_id": claim_id,
+                    "claim_type": (
+                        "mixed"
+                        if claim_sources == {"project", "external"}
+                        else next(iter(claim_sources))
+                    ),
+                    "claim_text": text.strip(),
+                    "source_refs": source_refs,
+                    "direct_citation": f"[[claim:{claim_id}]]",
+                    "is_resolved": True,
+                }
+            )
+    if not claims:
+        raise AuditabilityError("AA-RC-026 has no material claims.")
+    return {
+        "schema_version": "aa-rc-026-claim-evidence.v1",
+        "material_claim_count": len(claims),
+        "claims": claims,
+    }
+
+
+def build_external_evidence_reconciliation(
+    *,
+    retrieved_results: list[dict[str, Any]],
+    approved_sources: list[dict[str, Any]],
+) -> dict[str, Any]:
+    approved_by_url = {
+        _canonical_url(str(item.get("url") or "")): item
+        for item in approved_sources
+        if item.get("url")
+    }
+    excluded_results: list[dict[str, Any]] = []
+    matched_results: list[dict[str, Any]] = []
+    for result in retrieved_results:
+        url = _canonical_url(str(result.get("url") or ""))
+        approved = approved_by_url.get(url)
+        if approved is None:
+            excluded_results.append(
+                {
+                    "url": result.get("url"),
+                    "title": result.get("title"),
+                    "accessed_at": result.get("retrieved_at")
+                    or result.get("date_accessed"),
+                    "reason": "not_in_approved_official_source_bundle",
+                }
+            )
+            continue
+        matched_results.append(
+            {
+                "url": approved["url"],
+                "title": approved["title"],
+                "accessed_at": approved.get("date_accessed")
+                or approved.get("retrieved_at"),
+                "approved_source_key": approved.get("key"),
+            }
+        )
+    matched_urls = {entry["url"] for entry in matched_results}
+    external_claims = [
+        {
+            "claim_id": f"external:{item['key']}",
+            "url": item["url"],
+            "title": item["title"],
+            "accessed_at": item.get("date_accessed") or item.get("retrieved_at"),
+            "source_identity": item.get("source_identity"),
+            "trust_classification": EXTERNAL_TRUST_CLASSIFICATION,
+            "verification_status": item.get(
+                "verification_status", "UNVERIFIED_EXTERNAL"
+            ),
+            "retrieved_by_search": _canonical_url(item["url"]) in matched_urls,
+        }
+        for item in approved_sources
+    ]
+    return {
+        "schema_version": "aa-rc-026-external-reconciliation.v1",
+        "retrieved_result_count": len(retrieved_results),
+        "approved_source_count": len(approved_sources),
+        "matched_result_count": len(matched_results),
+        "excluded_result_count": len(excluded_results),
+        "matched_results": matched_results,
+        "excluded_results": excluded_results,
+        "external_claims": external_claims,
+        "reconciliation_status": "RECONCILED",
+    }
+
+
+def build_audit_ready_answer(
+    *,
+    original_answer: str,
+    claims: dict[str, Any],
+) -> str:
+    resolved_claims = [
+        claim for claim in claims.get("claims", []) if claim.get("is_resolved")
+    ]
+    unresolved_claims = [
+        claim for claim in claims.get("claims", []) if not claim.get("is_resolved")
+    ]
+    lines = [
+        original_answer.strip(),
+        "",
+        "## Evidence-backed build-vs-buy comparison",
+    ]
+    lines.extend(
+        f"- {claim['claim_text']} {claim['direct_citation']}"
+        for claim in resolved_claims
+    )
+    lines.extend(
+        [
+            "",
+            "## Unresolved claims and abstention",
+            (
+                "- Claims without a resolved source mapping are not asserted. "
+                "Abstain from them until a project locator or an approved official "
+                "external source is available."
+            ),
+        ]
+    )
+    if unresolved_claims:
+        lines.extend(
+            f"- Unresolved: {claim['claim_text']} (abstain; no resolved source)."
+            for claim in unresolved_claims
+        )
+    return "\n".join(lines)
+
+
+def build_review_audit_trace(
+    *,
+    answer: str,
+    raw_trace: dict[str, Any],
+    architecture: dict[str, Any],
+    external: list[dict[str, Any]],
+    claims: dict[str, Any],
+    reconciliation: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "answer_saved": True,
+        "answer": answer,
+        "raw_trace_saved": True,
+        "raw_trace": _packet_trace_for_independent_reviewer(raw_trace),
+        "targeted_trace_saved": True,
+        "project_evidence_context": architecture.get("citations", [])[:48],
+        "external_evidence_context": external,
+        "claim_level_evidence_map": claims,
+        "external_evidence_reconciliation": reconciliation,
+    }
+
+
+def build_review_dimension_notes(*, claims: dict[str, Any]) -> dict[str, str]:
+    claim_ids = [
+        f"claim:{claim['claim_id']}" for claim in claims.get("claims", [])[:8]
+    ]
+    refs = ", ".join(claim_ids)
+    return {
+        dimension: (
+            f"AA-RC-026 audit evidence refs: {refs}. Review this dimension "
+            "against the cited claim text, source locator, trust classification, "
+            "and unresolved-claim abstention section."
+        )
+        for dimension in AUDIT_DIMENSIONS
+    }
 
 
 def _load_case() -> dict[str, Any]:
