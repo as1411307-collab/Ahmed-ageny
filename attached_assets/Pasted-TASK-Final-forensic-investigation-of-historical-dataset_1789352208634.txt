@@ -1,0 +1,178 @@
+TASK:
+Final forensic investigation of historical dataset hash 35534e...
+READ-ONLY ONLY.
+
+Do not modify:
+- code
+- dataset
+- baselines
+- fixtures
+- database
+- ADRs
+- deployment
+
+Current established facts:
+
+Current real_cases.json raw SHA-256:
+923b05321ebba94cce69db8cb5317a6fc12f574ce27865c808c5d298d3879559
+
+Historical artifacts record:
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+Current harness uses raw file bytes.
+
+Git-tracked real_cases.json from its first recoverable commit through HEAD
+is unchanged and hashes to 923b...
+
+Current classification:
+INSUFFICIENT_EVIDENCE
+
+Goal:
+Determine whether any remaining repository/Git evidence can explain 35534e...
+before making a governance decision.
+
+
+1. HISTORICAL HARNESS
+
+Inspect evaluation_baseline.py at:
+
+- commit 83583f8b821255e35bb8e6ebcf3777f59ed9a286
+- its parent
+- commit dd3e89582e1ef260e7980f478f3920312cba319d
+- any relevant commits between them
+
+Determine at each revision:
+
+- how dataset path was chosen
+- how dataset_sha256 was computed
+- whether hash was hard-coded anywhere
+- whether an external --dataset path could be supplied
+- whether default dataset path differed from current path
+
+Show exact historical code evidence.
+
+
+2. ARTIFACT CREATION PATH
+
+Inspect the commit/diff that first introduced artifacts containing 35534e...
+
+Determine:
+
+- which script/command generated them, if recoverable
+- whether artifacts appear generated automatically or manually added
+- whether artifact metadata records dataset path
+- whether a command line, README, log, shell script, test, or docs references
+  the dataset used for that run
+- whether 35534e... was inserted by code or already present in generated JSON
+
+
+3. SEARCH ALL GIT REFS
+
+Search all refs, not only current branch:
+
+- local branches
+- remote-tracking branches
+- tags
+- full history
+
+Look for:
+
+- other real_cases.json versions
+- renamed/moved copies
+- evaluation dataset files containing the same 26 case IDs
+- files whose raw SHA-256 equals 35534e...
+
+Do not checkout anything.
+
+
+4. REFLOG
+
+Inspect available reflogs read-only.
+
+Look for commits/states before the dataset was first tracked that might contain:
+
+- real_cases.json
+- an earlier evaluation fixture directory
+- an alternative dataset path
+
+Do not reset or restore.
+
+
+5. UNREACHABLE GIT OBJECTS
+
+Use read-only Git object inspection to determine whether unreachable blobs or
+commits exist that may contain historical evaluation dataset content.
+
+Do not use commands/options that write lost-found files.
+
+For plausible candidate blobs:
+- inspect content with git cat-file
+- identify JSON containing AA-RC case structures
+- compute SHA-256 of recovered bytes without restoring them
+
+Specifically test whether any candidate bytes hash to:
+
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+
+6. ALTERNATIVE DATASET COPIES
+
+Search repository/workspace for files that:
+
+- contain AA-RC-001 through AA-RC-026
+- resemble real_cases.json
+- have names such as dataset, real_cases, baseline cases, fixtures
+- may have been used before the tracked file existed
+
+For each plausible copy:
+report path, case count, raw SHA-256.
+
+Do not modify them.
+
+
+7. HISTORICAL HASH GENERATION TEST
+
+Using the HISTORICAL harness implementation, where safely possible,
+reconstruct its hash computation on the recoverable dataset bytes.
+
+Do not alter the repository.
+
+Determine whether historical code + current/recoverable bytes can produce 35534e...
+
+If not, state so explicitly.
+
+
+8. CLASSIFICATION
+
+After this final sweep return one:
+
+A. HASH_SEMANTICS_MISMATCH
+B. RECOVERED_HISTORICAL_DATASET
+C. EXTERNAL_DATASET_PATH_CONFIRMED
+D. HISTORICAL_HASH_INSERTION_ERROR
+E. LEGACY_HASH_PROVENANCE_UNRECOVERABLE
+
+Use E only if all above checks fail to identify the source.
+
+Do not use generic INSUFFICIENT_EVIDENCE after completing this exhaustive
+bounded sweep; instead state what remains unknowable under
+LEGACY_HASH_PROVENANCE_UNRECOVERABLE.
+
+
+9. FINAL OUTPUT
+
+Return:
+
+HISTORICAL_HARNESS_HASH_METHOD:
+HISTORICAL_DATASET_PATH_LOGIC:
+FIRST_355_ARTIFACT_GENERATION_EVIDENCE:
+ALL_REFS_RESULT:
+REFLOG_RESULT:
+UNREACHABLE_OBJECT_RESULT:
+ALTERNATIVE_DATASET_RESULT:
+RECOVERED_355_BYTES: yes/no
+ROOT_CAUSE_CLASS:
+EVIDENCE:
+SAFE_NEXT_DECISION:
+
+Do not execute SAFE_NEXT_DECISION.
