@@ -1,0 +1,427 @@
+CONTINUE AHMED AGENT — PHASE 0 FAST-TRACK
+
+Use AUTO-CONTINUE WITH GATES.
+
+Goal:
+Complete Phase 0 as quickly as safely possible:
+
+ADR-019 + AA-RC-002
+→ ADR-020 + AA-RC-011
+→ ADR-021 + AA-RC-007
+→ TARGET 26 / 0 / 0 / 0
+
+Do not stop for routine approval between these three capabilities if all
+defined gates pass.
+
+==================================================
+A. FIRST — DATASET REPRODUCIBILITY GATE
+==================================================
+
+Before production changes:
+
+Regenerate normalized evaluation dataset from:
+
+tests/fixtures/evaluation_baseline/real_cases.json
+
+using the existing import_real_cases path.
+
+Expected:
+
+raw_source_dataset_sha256 =
+923b05321ebba94cce69db8cb5317a6fc12f574ce27865c808c5d298d3879559
+
+regenerated_normalized_sha256 =
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+existing real-cases-validated.json sha256 =
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+byte_for_byte_match = true
+
+If this fails:
+STOP immediately and report evidence.
+
+If it passes:
+consider dataset lineage RESOLVED and do not reopen it unless new evidence appears.
+
+
+==================================================
+B. PARALLEL PREPARATION
+==================================================
+
+Immediately after starting the reproducibility check, run independent
+READ-ONLY/DESIGN workers in parallel:
+
+WORKER 1:
+Prepare ADR-020 + AA-RC-011 execution packet:
+- architecture decision
+- rejected alternatives
+- exact evidence needed
+- affected files
+- tests
+- security checks
+- acceptance criteria
+- stop conditions
+- expected promotion result 25/1/0/0
+
+WORKER 2:
+Prepare ADR-021 + AA-RC-007 execution packet:
+- architecture continuity groups
+- implementation evidence requirements
+- wiring evidence
+- tests evidence
+- status model
+- tests
+- acceptance criteria
+- stop conditions
+- expected promotion result 26/0/0/0
+
+WORKER 3:
+Prepare Phase-1 execution packet only:
+- Semantic Grader
+- Runtime Assurance
+- Canonical State Manifest
+- interface/governance contracts from Blueprint Rev 1.1
+
+These workers MUST NOT modify shared production files.
+
+They return preparation artifacts only.
+
+
+==================================================
+C. PRODUCTION RULE
+==================================================
+
+ONLY ONE production writer at a time.
+
+Production order is fixed:
+
+1. ADR-019 + AA-RC-002
+2. ADR-020 + AA-RC-011
+3. ADR-021 + AA-RC-007
+
+Never edit production for two capabilities concurrently.
+
+
+==================================================
+D. AA-RC-002
+==================================================
+
+If reproducibility passes:
+
+execute the previously approved AA-RC-002 plan:
+
+- create ADR-019
+- create deterministic Evaluation Source Pack
+- do NOT modify semantic real-case dataset
+- ingest fixtures through real MY_FILES ingestion
+- use OriginalSourceStore
+- use authenticated owner
+- use search_my_files
+- use inspect_source_of_truth
+- verify original SHA/provenance
+- positive 2-vs-3 discrepancy test
+- missing-source negative test
+- security tests
+- cleanup by exact source IDs
+
+Use TDD:
+affected tests first.
+
+Then targeted AA-RC-002 evaluation.
+
+If targeted PASS:
+run Promotion Gate:
+
+- full tests
+- compileall
+- git diff --check
+- full 26 real cases
+- artifact/hash verification
+
+Required promotion result:
+
+24 EXECUTED
+2 GAP
+0 provider failures
+0 HITL_BLOCKED
+
+Remaining gaps exactly:
+
+AA-RC-011
+AA-RC-007
+
+Create immutable v4 artifact.
+
+If successful:
+AUTO-CONTINUE to ADR-020 + AA-RC-011.
+
+Do not wait for routine approval.
+
+
+==================================================
+E. AA-RC-011
+==================================================
+
+Use the prepared ADR-020 execution packet.
+
+Before production implementation:
+re-read current repository state because AA-RC-002 may have changed shared
+evaluation infrastructure.
+
+ADR-020 must define Deployment Boundary.
+
+Build only the bounded evidence capability required for AA-RC-011.
+
+The capability must distinguish:
+
+- DECLARED
+- IMPLEMENTED
+- WIRED
+- TESTED
+- DEPLOY_CONFIGURED
+- EXTERNALLY_HEALTHY
+- ACTUALLY_DEPLOYED
+
+Critical rule:
+
+source/config evidence MUST NOT be used to falsely claim live deployment
+or external service health.
+
+Read-only inspection only.
+
+No deploy/publish/mutation action.
+
+Use fixed capability-specific allowlists.
+No generic project reader.
+
+TDD affected tests.
+
+Then targeted AA-RC-011.
+
+If targeted PASS:
+run full Promotion Gate once.
+
+Required result:
+
+25 EXECUTED
+1 GAP
+0 provider failures
+0 HITL_BLOCKED
+
+Only remaining gap:
+
+AA-RC-007
+
+Create immutable v5 artifact.
+
+If successful:
+AUTO-CONTINUE to ADR-021 + AA-RC-007.
+
+
+==================================================
+F. AA-RC-007
+==================================================
+
+Use prepared ADR-021 execution packet.
+
+ADR-021 must define Architecture Continuity.
+
+Inspect fixed architecture component groups based on actual repository:
+
+- runtime
+- persistence/state/recovery
+- policy/security
+- evidence/provenance
+- evaluation
+- actions/integrations
+- tests
+
+For each group distinguish:
+
+- implementation evidence
+- wiring evidence
+- test evidence
+- status
+
+Allowed statuses:
+
+VERIFIED
+PARTIAL
+DISCREPANCY
+NOT_FOUND
+DENIED
+
+Never claim:
+
+module exists = operational
+
+or:
+
+test file exists = tests passed
+
+Use actual provenance and hashes.
+
+No generic repo browser.
+
+TDD affected tests.
+
+Then targeted AA-RC-007.
+
+If targeted PASS:
+run final Phase-0 Promotion Gate.
+
+Required result:
+
+26 total
+26 EXECUTED
+0 Capability Gaps
+0 Provider Failures
+0 HITL_BLOCKED
+
+Create immutable v6 Phase-0-complete artifact.
+
+
+==================================================
+G. PROMOTION GATE — EVERY CAPABILITY
+==================================================
+
+Do NOT run full 26-case regression after every small edit.
+
+LEVEL 1:
+affected tests
+
+LEVEL 2:
+targeted capability
+security
+policy
+provenance
+deterministic quality
+
+LEVEL 3:
+only at promotion:
+- full test suite
+- compileall
+- git diff --check
+- full 26-case evaluation
+- artifact verification
+- hashes
+
+No completion claim without fresh Level-3 evidence.
+
+
+==================================================
+H. DATASET PROVENANCE
+==================================================
+
+From now on record separately:
+
+raw_source_dataset_sha256
+
+normalized_evaluation_dataset_sha256
+
+evaluation_source_pack_sha256
+where applicable
+
+Do not rewrite historical baseline artifacts.
+
+Do not confuse raw and normalized hashes again.
+
+
+==================================================
+I. AUTO-CONTINUE PERMISSION
+==================================================
+
+You are authorized to automatically continue:
+
+AA-RC-002 → AA-RC-011 → AA-RC-007
+
+ONLY IF:
+
+- previous targeted gate passed
+- previous full promotion passed
+- no security regression
+- no scope escalation
+- no provider/model change
+- no unexpected database architecture change
+- no major server.py modification
+- dataset semantics remain unchanged
+
+
+==================================================
+J. HARD STOP
+==================================================
+
+STOP and report before continuing if any capability requires:
+
+- generic filesystem/repository access
+- auth bypass
+- cross-owner access
+- weakening provenance/integrity
+- semantic dataset modification
+- rewriting historical baselines
+- provider/model replacement
+- new external paid dependency
+- deployment mutation
+- substantial server.py architectural rewrite
+- security/policy relaxation
+- unsupported live-health/deployment claims
+- unresolved regression
+
+Do not work around these conditions.
+
+
+==================================================
+K. PHASE 1
+==================================================
+
+When Phase 0 reaches:
+
+26 / 0 / 0 / 0
+
+STOP production implementation.
+
+Do NOT automatically implement Phase 1.
+
+Return the prepared Phase-1 execution packet for review.
+
+Phase-1 production requires the next approval.
+
+
+==================================================
+L. FINAL REPORT
+==================================================
+
+Report a concise milestone table:
+
+Capability
+Targeted result
+Full promotion
+Tests
+Artifact
+Hashes
+Remaining gaps
+
+Then report:
+
+PHASE 0 STATUS
+26/0/0/0 or exact blocker
+
+ADR-019 status
+ADR-020 status
+ADR-021 status
+
+AA-RC-002 status
+AA-RC-011 status
+AA-RC-007 status
+
+raw dataset hash
+normalized dataset hash
+
+latest immutable baseline artifact
+physical SHA-256
+canonical SHA-256
+
+Phase-1 preparation readiness
+
+Do not claim success unless verified by fresh commands.
