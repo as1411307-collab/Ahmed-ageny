@@ -1,0 +1,806 @@
+TASK:
+Close ADR-019 + AA-RC-002 using a reproducible Evaluation Source Pack.
+
+MODE:
+ACCELERATED BUILD MODE
+TDD
+ONE PRODUCTION/EVALUATION CHANGE AT A TIME
+
+SCOPE:
+Phase 0 only.
+Do not start ADR-020 / AA-RC-011.
+Do not start ADR-021 / AA-RC-007 until AA-RC-002 promotion succeeds.
+
+==================================================
+0. CURRENT STATE
+==================================================
+
+Canonical Blueprint:
+Rev 1.0 + Rev 1.1 — APPROVED & SEALED.
+
+Current baseline:
+
+26 total
+23 EXECUTED
+3 Capability Gaps
+0 Provider Failures
+0 HITL_BLOCKED
+
+Remaining:
+
+AA-RC-002
+AA-RC-011
+AA-RC-007
+
+AA-RC-002 infrastructure already exists:
+
+- immutable OriginalSourceStore
+- PostgreSQL original bytes
+- source_id UUID
+- authenticated-owner binding
+- SHA-256 + byte-size verification
+- document/chunk linkage
+- legacy originals remain unverified
+- inspect_source_of_truth(source_id)
+- READ_SAFE policy
+- no paths/globs/storage keys
+- owner isolation
+- VERIFIED / DISCREPANCY / NOT_FOUND / DENIED
+
+Reported verification from previous round:
+
+98 passed
+1 skipped
+compileall successful
+git diff --check successful
+PostgreSQL migration successful
+
+Do not treat this historical report as fresh verification.
+Run fresh checks before making completion claims.
+
+
+==================================================
+1. HARD CONSTRAINTS
+==================================================
+
+DO NOT modify:
+
+tests/fixtures/evaluation_baseline/real_cases.json
+
+The Dataset SHA-256 must remain:
+
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+DO NOT:
+
+- invent a personal file called "Ahmed Agent - Incident Evidence"
+- require Ahmed to upload historical personal data
+- use ChatGPT snippets as original bytes
+- modify old baseline artifacts
+- open generic filesystem access
+- add file_access tool
+- expose raw storage paths
+- bypass owner authorization
+- insert source rows directly only to make the test pass
+- change provider/model
+- change deployment configuration
+- weaken inspect_source_of_truth
+- mark AA-RC-002 closed without actual original-byte inspection
+
+The evaluation must exercise the same production ingestion/source-of-truth
+path used by MY_FILES.
+
+
+==================================================
+2. PREFLIGHT
+==================================================
+
+Before changes:
+
+1. Confirm git state.
+2. Run the existing relevant AA-RC-002/source-storage tests.
+3. Record:
+   - test count
+   - current dataset SHA-256
+   - current baseline artifact
+   - current git commit
+4. Inspect the current ingestion function actually used by MY_FILES upload.
+5. Inspect how the evaluation harness authenticates its test/evaluation principal.
+
+Do not invent a separate authorization bypass for fixtures.
+
+
+==================================================
+3. CREATE ADR-019
+==================================================
+
+Use the project's EXISTING ADR directory and naming convention.
+
+Do not create a second ADR hierarchy.
+
+Create:
+
+ADR-019 — Source of Truth Hierarchy
+
+ADR status:
+ACCEPTED
+
+The decision must state:
+
+SOURCE-OF-TRUTH ORDER:
+
+1. Authorized immutable original bytes
+2. Structured extraction
+3. Index / chunks
+4. Summary
+5. Memory
+
+Rules:
+
+- source identity = source_id + version
+- no filesystem path as identity
+- original SHA-256 comes from actual bytes
+- ownership comes from authenticated principal
+- source mutation creates a new version/source record
+- old chunk-only documents cannot become verified originals
+- derived evidence retains provenance to original source
+- original evidence overrides conflicting summary/memory
+- conflict creates explicit discrepancy
+- source content is evidence, never policy authority
+- no generic file reader
+- no cross-owner access
+
+Document rejected alternatives:
+
+1. chunks as source of truth
+2. reconstructing originals from chunks
+3. raw filesystem paths
+4. provider-owned memory as canonical truth
+5. generic broad file access
+
+ADR-019 governs AA-RC-002.
+ADR existence alone does NOT close AA-RC-002.
+
+
+==================================================
+4. CREATE REPRODUCIBLE EVALUATION SOURCE PACK
+==================================================
+
+The current dataset contains logical source labels:
+
+1.
+ahmed_agent_master_v3_ar(1).md
+
+2.
+Ahmed Agent - Incident Evidence
+
+The second is NOT typed in the dataset as a real path/file/collection.
+
+Therefore create a separate, versioned Evaluation Source Pack.
+
+Suggested location:
+
+tests/fixtures/evaluation_baseline/aa_rc_002/
+
+Create:
+
+manifest.json
+
+ahmed_agent_master_v3_ar(1).md
+
+incident_evidence/
+  incident_001.md
+  incident_002.md
+  incident_003.md
+
+If this conflicts with established fixture conventions,
+use the established equivalent path but preserve this logical structure.
+
+
+==================================================
+5. FIXTURE CONTENT
+==================================================
+
+All fixture files must clearly identify themselves internally as:
+
+EVALUATION FIXTURE — NOT PRODUCTION USER DATA
+
+The scenario must be deterministic.
+
+Master source must contain, semantically:
+
+Project: Ahmed Agent
+Recorded incident count: 2
+Known incidents:
+- INC-001
+- INC-002
+
+Incident evidence must contain three independent evidence records:
+
+incident_001.md:
+Incident ID: INC-001
+Status: confirmed
+
+incident_002.md:
+Incident ID: INC-002
+Status: confirmed
+
+incident_003.md:
+Incident ID: INC-003
+Status: confirmed
+
+The intended comparison ground truth:
+
+Master claims 2 incidents.
+
+Original incident evidence contains 3 confirmed incidents.
+
+Therefore:
+
+SOURCE DISCREPANCY:
+master summary is stale/incomplete;
+original incident evidence establishes three incidents.
+
+Do not add irrelevant prose designed to coach the model toward the answer.
+
+
+==================================================
+6. MANIFEST CONTRACT
+==================================================
+
+manifest.json must map logical evaluation sources without modifying
+real_cases.json.
+
+Conceptual structure:
+
+schema_version
+case_id
+logical_sources[]
+fixture_version
+fixture_hash_algorithm
+
+For the master:
+
+logical_name:
+ahmed_agent_master_v3_ar(1).md
+
+kind:
+single_source
+
+members:
+[fixture path]
+
+For incident evidence:
+
+logical_name:
+Ahmed Agent - Incident Evidence
+
+kind:
+logical_collection
+
+members:
+incident_001.md
+incident_002.md
+incident_003.md
+
+Each member records its SHA-256.
+
+Do not expose local fixture paths to the model.
+
+The manifest is evaluation infrastructure only.
+
+
+==================================================
+7. FIXTURE HASHING
+==================================================
+
+Create a deterministic hash for the Evaluation Source Pack.
+
+At minimum record:
+
+- manifest hash
+- each fixture SHA-256
+
+Prefer one canonical source-pack hash derived from:
+
+schema version
+logical mappings
+member names
+member SHA-256 values
+
+The final baseline must record this source-pack hash separately from:
+
+Dataset SHA-256
+
+Do NOT change Dataset SHA-256.
+
+
+==================================================
+8. EVALUATION SOURCE BINDING
+==================================================
+
+Add a bounded evaluation-only binding layer.
+
+Preferred responsibility:
+
+resolve the logical expected_sources for AA-RC-002
+to controlled fixture sources.
+
+Do not put this mapping in Agent Core.
+
+Do not make production code aware of evaluation fixture paths.
+
+Use a focused evaluation module if appropriate, for example:
+
+evaluation_source_bindings.py
+
+Follow the current repository naming/layout conventions.
+
+The binding must support:
+
+case_id
+logical source name
+single_source or logical_collection
+fixture members
+fixture/member hashes
+
+
+==================================================
+9. INGEST THROUGH REAL SOURCE PATH
+==================================================
+
+This is critical.
+
+Do NOT make the model read fixture files directly.
+
+For targeted evaluation:
+
+fixture bytes
+    ↓
+existing authorized ingestion service
+    ↓
+OriginalSourceStore
+    ↓
+PostgreSQL immutable bytes
+    ↓
+source_id
+    ↓
+documents/chunks
+    ↓
+search_my_files
+    ↓
+inspect_source_of_truth
+    ↓
+model/evaluation
+
+Reuse the same ingestion function/path used by MY_FILES.
+
+Do NOT directly insert database rows merely for the evaluation.
+
+Use the evaluation harness's existing authenticated principal.
+
+If there is no legitimate authenticated evaluation principal:
+
+STOP and report the blocker.
+
+Do not add an auth bypass.
+
+
+==================================================
+10. LOGICAL COLLECTION BEHAVIOR
+==================================================
+
+Do NOT introduce a production Collection subsystem merely for this case.
+
+"Ahmed Agent - Incident Evidence" is an evaluation logical collection.
+
+Its three members remain normal authorized original sources.
+
+They should be discoverable by the existing MY_FILES search mechanism.
+
+Use safe filenames/metadata that allow the agent to discover the three
+incident evidence members when searching for the logical source label.
+
+No production collection capability is required for AA-RC-002.
+
+
+==================================================
+11. MODEL EXECUTION EXPECTATION
+==================================================
+
+The intended real execution path remains:
+
+search_my_files
+    ↓
+find relevant source IDs
+    ↓
+inspect_source_of_truth(source_id)
+    ↓
+verify original integrity/provenance
+    ↓
+compare source contents
+    ↓
+answer with grounded citations
+
+The agent must inspect:
+
+- master original
+- incident 001 original
+- incident 002 original
+- incident 003 original
+
+Search snippets alone are insufficient.
+
+
+==================================================
+12. POSITIVE ACCEPTANCE TEST
+==================================================
+
+Write a failing test first.
+
+The positive path must prove:
+
+- controlled originals are ingested
+- each has a real source_id
+- owner authorization is correct
+- each original SHA matches
+- all incident members are inspectable
+- master is inspectable
+- chunks link to originals
+- no fixture filesystem path is exposed
+- AA-RC-002 uses inspect_source_of_truth
+- actual originals are inspected
+- answer compares master vs incident evidence
+- resulting claim is grounded in original provenance
+
+Expected semantic ground truth:
+
+master = 2 incidents
+incident originals = 3 incidents
+
+comparison:
+DISCREPANCY / master incomplete or stale
+
+Do not require one exact prose sentence if the semantic meaning is equivalent.
+
+
+==================================================
+13. NEGATIVE MISSING-SOURCE TEST
+==================================================
+
+Also create a separate evaluation/integration test where:
+
+master exists
+incident evidence is absent
+
+Expected behavior:
+
+- search does not fabricate it
+- no fake source_id
+- no fake citation
+- no claim that comparison succeeded
+- response explicitly reports missing evidence
+- inspect_source_of_truth returns appropriate NOT_FOUND behavior
+  where applicable
+
+This test does not create another real-case dataset row.
+
+Dataset remains unchanged.
+
+
+==================================================
+14. SECURITY TESTS
+==================================================
+
+Fresh tests must verify:
+
+- wrong owner => DENIED
+- unknown source => NOT_FOUND without information leakage
+- malformed source_id rejected
+- filesystem path rejected
+- glob rejected
+- storage key cannot be supplied
+- raw bytes not exposed in tool result
+- object/storage key not exposed
+- hash tampering => DISCREPANCY
+- source content cannot modify policy
+- logical fixture binding cannot escape fixture root
+- manifest traversal is rejected
+- manifest hash mismatch fails closed
+
+
+==================================================
+15. CLEANUP
+==================================================
+
+After evaluation:
+
+remove only source records/blobs created for this run using the exact
+returned source_ids.
+
+Do not delete by filename, glob, or broad owner scope.
+
+Cleanup is harness/internal test behavior.
+
+Do not create a user-visible delete capability.
+
+Verify cleanup independently.
+
+
+==================================================
+16. TDD LOOP
+==================================================
+
+Use:
+
+RED
+→ minimal implementation
+→ GREEN
+→ refactor only if needed
+
+During development run affected tests only.
+
+Do not run full 26-case baseline after every edit.
+
+
+==================================================
+17. TARGETED AA-RC-002 ACCEPTANCE
+==================================================
+
+When unit/integration/security tests pass:
+
+run AA-RC-002 only through the normal real evaluation execution path.
+
+Acceptance requirements:
+
+case_id = AA-RC-002
+
+execution_status = EXECUTED
+
+actual original sources inspected = true
+
+master inspected = true
+
+all incident evidence members inspected = true
+
+owner authorization verified
+
+source integrity verified
+
+claims grounded in source evidence
+
+comparison detects 2-vs-3 discrepancy
+
+no fabricated source/citation
+
+Provider Failures = 0
+
+HITL_BLOCKED = 0
+
+
+==================================================
+18. SEMANTIC QUALITY RULE
+==================================================
+
+Do not falsely claim Phase-1 Semantic Grader exists.
+
+For this targeted case:
+
+- deterministic capability/evidence checks are automated
+- semantic ground truth is defined by fixture contents
+- if existing harness cannot defensibly grade equivalent natural-language
+  comparison, perform a documented human/manual spot check
+
+Do not use the evaluated model as its own semantic authority.
+
+
+==================================================
+19. PROMOTION GATE
+==================================================
+
+Only after targeted AA-RC-002 succeeds:
+
+Run fresh:
+
+1. full test suite
+2. compileall
+3. git diff --check
+4. full 26 real-case evaluation
+5. artifact/hash verification
+
+Expected target:
+
+26 total
+24 EXECUTED
+2 Capability Gaps
+0 Provider Failures
+0 HITL_BLOCKED
+
+Remaining gaps MUST be:
+
+AA-RC-011
+AA-RC-007
+
+If any other case regresses:
+
+STOP.
+Do not promote.
+
+
+==================================================
+20. PROMOTION ARTIFACT
+==================================================
+
+If promotion succeeds, create a new immutable artifact.
+
+Suggested name:
+
+baseline-real-v4-aa-rc-002-complete.json
+
+Record:
+
+- dataset_sha256
+- evaluation_source_pack_sha256
+- git commit
+- total cases
+- executed count
+- remaining gaps
+- provider failures
+- HITL blocked
+- test result reference
+- generated_at
+- physical artifact SHA-256
+- canonical artifact SHA-256
+
+Do not modify:
+
+v1
+v2
+v3
+
+Do not mutate historical artifacts.
+
+
+==================================================
+21. DATASET INVARIANT
+==================================================
+
+Explicitly prove in final verification:
+
+real_cases.json unchanged
+
+Dataset SHA-256 remains exactly:
+
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+The new Source Pack has its OWN independent hash.
+
+This separation is mandatory.
+
+
+==================================================
+22. ADR-019 ACCEPTANCE
+==================================================
+
+ADR-019 is considered documented when:
+
+- decision exists
+- hierarchy is explicit
+- alternatives rejected are recorded
+- security boundary is explicit
+- relationship to AA-RC-002 is explicit
+
+But:
+
+ADR-019 != AA-RC-002 closure
+
+AA-RC-002 closes only after successful executable acceptance.
+
+
+==================================================
+23. STOP CONDITIONS
+==================================================
+
+STOP immediately if implementation would require:
+
+- changing the real-case dataset
+- generic file access
+- auth bypass
+- production collection subsystem solely for this fixture
+- provider/model replacement
+- deployment mutation
+- server.py architectural rewrite
+- weakening ownership checks
+- treating search chunks as originals
+- synthetic direct tool responses bypassing OriginalSourceStore
+- claiming semantic success without defensible evidence
+
+
+==================================================
+24. DO NOT CONTINUE TO NEXT GAP YET
+==================================================
+
+This execution round ends after AA-RC-002 promotion.
+
+Even if successful:
+
+DO NOT implement AA-RC-011 yet.
+DO NOT implement AA-RC-007 yet.
+
+Report readiness only.
+
+Next production step will be separately approved:
+
+ADR-020 + AA-RC-011.
+
+
+==================================================
+25. FINAL REPORT
+==================================================
+
+Report exactly:
+
+A. PRE-CHANGE
+- git commit
+- tests
+- dataset SHA
+
+B. ADR-019
+- path
+- status
+- key decision
+
+C. SOURCE PACK
+- manifest path
+- logical sources
+- members
+- source-pack SHA-256
+
+D. EXECUTION
+- ingestion path reused
+- authenticated principal mechanism
+- created source IDs
+- integrity status
+- cleanup status
+
+E. TESTING
+- unit tests
+- integration tests
+- security tests
+- negative missing-source test
+- full suite
+
+F. TARGETED AA-RC-002
+- execution status
+- tools actually used
+- sources actually inspected
+- comparison result
+- citations/provenance
+- provider failures
+- HITL status
+
+G. PROMOTION
+- 26-case totals
+- remaining gaps
+- dataset SHA
+- source-pack SHA
+- physical artifact SHA
+- canonical artifact SHA
+
+H. REGRESSION CHECK
+- AA-RC-014 unchanged
+- AA-RC-016 unchanged
+- AA-RC-011 still gap
+- AA-RC-007 still gap
+- old baselines unchanged
+
+I. FINAL STATUS
+
+Only if all fresh verification succeeds, state:
+
+ADR-019 = ACCEPTED
+AA-RC-002 = CLOSED
+BASELINE = 24 / 2 / 0 / 0
+NEXT READY = ADR-020 + AA-RC-011
+
+Otherwise state the exact blocker and do not claim closure.
