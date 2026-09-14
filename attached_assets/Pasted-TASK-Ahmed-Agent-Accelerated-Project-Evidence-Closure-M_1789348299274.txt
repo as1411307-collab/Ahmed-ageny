@@ -1,0 +1,965 @@
+TASK: Ahmed Agent Accelerated Project Evidence Closure
+
+MODE:
+ACCELERATED BUILD MODE
+
+CORE RULE:
+PARALLELIZE ANALYSIS / DESIGN / TEST PREPARATION
+SERIALIZE PRODUCTION CHANGES / MERGES / BASELINE PROMOTION
+
+الهدف من هذه الجولة:
+إغلاق Project Evidence Capability Gaps الثلاث المتبقية بأسرع طريقة آمنة:
+
+1. AA-RC-002 — source_of_truth
+2. AA-RC-011 — deployment_boundary
+3. AA-RC-007 — architecture_continuity
+
+مع الحفاظ على:
+- regression isolation
+- security boundaries
+- deterministic citations/provenance
+- immutable baselines
+- provider/model configuration الحالية
+
+إذا نجحت المراحل الثلاث، الهدف النهائي:
+
+26 total
+26 EXECUTED
+0 Capability Gaps
+0 Provider Failures
+0 HITL_BLOCKED
+
+لكن لا تنتقل من Capability إلى التالية إلا بعد اجتياز بوابتها بالكامل.
+
+
+==================================================
+0. CURRENT VERIFIED STATE
+==================================================
+
+الوضع الحالي المرجعي:
+
+Coverage Baseline:
+
+26 total
+23 EXECUTED
+3 Capability Gaps
+0 Provider Failures
+0 HITL_BLOCKED
+
+Remaining gaps:
+
+- AA-RC-002
+- AA-RC-007
+- AA-RC-011
+
+مغلق بالفعل:
+
+- AA-RC-014 = EXECUTED
+- AA-RC-016 = EXECUTED
+
+AA-RC-014:
+
+Capability Acceptance = SUCCESS
+Coverage Acceptance = SUCCESS
+Deterministic Quality = PASS
+Semantic Quality = DEFERRED
+
+سبب Semantic DEFERRED:
+لا يوجد semantic grader مهيأ حاليًا.
+لا تعتبر ذلك Capability Failure.
+
+Current coverage artifact:
+
+baseline-real-v3-aa-rc-014-complete.json
+
+Canonical SHA-256:
+
+ed15e284c77199f17ba3431ec74d203835aaffbb6624d1ecf0699f58c136f310
+
+Physical SHA-256:
+
+45b6e3e16c2dbc0f6a0d1f4325c870a44d977dab235d945ae50e3156b51b82dc
+
+Dataset SHA-256:
+
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+Known latest verification reported:
+
+93 tests passed
+1 optional test skipped
+compileall = success
+git diff --check = success
+
+لا تعتمد على العدد فقط.
+شغّل verification الحالية وسجل العدد الفعلي قبل التغيير.
+
+
+==================================================
+1. HARD SAFETY GATES
+==================================================
+
+مسموح في هذه الجولة:
+
+- Project Evidence Core extensions
+- bounded read-only capabilities
+- capability-specific allowlists
+- provenance/hashing
+- deterministic citations
+- policy registrations
+- evaluation mappings الخاصة بالحالات الثلاث فقط
+- tests
+- versioned evaluation artifacts
+
+ممنوع:
+
+- generic project_file_access
+- generic unrestricted file_access
+- arbitrary filesystem path من model/user
+- shell access كجزء من Agent capability
+- network access لإثبات project evidence
+- mutation/write project tools
+- secrets retrieval
+- .env reading
+- deploy/publish actions
+- provider/model changes
+- multi-provider routing
+- OpenRouter
+- ADR-017 implementation
+- ADR-018 implementation
+- Code Sandbox
+- Adaptive Brain
+- Multimodal/Voice implementation
+- Image/Video implementation
+- Self-Evolution Engine
+- Runtime Assurance Pack
+- broad repository refactor
+
+إذا احتاجت أي Capability:
+
+- توسيع صلاحيات عام
+- تعديل security model
+- تعديل server.py بصورة جوهرية
+- تغيير provider/model
+- generic filesystem access
+- تغيير deployment behavior
+
+فهذا HARD STOP.
+
+لا تنفذ التوسيع.
+اعرض blocker وانتظر approval.
+
+
+==================================================
+2. ACCELERATED PARALLEL PREPARATION
+==================================================
+
+قبل تنفيذ أول Capability:
+
+جهّز 3 تحليلات مستقلة بالتوازي إن كانت البيئة تدعم workers/subagents آمنة.
+
+Worker A:
+AA-RC-002
+
+Worker B:
+AA-RC-011
+
+Worker C:
+AA-RC-007
+
+هذه الـworkers تحليلية فقط.
+
+ممنوع عليها تعديل production code.
+
+لكل واحدة:
+
+1. اقرأ real case الفعلي من dataset.
+2. حدد السبب الحالي للـCapability Gap من evaluation mapping.
+3. افحص الـrepository الفعلي.
+4. حدد أقل capability ممكنة لإغلاق الحالة.
+5. حدد:
+   - contract
+   - scope
+   - capability-specific allowlist
+   - security boundaries
+   - files المتوقع تعديلها
+   - tests
+   - acceptance criteria
+   - risks
+6. تحقق مما يمكن إعادة استخدامه من:
+   - evidence_core.py
+   - citation contract الحالي
+   - policy.py
+   - evaluation infrastructure
+7. لا تفترض filenames أو storage layout غير موجودة.
+
+إذا parallel workers غير متاحة:
+نفذ التحليلات الثلاث بالتسلسل، لكن احتفظ بها منفصلة ولا تخلط التنفيذ.
+
+بعد انتهاء التحليل:
+
+PRODUCTION ORDER ثابت:
+
+AA-RC-002
+↓
+AA-RC-011
+↓
+AA-RC-007
+
+
+==================================================
+3. THREE-LEVEL TEST LOOP
+==================================================
+
+لكل Capability استخدم:
+
+LEVEL 1 — FAST DEVELOPMENT LOOP
+
+- tests للملفات المتأثرة
+- tests الخاصة بالـCapability
+- لا full evaluation بعد كل تعديل صغير
+
+
+LEVEL 2 — CAPABILITY GATE
+
+بعد اكتمال implementation:
+
+- capability tests
+- security tests
+- policy tests
+- provenance/citation tests
+- targeted real case
+- deterministic quality checks إذا كانت capability تنتج evidence claims
+
+
+LEVEL 3 — PROMOTION GATE
+
+مرة واحدة فقط لكل Capability:
+
+- full test suite
+- compileall
+- git diff --check
+- full 26-case evaluation
+- artifact/hash verification
+
+إذا فشل Level 1:
+أصلح ضمن نفس capability.
+
+إذا فشل Level 2:
+لا تنتقل للـCapability التالية.
+
+إذا فشل Level 3 بسبب regression:
+توقف.
+
+إذا فشل فقط بسبب provider rate limit:
+لا تغيّر provider/model.
+سجل promotion deferred وتوقف.
+
+
+==================================================
+4. PHASE 1 — AA-RC-002 SOURCE_OF_TRUTH
+==================================================
+
+ابدأ التنفيذ الإنتاجي هنا فقط.
+
+
+--------------------------------
+4.1 Inspect actual requirement first
+--------------------------------
+
+اقرأ AA-RC-002 الفعلية.
+
+لا تفترض أن المشكلة تعني repository file access.
+
+المشكلة المعروفة سابقًا:
+
+search_my_files موجود،
+لكنه لا يثبت قراءة المصدر الأصلي نفسه.
+
+المطلوب أن يستطيع Ahmed الرجوع إلى Source of Truth الحقيقي،
+وليس:
+
+- memory
+- summary
+- search snippet فقط
+- cached interpretation فقط
+
+
+--------------------------------
+4.2 Preferred architecture
+--------------------------------
+
+أنشئ capability ضيقة مثل:
+
+inspect_source_of_truth
+
+أو naming متوافق مع المشروع.
+
+لكن:
+
+لا تجعلها generic file reader.
+
+لا تقبل arbitrary filesystem paths.
+
+فضّل التعامل مع:
+
+- authorized source/evidence IDs
+- collection IDs
+- file handles
+- identifiers الموجودة فعلًا في MY_FILES architecture
+
+بدل raw paths.
+
+افحص storage/indexing architecture الحالية أولًا.
+
+
+--------------------------------
+4.3 Trust hierarchy
+--------------------------------
+
+استخدم ترتيب الحقيقة التالي عند توفره:
+
+ORIGINAL AUTHORIZED SOURCE BYTES
+        ↓
+STRUCTURED EXTRACTION FROM ORIGINAL
+        ↓
+INDEX / SEARCH RECORD
+        ↓
+SUMMARY
+        ↓
+MEMORY
+
+الذاكرة والملخصات ليست Source of Truth.
+
+إذا تعارض summary مع original source:
+يجب أن يفوز المصدر الأصلي،
+ويظهر discrepancy بوضوح.
+
+
+--------------------------------
+4.4 Source evidence output
+--------------------------------
+
+النتيجة يجب أن تحتوي على provenance حقيقية، حسب طبيعة التخزين الفعلية:
+
+- source identifier
+- original filename إن كان مسموحًا
+- source/file hash
+- extracted facts
+- line/page/section reference حيث يمكن
+- trust classification
+- verification status
+- limitations
+
+لا تعرض محتوى كامل إذا كانت facts المطلوبة تكفي.
+
+
+--------------------------------
+4.5 Security
+--------------------------------
+
+يجب إثبات:
+
+- user-owned/authorized sources فقط
+- no arbitrary path
+- no path traversal
+- no cross-user/source leakage
+- no secret leakage
+- read-only
+- no mutation
+- no execution
+- no network added لهذا reader
+- no implicit widening of MY_FILES permissions
+
+إذا storage architecture لا تسمح بإثبات ownership/boundary بأمان:
+توقف بدل بناء reader عام.
+
+
+--------------------------------
+4.6 Citations
+--------------------------------
+
+أعد استخدام deterministic citation contract الحالي حيث يصلح.
+
+لا تجعل النموذج يخترع citation.
+
+Citation يجب أن تُشتق من evidence metadata الفعلية.
+
+Unsupported claim:
+لا citation وهمية.
+
+NOT_FOUND:
+لا fake source.
+
+DENIED:
+لا تسريب لمسار أو محتوى محظور.
+
+
+--------------------------------
+4.7 Evaluation isolation
+--------------------------------
+
+غيّر mapping فقط لـ:
+
+AA-RC-002
+
+لا تجعل:
+
+file_access = globally available
+
+ولا تجعل:
+
+project_file_access = globally available
+
+يجب أن تبقى:
+
+AA-RC-011 = GAP
+AA-RC-007 = GAP
+
+
+--------------------------------
+4.8 AA-RC-002 acceptance
+--------------------------------
+
+Targeted Acceptance:
+
+- AA-RC-002 = EXECUTED
+- capability الجديدة استُدعيت فعليًا
+- original evidence inspected
+- claims backed by provenance
+- no Provider Failure
+- no HITL block
+- no unsupported source-of-truth claim
+- deterministic citation/provenance quality PASS إن كان grader ينطبق
+
+
+--------------------------------
+4.9 AA-RC-002 promotion
+--------------------------------
+
+بعد targeted success:
+
+شغّل Full 26 مرة واحدة.
+
+المستهدف:
+
+26 total
+24 EXECUTED
+2 Capability Gaps
+0 Provider Failures
+0 HITL_BLOCKED
+
+Remaining gaps تحديدًا:
+
+- AA-RC-011
+- AA-RC-007
+
+إذا نجح:
+
+أنشئ success artifact جديدًا حسب naming convention.
+
+اسم مقترح إن كان متوافقًا:
+
+baseline-real-v4-aa-rc-002-complete.json
+
+احسب:
+
+- Dataset SHA-256
+- Physical SHA-256
+- Canonical SHA-256
+
+لا تعدّل v1/v2/v3.
+
+اعمل commit مستقل قابل للrollback إذا Git workflow الحالي يسمح بذلك.
+
+
+==================================================
+5. AUTOMATIC CONTINUE RULE
+==================================================
+
+إذا وفقط إذا:
+
+AA-RC-002 targeted acceptance = PASS
+
+و:
+
+Full regression = 24/2/0/0
+
+و:
+
+لا security regression
+
+انتقل تلقائيًا إلى AA-RC-011.
+
+لا تنتظر user confirmation بينهما لأن هذا التسلسل معتمد ضمن Accelerated Build Mode.
+
+لكن أي scope escalation حساس = STOP.
+
+
+==================================================
+6. PHASE 2 — AA-RC-011 DEPLOYMENT_BOUNDARY
+==================================================
+
+الهدف:
+
+تمكين Ahmed من معرفة حدود deployment والتكاملات الفعلية قبل اقتراح تطوير،
+دون إعطائه صلاحية deploy أو publish.
+
+
+--------------------------------
+6.1 Capability
+--------------------------------
+
+أنشئ capability ضيقة مثل:
+
+inspect_deployment_boundary
+
+أو naming متوافق.
+
+Read-only فقط.
+
+لا deploy.
+لا publish.
+لا shell.
+لا network mutation.
+
+
+--------------------------------
+6.2 Evidence scope
+--------------------------------
+
+افحص الملفات الفعلية أولًا.
+
+Capability-specific allowlist يجب أن تشمل فقط ما يلزم لإثبات:
+
+- runtime/deployment configuration
+- integration registrations
+- build/runtime declarations
+- relevant policy boundaries
+- dependency/config declarations
+- relevant tests/configs
+
+يمكن إعادة استخدام أدلة:
+
+inspect_runtime_evidence
+
+لكن لا تعيد refactor لـAA-RC-016 إذا لم تكن هناك ضرورة.
+
+
+--------------------------------
+6.3 Semantics
+--------------------------------
+
+ميّز بين:
+
+- declared
+- implemented
+- wired
+- tested
+- deploy-configured
+- externally healthy
+- actually deployed
+
+لا تعتبر وجود config دليلًا على أن الخدمة externally healthy.
+
+لا تعتبر source inspection إثباتًا أن deployment حي.
+
+اعرض limitations.
+
+
+--------------------------------
+6.4 Security
+--------------------------------
+
+الأداة لا تستطيع:
+
+- deploy
+- publish
+- restart
+- mutate configuration
+- read secret values
+- call external integration
+- modify DB
+- change Replit deployment
+
+
+--------------------------------
+6.5 AA-RC-011 acceptance
+--------------------------------
+
+Targeted:
+
+- AA-RC-011 = EXECUTED
+- deployment boundary evidence حقيقية
+- no unsupported runnable/deployed claims
+- no Provider Failure
+- no HITL block
+- provenance/citations صحيحة
+
+ثم Full 26 مرة واحدة.
+
+المستهدف:
+
+26 total
+25 EXECUTED
+1 Capability Gap
+0 Provider Failures
+0 HITL_BLOCKED
+
+Remaining gap:
+
+AA-RC-007 فقط.
+
+إذا نجح:
+
+أنشئ artifact versioned جديدًا.
+
+اسم مقترح:
+
+baseline-real-v5-aa-rc-011-complete.json
+
+وسجل hashes.
+
+اعمل commit مستقل إن كان workflow يسمح.
+
+
+==================================================
+7. AUTOMATIC CONTINUE TO AA-RC-007
+==================================================
+
+إذا:
+
+AA-RC-011 targeted = PASS
+
+و:
+
+25/1/0/0 = PASS
+
+انتقل تلقائيًا إلى AA-RC-007.
+
+أي regression أو security widening:
+STOP.
+
+
+==================================================
+8. PHASE 3 — AA-RC-007 ARCHITECTURE_CONTINUITY
+==================================================
+
+هذه أوسع فجوة.
+
+نفّذها بأضيق تصميم ممكن.
+
+الهدف:
+
+أن يستطيع Ahmed تقييم بنية المشروع الفعلية عبر أدلة محددة،
+بدون generic repository browsing.
+
+
+--------------------------------
+8.1 Do NOT create generic project_file_access
+--------------------------------
+
+بدل ذلك أنشئ capability مقيدة مثل:
+
+inspect_architecture_continuity
+
+تعمل على component groups ثابتة يحددها النظام،
+وليس filesystem paths يحددها الموديل.
+
+مثال مفاهيمي فقط:
+
+- runtime
+- state/recovery
+- policy/security
+- evidence
+- evaluation
+- actions/integrations
+- tests
+
+استخدم أسماء المكونات الفعلية الموجودة بعد inspection.
+
+
+--------------------------------
+8.2 Architecture Evidence
+--------------------------------
+
+لكل component group:
+
+- implementation evidence
+- registration/wiring
+- relevant tests
+- status:
+  VERIFIED
+  PARTIAL
+  DISCREPANCY
+  NOT_FOUND
+  DENIED
+- source hashes
+- provenance
+- limitations
+
+لا تعتبر module موجودة = operational.
+
+لا تعتبر test file موجود = test passes.
+
+يمكن الإشارة إلى current verified test run كدليل منفصل،
+لكن لا تخلطه مع source evidence.
+
+
+--------------------------------
+8.3 Scope control
+--------------------------------
+
+Capability-specific allowlist فقط.
+
+لا arbitrary repo search.
+
+لا dynamic glob واسع يفتح repository كله للموديل.
+
+إذا احتجت inventory داخليًا:
+ابنه من mappings ثابتة/مقيدة،
+ولا تعرض generic reader interface.
+
+
+--------------------------------
+8.4 AA-RC-007 acceptance
+--------------------------------
+
+Targeted:
+
+- AA-RC-007 = EXECUTED
+- tool المستخدمة فعليًا
+- architecture claims evidence-backed
+- verified/unverified distinction محفوظ
+- no Provider Failure
+- no HITL block
+- deterministic citation/provenance checks PASS حيث تنطبق
+
+
+--------------------------------
+8.5 FINAL Project Evidence promotion
+--------------------------------
+
+بعد نجاح targeted AA-RC-007:
+
+شغّل Full 26 مرة واحدة.
+
+الهدف النهائي لهذه الجولة:
+
+26 total
+26 EXECUTED
+0 Capability Gaps
+0 Provider Failures
+0 HITL_BLOCKED
+
+إذا نجح:
+
+أنشئ canonical success artifact جديدًا.
+
+اسم مقترح:
+
+baseline-real-v6-project-evidence-complete.json
+
+أو naming convention الأقرب للمشروع.
+
+احسب وسجل:
+
+- Dataset SHA-256
+- Physical artifact SHA-256
+- Canonical artifact SHA-256
+
+وتحقق أن baselines السابقة لم تتغير.
+
+
+==================================================
+9. SEMANTIC GRADING POLICY
+==================================================
+
+Semantic grader ما زال غير مهيأ حاليًا.
+
+لا تجعل ذلك يوقف Coverage Capability Closure.
+
+لكن:
+
+- deterministic evidence/citation checks يجب أن تعمل
+- لا تدّعي Semantic Quality PASS إذا لم يتم تشغيل grader
+- استخدم DEFERRED بوضوح
+
+لا تبني semantic grader في هذه الجولة.
+
+ضعه في backlog مستقل بعد Project Evidence closure.
+
+
+==================================================
+10. PARALLEL REVIEW DURING IMPLEMENTATION
+==================================================
+
+بينما Capability الحالية تُنفذ:
+
+يمكن للعامل التحليلي التالي:
+
+- مراجعة tests للمرحلة القادمة
+- مراجعة security boundaries
+- البحث عن file conflicts
+- إعداد acceptance checklist
+
+لكن:
+
+عامل واحد فقط يغير production code في أي لحظة.
+
+لا تسمح لعاملين بتعديل:
+
+evidence_core.py
+policy.py
+agent_core.py
+evaluation_baseline.py
+
+في نفس الوقت.
+
+التحليل متوازي.
+الإنتاج متسلسل.
+
+
+==================================================
+11. FAILURE POLICY
+==================================================
+
+عند أي فشل:
+
+أولًا صنفه:
+
+- implementation bug
+- capability regression
+- policy/security regression
+- evaluation issue
+- provider availability
+- test infrastructure issue
+- scope escalation required
+
+إذا implementation bug محدود:
+أصلحه داخل نفس Capability ثم أعد targeted gate.
+
+إذا security regression:
+STOP.
+
+إذا يحتاج generic access:
+STOP.
+
+إذا provider rate limit:
+لا تغيّر provider.
+لا تغيّر model.
+لا تعمل retry loop غير منضبط.
+سجل promotion deferred.
+
+إذا full regression يكشف حالة ناجحة سابقًا أصبحت فاشلة:
+STOP قبل الانتقال للمرحلة التالية.
+
+
+==================================================
+12. BASELINE IMMUTABILITY
+==================================================
+
+لا تعدّل:
+
+baseline-real-v1-complete.json
+
+baseline-real-v2-aa-rc-016-complete.json
+
+baseline-real-v3-aa-rc-014-complete.json
+
+ولا Dataset.
+
+كل Promotion يحصل على artifact جديد.
+
+كل diagnostic run يبقى واضحًا أنه non-canonical.
+
+
+==================================================
+13. ADR / FUTURE ARCHITECTURE FREEZE
+==================================================
+
+حتى لو انتهى Project Evidence بنجاح:
+
+لا تبدأ داخل هذه الجولة:
+
+- Runtime Assurance
+- ADR-017
+- ADR-018
+- Code Sandbox
+- Adaptive Cognitive Router
+- Multimodal Plane
+- Voice
+- Images
+- Video
+- Professional Media Generation
+- Behavioral Insight
+- Sovereign Evolution Engine
+- provider routing
+- local AI backends
+
+بعد الوصول إلى 26/0/0/0:
+
+STOP.
+
+سنراجع المرحلة التالية منفصلة.
+
+
+==================================================
+14. FINAL REPORT
+==================================================
+
+أعطني تقريرًا نهائيًا واحدًا واضحًا.
+
+لكل Capability:
+
+AA-RC-002
+AA-RC-011
+AA-RC-007
+
+أعرض:
+
+- root cause
+- design used
+- files created/modified
+- capability name
+- allowlist
+- deny/security boundaries
+- tests
+- targeted result
+- deterministic quality result
+- full regression result
+- artifact
+- hashes
+- warnings
+
+ثم Summary:
+
+- final test count
+- skipped tests
+- compileall
+- git diff --check
+- final 26-case counts
+- remaining Capability Gaps
+- Provider Failures
+- HITL_BLOCKED
+- Dataset SHA-256
+- canonical baseline artifact
+- Physical SHA-256
+- Canonical SHA-256
+- confirmation that v1/v2/v3 remained immutable
+- semantic grading status
+
+إذا وصلت إلى:
+
+26 EXECUTED
+0 Capability Gaps
+0 Provider Failures
+0 HITL_BLOCKED
+
+اكتب:
+
+PROJECT EVIDENCE PHASE = COMPLETE
+
+ثم توقف.
+
+لا تبدأ المرحلة المعمارية التالية تلقائيًا.
