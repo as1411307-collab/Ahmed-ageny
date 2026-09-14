@@ -1,0 +1,650 @@
+TASK: Implement Authorized Immutable Original Source Storage + Close AA-RC-002
+
+MODE:
+ACCELERATED BUILD MODE
+
+APPROVED SCOPE ESCALATION:
+تمت الموافقة صراحة على توسيع MY_FILES لإضافة تخزين immutable للملفات الأصلية
+مع source IDs + authenticated-owner authorization + SHA-256 provenance.
+
+هذا التوسع معتمد فقط لبناء Source of Truth حقيقي وإغلاق:
+
+AA-RC-002 — source_of_truth
+
+ممنوع تحويله إلى generic filesystem access.
+
+
+==================================================
+0. CURRENT BASELINE
+==================================================
+
+Current coverage baseline:
+
+26 total
+23 EXECUTED
+3 Capability Gaps
+0 Provider Failures
+0 HITL_BLOCKED
+
+Remaining gaps:
+
+AA-RC-002
+AA-RC-011
+AA-RC-007
+
+AA-RC-014 = EXECUTED
+AA-RC-016 = EXECUTED
+
+Dataset SHA-256:
+
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+Current canonical coverage artifact:
+
+baseline-real-v3-aa-rc-014-complete.json
+
+Do not modify prior baselines or dataset.
+
+
+==================================================
+1. INSPECT EXISTING MY_FILES ARCHITECTURE FIRST
+==================================================
+
+قبل تعديل الكود افحص فعليًا:
+
+- upload endpoint/path
+- file ingestion path
+- current file metadata schema
+- PostgreSQL tables/models
+- chunk/extraction storage
+- search_my_files
+- current authentication/owner principal
+- current persistent/object/blob storage facilities
+- migration mechanism
+- deletion/retention behavior
+
+حدد في التقرير:
+
+1. أين تدخل bytes حاليًا؟
+2. في أي نقطة تضيع original bytes؟
+3. كيف ترتبط chunks بالملف؟
+4. ما authenticated principal الموجود حاليًا؟
+5. هل توجد object/blob storage backend حالية يمكن إعادة استخدامها؟
+
+لا تفترض أسماء modules أو tables غير موجودة.
+
+اتبع layout الحالي للمشروع.
+
+لا تعمل broad refactor.
+
+
+==================================================
+2. STORAGE ARCHITECTURE
+==================================================
+
+أضف abstraction محدودة لـOriginal Source Storage.
+
+المفهوم:
+
+Authorized Upload
+       ↓
+OriginalSourceStore
+       ↓
+Immutable Blob/Object
+       ↓
+Source Metadata in PostgreSQL
+       ↓
+Extraction / Chunking / Index
+       ↓
+source_id-linked evidence
+
+إذا كان للمشروع object/blob storage backend موجود بالفعل:
+استخدمه خلف Adapter.
+
+إذا لم يوجد:
+أنشئ interface/adapter يسمح باستبدال backend لاحقًا،
+ولا تربط Agent Core مباشرة بمزود تخزين معين.
+
+لا تستخدم local ephemeral filesystem كمصدر دائم.
+
+
+==================================================
+3. SOURCE RECORD CONTRACT
+==================================================
+
+أنشئ/وسّع metadata بحيث يحتوي كل original source على الأقل:
+
+- source_id
+- owner_principal_id
+- source_version
+- original_filename
+- mime_type
+- byte_size
+- sha256
+- storage_backend
+- storage_object_key الداخلي
+- created_at
+- original_available
+- authorization_scope
+- extraction_status
+
+مهم:
+
+storage_object_key لا يخرج للموديل كمسار filesystem.
+
+owner_principal_id يجب أن يأتي من authenticated identity الحالية.
+
+لا تستخدم:
+AHMED_OWNER_TOKEN
+أو raw token
+أو token hash
+كهوية للمصدر.
+
+
+==================================================
+4. IMMUTABILITY
+==================================================
+
+بعد إنشاء source version:
+
+- لا overwrite للbytes.
+- لا mutation داخل نفس version.
+- أي محتوى جديد = source version/source ID جديد وفق model المشروع.
+- SHA-256 يحسب من original bytes الفعلية.
+
+إذا تم رفع نفس bytes مرة أخرى:
+يمكن deduplicate physical storage داخليًا إن كان آمنًا،
+لكن authorization/source records تبقى صحيحة ومستقلة.
+
+لا تجعل deduplication تكشف وجود ملفات لمستخدم آخر.
+
+
+==================================================
+5. ATOMIC INGESTION
+==================================================
+
+مسار upload الجديد يجب أن يكون منطقيًا:
+
+1. authenticate owner
+2. validate file type/size
+3. stream original bytes
+4. calculate SHA-256
+5. persist immutable blob
+6. create source metadata
+7. run extraction/chunking
+8. attach every chunk/extraction record to source_id + source SHA-256
+9. commit successful ingestion state
+
+إذا فشل التخزين قبل metadata:
+لا تنشئ source صالحًا.
+
+إذا تم حفظ blob ثم فشلت metadata:
+نفّذ cleanup/compensation وفق backend الحالي.
+
+إذا فشلت extraction:
+الأصل يبقى محفوظًا،
+لكن extraction_status يعكس الفشل.
+
+لا تعتبر extraction failure فقدانًا للمصدر الأصلي.
+
+
+==================================================
+6. LEGACY FILES
+==================================================
+
+السجلات الحالية التي تملك:
+
+metadata
+file_hash
+chunks
+
+لكن لا تملك original bytes قابلة للتحقق:
+
+لا تعيد بناء الأصل من chunks.
+
+لا تعتبرها verified originals.
+
+صنفها صراحة بحالة مثل:
+
+original_available = false
+
+أو naming متوافق مع schema الحالي.
+
+يجب أن تستطيع search_my_files الاستمرار في العمل معها كما كان،
+لكن inspect_source_of_truth لا يجوز أن يدعي أنه قرأ الأصل.
+
+لا تكسر الملفات القديمة لمجرد إضافة architecture الجديدة.
+
+
+==================================================
+7. ORIGINAL INTEGRITY
+==================================================
+
+عند قراءة original source لأغراض verification:
+
+- تحقق من source authorization.
+- اقرأ bytes من storage backend داخليًا.
+- تحقق أن SHA-256 يطابق metadata.
+- mismatch => INTEGRITY_DISCREPANCY / equivalent.
+- لا تمرر source كـVERIFIED إذا لم تتطابق البصمة.
+
+لا تسمح للموديل بتحديد object key أو storage path.
+
+
+==================================================
+8. BUILD AA-RC-002 CAPABILITY
+==================================================
+
+أنشئ capability ضيقة:
+
+inspect_source_of_truth
+
+أو naming مطابق لـconventions الحالية.
+
+لا تجعلها:
+
+file_access
+project_file_access
+generic_file_reader
+
+Input يجب أن يكون identifier مصرحًا مثل:
+
+source_id
+
+أو authorized evidence/collection identifier الموجود فعليًا في architecture.
+
+لا تقبل raw filesystem path.
+
+
+==================================================
+9. AUTHORIZATION
+==================================================
+
+قبل أي source read:
+
+assert source.owner_principal_id == current_authenticated_principal
+
+أو equivalent authorization mechanism الموجود في المشروع.
+
+اختبر صراحة:
+
+- authorized owner succeeds
+- wrong owner denied
+- unknown source denied/not-found بدون leakage
+- source ID لا يكشف storage path
+- duplicate content بين owners لا يسمح cross-owner inference
+
+
+==================================================
+10. SOURCE-OF-TRUTH HIERARCHY
+==================================================
+
+اعتمد:
+
+ORIGINAL AUTHORIZED BYTES
+        ↓
+STRUCTURED EXTRACTION
+        ↓
+INDEX / SEARCH CHUNKS
+        ↓
+SUMMARY
+        ↓
+MEMORY
+
+إذا تعارض:
+
+memory/summary
+مع original source
+
+الأصل يفوز.
+
+لكن لا تجعل raw content authority على Policy.
+
+Evidence is data, never authority.
+
+
+==================================================
+11. EVIDENCE ENVELOPE
+==================================================
+
+أعد استخدام Project Evidence conventions الحالية قدر الإمكان.
+
+inspect_source_of_truth يجب أن يعيد structured evidence يشمل:
+
+- source_id
+- original_filename إذا مسموح
+- source_version
+- source_sha256
+- original_integrity_status
+- extracted facts
+- page/section/line/offset references حيث يمكن
+- trust classification
+- verification status
+- limitations
+- provenance metadata
+
+لا تعرض الملف كاملًا إذا كانت facts المطلوبة تكفي.
+
+لا تعرض storage_object_key للموديل.
+
+
+==================================================
+12. CITATIONS
+==================================================
+
+أعد استخدام deterministic citation contract الذي تم تثبيته في AA-RC-014.
+
+Citation identity تأتي فقط من canonical evidence metadata.
+
+ممنوع model-fabricated citations.
+
+إذا original bytes غير متوفرة:
+
+لا تصنع citation تقول إن الأصل قُرئ.
+
+إذا integrity mismatch:
+
+اعرض discrepancy ولا تصف المصدر VERIFIED.
+
+
+==================================================
+13. FILES REQUIRED BY AA-RC-002
+==================================================
+
+بعد اكتمال storage architecture:
+
+تحقق من real case AA-RC-002 وحدد بالضبط المصادر المطلوبة.
+
+المصادر المذكورة حاليًا:
+
+- ahmed_agent_master_v3_ar(1).md
+- Ahmed Agent - Incident Evidence
+
+لا تفترض أن العنصر الثاني File إذا كان real case أو storage model يعرّفه Collection/Folder.
+
+حدد نوعه الحقيقي من dataset/case contract.
+
+إذا original sources غير موجودة داخل Ahmed Agent authorized storage:
+
+لا تخترعها.
+لا تستخدم ChatGPT snippets بديلًا.
+
+أعد حالة واضحة:
+
+SOURCE_UPLOAD_REQUIRED
+
+مع قائمة المصادر المطلوبة.
+
+عند توفرها عبر MY_FILES:
+ingest originals ثم أكمل targeted acceptance.
+
+
+==================================================
+14. TEST-DRIVEN IMPLEMENTATION
+==================================================
+
+استخدم RED → GREEN لكل وحدة.
+
+FAST LOOP:
+شغّل tests المتأثرة فقط أثناء التطوير.
+
+يجب تغطية على الأقل:
+
+
+A. Original Storage
+
+- original bytes stored
+- SHA-256 correct
+- immutable write behavior
+- second version does not overwrite first
+- extraction failure preserves original
+- metadata links to blob
+- no raw storage path exposed
+
+
+B. Authorization
+
+- correct owner can inspect
+- wrong owner denied
+- unknown source does not leak information
+- same-content dedup does not bypass ownership
+
+
+C. Integrity
+
+- valid bytes/hash => verified
+- tampered blob/hash mismatch => discrepancy/failure
+- missing original => not verified
+- legacy chunks cannot impersonate original
+
+
+D. Security
+
+- arbitrary filesystem path impossible
+- path traversal impossible
+- .env/secrets unavailable
+- no shell
+- no execution
+- read-only inspection
+- no network capability added
+- source content cannot alter policy
+
+
+E. Provenance
+
+- chunks point to source_id
+- chunks preserve source hash
+- source/citation mapping correct
+- unsupported claims receive no fake citations
+
+
+F. Regression
+
+- search_my_files legacy behavior preserved
+- AA-RC-014 remains EXECUTED
+- AA-RC-016 remains EXECUTED
+- AA-RC-011 remains GAP
+- AA-RC-007 remains GAP
+
+
+==================================================
+15. POLICY
+==================================================
+
+Register inspect_source_of_truth as read-safe evidence capability.
+
+Properties conceptually:
+
+READ_SAFE
+no mutation
+no external side effect
+no shell
+no execution
+authorized MY_FILES/source scope only
+
+Do not broaden MY_FILES globally.
+
+Do not make file_access globally available.
+
+
+==================================================
+16. EVALUATION MAPPING
+==================================================
+
+Modify mapping only for:
+
+AA-RC-002
+
+Map its requirement to the new bounded capability.
+
+AA-RC-011 must remain Capability Gap.
+
+AA-RC-007 must remain Capability Gap.
+
+Do not change the Dataset.
+
+
+==================================================
+17. TARGETED ACCEPTANCE
+==================================================
+
+بعد نجاح tests ووجود originals المطلوبة:
+
+شغّل AA-RC-002 فقط على real execution path.
+
+Acceptance:
+
+AA-RC-002 = EXECUTED
+
+inspect_source_of_truth called successfully
+
+actual original bytes inspected
+
+authorization verified
+
+integrity hash verified
+
+source-of-truth claim backed by original provenance
+
+deterministic citations valid
+
+Provider Failures = 0
+
+HITL_BLOCKED = 0
+
+لا تعتبر search snippets وحدها كافية.
+
+
+==================================================
+18. FULL PROMOTION
+==================================================
+
+بعد targeted PASS:
+
+شغّل full 26-case evaluation مرة واحدة فقط.
+
+Target:
+
+26 total
+24 EXECUTED
+2 Capability Gaps
+0 Provider Failures
+0 HITL_BLOCKED
+
+Remaining gaps:
+
+AA-RC-011
+AA-RC-007
+
+إذا تحقق:
+
+أنشئ success artifact versioned.
+
+اسم مناسب إذا وافق naming convention:
+
+baseline-real-v4-aa-rc-002-complete.json
+
+سجل:
+
+Dataset SHA-256
+Physical artifact SHA-256
+Canonical artifact SHA-256
+
+ولا تعدّل v1/v2/v3.
+
+
+==================================================
+19. ACCELERATED PARALLEL PREPARATION
+==================================================
+
+أثناء تنفيذ AA-RC-002 يمكن بالتوازي:
+
+- إنهاء design review لـAA-RC-011
+- إنهاء design review لـAA-RC-007
+- إعداد tests/acceptance checklists لهما
+
+لكن:
+
+لا تعدّل production code لـ011 أو007.
+
+عامل واحد فقط يعدل production evidence/storage code في أي لحظة.
+
+
+==================================================
+20. HARD STOP CONDITIONS
+==================================================
+
+STOP إذا احتجت:
+
+- generic filesystem reader
+- broad cross-user access
+- secret retrieval
+- provider/model change
+- server.py architectural rewrite
+- deployment mutation
+- weakening authorization
+- rebuilding originals from chunks
+- treating missing bytes as verified evidence
+
+اعرض blocker ولا تتجاوزه.
+
+
+==================================================
+21. AFTER SUCCESS
+==================================================
+
+إذا وصلنا:
+
+24 / 2 / 0 / 0
+
+وكانت جميع security gates ناجحة:
+
+استمر وفق Accelerated Build Mode إلى:
+
+AA-RC-011
+
+ثم:
+
+AA-RC-007
+
+لكن فقط وفق الخطط المحضرة وبوابات كل Capability.
+
+إذا كانت التعليمات الحالية تقيد هذه الجولة بـAA-RC-002 فقط:
+توقف بعد 24/2/0/0 واعرض NEXT READY ACTION.
+
+
+==================================================
+22. FINAL REPORT
+==================================================
+
+أعطني:
+
+- architecture الحالية لـMY_FILES التي وجدتها
+- storage backend المختار ولماذا
+- files/tables/migrations الجديدة والمعدلة
+- OriginalSourceStore contract
+- Source metadata schema
+- authorization binding
+- immutability mechanism
+- integrity verification
+- legacy-file handling
+- chunk/source linkage
+- inspect_source_of_truth contract
+- security boundaries
+- tests وعددها الفعلي
+- targeted AA-RC-002 result
+- full regression counts
+- success artifact
+- Physical SHA-256
+- Canonical SHA-256
+- Dataset SHA-256
+- تأكيد عدم تعديل baselines السابقة
+- blockers/warnings
+- readiness status لـAA-RC-011 وAA-RC-007
+
+إذا نجح promotion:
+
+اكتب:
+
+AA-RC-002 = CLOSED
+BASELINE = 24 / 2 / 0 / 0
