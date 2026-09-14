@@ -1,0 +1,32 @@
+{
+  "schema_version": "aa-rc-002-upload-evidence.v1",
+  "retrieval_mode": "HYBRID_RRF",
+  "result_count": 10,
+  "files": [
+    {
+      "filename": "JobRequest-(1)_(1)_1789406011025.pdf",
+      "sha256": "33de413a950e0685612775d3c495fb200d84e15fbe23d8de5ede52446b1efbac",
+      "search_matches": 3,
+      "source_id": "68c95924-16fd-4cde-bd45-fd263141a3da",
+      "status": null,
+      "original_available": true,
+      "citation": "[source: JobRequest-(1)_(1)_1789406011025.pdf, page 1, chunk 0]",
+      "inspection_evidence_status": "VERIFIED",
+      "original_integrity_status": "VERIFIED",
+      "inspection_source_id_matches": true
+    },
+    {
+      "filename": "JobRequest-A_(2)_(3)_1789406011025.pdf",
+      "sha256": "9a397abf8dbb5337e7aed2211d449f7c2a05bc7c2789369d7b97993b8f6b5f0b",
+      "search_matches": 2,
+      "source_id": "82084c28-b7ea-4f3b-9d08-979671fec10a",
+      "status": null,
+      "original_available": true,
+      "citation": "[source: JobRequest-A_(2)_(3)_1789406011025.pdf, page 1, chunk 0]",
+      "inspection_evidence_status": "VERIFIED",
+      "original_integrity_status": "VERIFIED",
+      "inspection_source_id_matches": true
+    }
+  ],
+  "all_verified": true
+}
