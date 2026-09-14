@@ -1,0 +1,148 @@
+TASK: Resolve evaluation dataset hash lineage before continuing AA-RC-002.
+
+READ-ONLY INVESTIGATION ONLY.
+Do not modify code, dataset, baselines, fixtures, ADRs, database, or deployment.
+
+Current HEAD:
+ed3547e42fdb9162c00e64cc40707152e0075bd5
+
+Current raw SHA-256 reported for:
+tests/fixtures/evaluation_baseline/real_cases.json
+
+923b05321ebba94cce69db8cb5317a6fc12f574ce27865c808c5d298d3879559
+
+Historical expected/reference value:
+
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+
+INVESTIGATE EXACTLY:
+
+1. HASH SEMANTICS
+Inspect evaluation_baseline.py and all relevant evaluation/hash helpers.
+
+Determine exactly how "dataset_sha256" in historical baseline artifacts was computed:
+
+- raw file bytes?
+- parsed JSON then canonical serialization?
+- selected case fields?
+- another transformation?
+
+Show the exact function/code path responsible.
+
+Do not assume raw sha256sum is equivalent to the baseline dataset hash.
+
+
+2. RECOMPUTE USING THE HARNESS
+
+Using the exact existing evaluation code path, compute the dataset hash
+for the current real_cases.json.
+
+Report separately:
+
+RAW_FILE_SHA256 =
+CANONICAL/HARNESS_DATASET_SHA256 =
+
+If the harness has no canonical computation, state that explicitly.
+
+
+3. TRACE 35534e...
+
+Search repository history and immutable baseline artifacts for:
+
+35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1
+
+Identify:
+
+- first/earliest relevant artifact or commit containing it
+- baseline artifact(s) that reference it
+- git commit associated with those artifacts if recorded
+- exact dataset version/content that produced it, if recoverable
+
+
+4. DATASET GIT HISTORY
+
+Inspect git history for:
+
+tests/fixtures/evaluation_baseline/real_cases.json
+
+Determine:
+
+- commits that changed it
+- latest commit that changed it
+- whether changes were semantic or formatting-only
+- whether AA-RC case count/IDs changed
+- specifically whether AA-RC-002, AA-RC-007, or AA-RC-011 changed
+
+Do not restore or checkout anything.
+
+
+5. COMPARE LOGICAL DATASET
+
+Compare the dataset associated with 35534e... (if recoverable)
+against current HEAD.
+
+Report:
+
+- case count old/current
+- case IDs added/removed
+- fields changed
+- expected_behavior changes
+- expected_sources changes
+- success_criteria changes
+- required_tools changes
+- formatting-only differences
+
+Use a structured diff.
+
+
+6. BASELINE LINEAGE
+
+For v1, v2, v3 baseline artifacts report:
+
+- artifact name
+- recorded dataset hash
+- git commit if recorded
+- case total
+- executed/gap counts
+
+Determine whether historical baselines are internally consistent with
+the dataset revision they evaluated.
+
+
+7. CLASSIFY ROOT CAUSE
+
+Return exactly one primary classification:
+
+A. HASH_SEMANTICS_MISMATCH
+B. INTENTIONAL_DATASET_REVISION
+C. FORMATTING_ONLY_DATASET_CHANGE
+D. UNAPPROVED_DATASET_DRIFT
+E. HISTORICAL_HASH_RECORD_ERROR
+F. INSUFFICIENT_EVIDENCE
+
+Explain the evidence.
+
+
+8. NO FIX YET
+
+Do not:
+- update expected hash
+- restore the dataset
+- edit historical baseline artifacts
+- generate a new baseline
+- continue AA-RC-002
+- create ADR-019 yet
+
+Return evidence only.
+
+FINAL OUTPUT:
+
+A. Raw current hash
+B. Harness/canonical current hash
+C. Meaning of historical 35534e...
+D. Dataset git lineage
+E. Semantic diff old vs current
+F. Historical baseline consistency
+G. Root-cause classification
+H. Recommended next action, but do not execute it
