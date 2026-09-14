@@ -211,6 +211,47 @@ class EvaluationBaselineTests(unittest.TestCase):
         self.assertEqual(trace["execution_status"], "EXECUTED")
         self.assertEqual(trace["tool_calls"][0]["name"], "web_search")
 
+    def test_trace_projects_raw_evidence_items_when_event_citations_are_empty(self) -> None:
+        case = next(case for case in load_evaluation_cases() if case["id"] == "web-current-official")
+        item = {
+            "relative_source_path": "search_fabric.py",
+            "file_sha256": "a" * 64,
+            "line_start": 10,
+            "line_end": 12,
+            "extracted_evidence": "verified source",
+            "verification_status": "VERIFIED",
+            "trust_classification": "PROJECT_SOURCE",
+        }
+        trace = build_evaluation_trace(
+            case=case,
+            run_id="run-raw-evidence",
+            scope="WEB",
+            provider="gemini",
+            response_status=200,
+            response_payload={"reply": "Answer"},
+            persisted={
+                "run": {"status": "succeeded", "model_name": "test-model"},
+                "tool_events": [
+                    {
+                        "tool_name": "inspect_runtime_evidence",
+                        "status": "success",
+                        "duration_ms": 1,
+                        "safe_metadata": {
+                            "evidence_status": "VERIFIED",
+                            "evidence_items": [item],
+                            "evidence_citations": [],
+                        },
+                    }
+                ],
+                "pending_actions": [],
+            },
+            latency_ms=1,
+        )
+        self.assertEqual(len(trace["evidence_provenance"]), 1)
+        self.assertEqual(len(trace["available_evidence_citations"]), 1)
+        self.assertEqual(trace["evidence_provenance"][0]["file_sha256"], "a" * 64)
+        self.assertIn("file: search_fabric.py", trace["evidence_provenance"][0]["citation"])
+
     def test_malformed_trace_is_rejected(self) -> None:
         with self.assertRaises(ValueError):
             validate_evaluation_trace({"case_id": "broken"})

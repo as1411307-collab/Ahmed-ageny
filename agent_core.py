@@ -48,8 +48,12 @@ from source_of_truth import (
     inspect_source_of_truth as inspect_existing_source_of_truth,
 )
 from source_status import inspect_source_status as inspect_existing_source_status
-from evidence_citations import remove_model_source_markers, render_evidence_report
-from evidence_citations import render_evidence_citations
+from evidence_citations import (
+    build_evidence_provenance,
+    remove_model_source_markers,
+    render_evidence_citations,
+    render_evidence_report,
+)
 from request_routing import RouteDecision, RequestCapability, classify_request
 from skill_tools import web_search as existing_web_search
 
@@ -255,12 +259,17 @@ def _evidence_payload(
         "target": target,
         "evidence_status": _evidence_status(result),
         "evidence_items": items,
+        "evidence_provenance": build_evidence_provenance(
+            items,
+            source_label=source_label,
+        ),
         "source_label": source_label,
     }
     payload = {
         "target": target,
         "status": _evidence_status(result),
         "citations": citations,
+        "evidence_provenance": envelope["evidence_provenance"],
         "facts": result,
     }
     return envelope, payload
@@ -316,6 +325,8 @@ async def prepare_evidence_first_context(
                 "evidence_status": envelope["evidence_status"],
                 "evidence_citations": payload["citations"],
                 "evidence_items": envelope["evidence_items"][:24],
+                "evidence_provenance": envelope["evidence_provenance"][:24],
+                "source_label": source_label,
             },
         )
 

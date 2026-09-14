@@ -3,20 +3,20 @@
 - **Date:** 2026-09-14
 - **Branch:** `agent/blueprint-docs-2026-09-14`
 - **Scope:** authenticated operational paths already present in Ahmed Agent
-- **External sends:** none; provider-backed model execution was not invoked
+- **External sends:** provider-backed Gemini execution was invoked for acceptance and the real-case baseline; no user-facing external side effect was performed
 - **Deployment:** not performed
 - **Secrets:** used internally by the environment, never printed or persisted
 
 ## Result
 
-**PASS for the local operational boundary.** Authenticated HTTP, PostgreSQL
-persistence, MCP lifecycle, file validation, recovery controls, idempotency,
-audit integrity, and internal runtime alerting were exercised with temporary
-test data.
+**PASS for the authenticated operational boundary.** Authenticated HTTP,
+PostgreSQL persistence, MCP lifecycle, file validation, recovery controls,
+idempotency, audit integrity, internal runtime alerting, real Gemini chat, and
+provider fallback fault injection were exercised with bounded test data.
 
-The chat acceptance used a local provider stub because this acceptance run
-explicitly forbade external sends. The real provider selection and persistence
-path were still exercised by the route; no Gemini or OpenAI request was made.
+The real chat acceptance returned `200` through Gemini. The fallback check used
+an in-test transient provider fault and a ready alternate provider; it did not
+alter production provider configuration or send a synthetic fault to Gemini.
 
 ## Paths accepted
 
@@ -30,7 +30,8 @@ path were still exercised by the route; no Gemini or OpenAI request was made.
 
 ### Chat and persistence
 
-- Authenticated `/chat/message` with the local provider stub returned `200`.
+- Authenticated `/chat/message` with the real Gemini provider returned `200`.
+- The provider health route reported Gemini `READY` before the request.
 - The reply was persisted as a successful run.
 - Persisted run state was:
   `succeeded / completed / resolved`.
@@ -53,6 +54,22 @@ path were still exercised by the route; no Gemini or OpenAI request was made.
 - Authenticated Streamable HTTP `initialize` returned `200`.
 - An MCP session ID was issued.
 - The server returned protocol version `2025-03-26`.
+
+### Evidence and semantic evaluation
+
+- Runtime evidence references now carry canonical source identity, SHA-256,
+  locator, verification status, and trust classification.
+- Raw persisted evidence items are projected into `evidence_provenance` and
+  citation lists only when the citation contract validates; absent evidence
+  does not produce a fabricated citation.
+- New baseline: 26/26 executed, 0 execution failures, 0 provider rate limits,
+  0 capability gaps, and 0 missing traces.
+- Baseline contained 263 output citations and 279 available evidence citations.
+- Semantic evaluation: 0 PASS, 2 deterministic semantic FAIL, 24
+  `REVIEW_REQUIRED`, with independent review still required. The two FAIL
+  cases are answer/evidence failures, not provider or execution failures.
+- Provider/execution failures are classified as `NOT_DETERMINED` and reported
+  separately from semantic answer failures.
 
 ### PostgreSQL, leases, recovery, and idempotency
 
@@ -87,8 +104,10 @@ request succeeds after lifecycle startup.
 
 ## Cleanup
 
-All temporary runs, sessions, checkpoints, messages, pending actions, tool
-events, and uploaded document records were removed by exact test identifiers.
+All temporary operational runs, sessions, checkpoints, messages, pending
+actions, tool events, and uploaded document records were removed by exact
+identifiers. The 26 baseline runs and sessions were also removed by their
+recorded run IDs after artifact generation.
 Verification after cleanup found:
 
 - marked test runs: `0`
@@ -100,15 +119,16 @@ Audit events were preserved according to the retention policy.
 
 ## Verification
 
-- Targeted operational/security tests: `18 passed, 1 skipped`
-- Full suite: `107 passed, 1 skipped`
+- Targeted provenance/provider/semantic tests: `49 passed`
+- Full suite: `138 passed, 1 skipped`
 - Python compile check: passed
 - `uv pip check`: passed; 119 packages compatible
 - `git diff --check`: passed
+- Controlled fallback fault injection: passed; fallback event was recorded with
+  the actual alternate provider and bounded retry behavior.
 
 ## Not started
 
-- Semantic grading
-- Model Gateway work
+- Independent human semantic review for the 26 cases
 - Multimodal/Voice
 - Deployment or publishing

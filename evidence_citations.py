@@ -97,6 +97,36 @@ def render_evidence_citations(
     return citations
 
 
+def build_evidence_provenance(
+    items: Iterable[object],
+    *,
+    source_label: str = "Ahmed Agent project files",
+) -> list[dict[str, object]]:
+    """Return bounded provenance records only for citation-ready evidence."""
+
+    provenance: list[dict[str, object]] = []
+    for item in list(items)[:_MAX_ITEMS]:
+        validated = _validated_item(item)
+        citation = render_evidence_citation(item, source_label=source_label)
+        if validated is None or citation is None:
+            continue
+        provenance.append(
+            {
+                "citation": citation,
+                "source_identity": source_label,
+                "relative_source_path": validated["relative_source_path"],
+                "file_sha256": validated["file_sha256"],
+                "locator": {
+                    "line_start": validated["line_start"],
+                    "line_end": validated["line_end"],
+                },
+                "verification_status": validated["verification_status"],
+                "trust_classification": validated["trust_classification"],
+            }
+        )
+    return provenance
+
+
 def parse_evidence_citation(value: str) -> dict[str, object] | None:
     match = _CITATION_RE.fullmatch(value.strip())
     if not match:

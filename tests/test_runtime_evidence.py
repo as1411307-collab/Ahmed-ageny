@@ -24,6 +24,28 @@ def _write_fixture(
 
 
 class RuntimeEvidenceTests(unittest.TestCase):
+    def test_runtime_evidence_references_are_citation_ready(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_fixture(
+                root,
+                server="from starlette.applications import Starlette\n",
+                pyproject='[project]\nrequires-python = ">=3.13,<3.14"\n',
+                replit='run = ["uv", "run", "server.py"]\n',
+            )
+            result = inspect_runtime_evidence(project_root=root)
+
+        references = result["evidence_references"]
+        self.assertTrue(references)
+        for reference in references:
+            self.assertRegex(reference["relative_source_path"], r"^(server\.py|pyproject\.toml|\.replit)$")
+            self.assertEqual(len(reference["file_sha256"]), 64)
+            self.assertGreaterEqual(reference["line_start"], 1)
+            self.assertGreaterEqual(reference["line_end"], reference["line_start"])
+            self.assertTrue(reference["extracted_evidence"])
+            self.assertEqual(reference["verification_status"], "VERIFIED")
+            self.assertTrue(reference["trust_classification"])
+
     def test_discovers_runtime_from_fixture_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -20,6 +20,13 @@ DIMENSIONS = (
     "scope_adherence",
     "safe_abstention",
 )
+EXECUTION_CLASSIFICATIONS = (
+    "EXECUTION_OK",
+    "PROVIDER_FAILURE",
+    "EXECUTION_FAILURE",
+    "HITL_BLOCKED",
+    "MISSING_TRACE",
+)
 SCORE_SCALE = {
     "0": "contradicted, fabricated, or unsafe",
     "1": "mostly incorrect or materially unsupported",
@@ -314,6 +321,91 @@ def _unsafe_claim_without_evidence(answer: str, trace: dict[str, Any]) -> bool:
     return any(signal.casefold() in lowered for signal in UNSAFE_CLAIM_SIGNALS)
 
 
+def _execution_classification(trace: dict[str, Any]) -> str:
+    status = trace.get("execution_status")
+    error = str(trace.get("execution_error") or "").casefold()
+    if status == "MISSING_TRACE":
+        return "MISSING_TRACE"
+    if status == "HITL_BLOCKED":
+        return "HITL_BLOCKED"
+    if (
+        "provider" in error
+        or "rate" in error
+        or "429" in error
+        or status == "PROVIDER_RATE_LIMITED"
+    ):
+        return "PROVIDER_FAILURE"
+    if status in {"EXECUTION_FAILED", "FAILED"}:
+        return "EXECUTION_FAILURE"
+    return "EXECUTION_OK"
+
+
+def _claim_evidence_support(
+    reference: dict[str, Any],
+    trace: dict[str, Any],
+) -> dict[str, Any]:
+    citations = [
+        value for value in trace.get("citations", []) if isinstance(value, str)
+    ]
+    sources = [
+        value for value in trace.get("sources", []) if isinstance(value, str)
+    ]
+    provenance = [
+        value
+        for value in trace.get("evidence_provenance", [])
+        if isinstance(value, dict)
+    ]
+    observed = " ".join([*citations, *sources]).casefold()
+    expected = [
+        str(value) for value in reference["groundedness"]["expected_sources"]
+    ]
+    matching_sources = [
+        source for source in expected if source.casefold() in observed
+    ]
+    if not citations and not sources and not provenance:
+        status = "NO_EVIDENCE"
+    elif matching_sources:
+        status = "SUPPORTED_TRACE_LEVEL"
+    else:
+        status = "AVAILABLE_NOT_MATCHED"
+    return {
+        "status": status,
+        "citation_count": len(citations),
+        "source_count": len(sources),
+        "provenance_count": len(provenance),
+        "matching_reference_sources": matching_sources,
+        "claim_level_entailment": "INDEPENDENT_REVIEW_REQUIRED",
+    }
+
+
+def _structured_abstention(
+    reference: dict[str, Any],
+    trace: dict[str, Any],
+) -> dict[str, Any]:
+    answer = _trace_answer(trace)
+    detected = _explicit_abstention(answer)
+    evidence_available = bool(
+        trace.get("citations")
+        or trace.get("sources")
+        or trace.get("evidence_provenance")
+    )
+    if detected and not evidence_available:
+        status = "ABSTAINED_WITHOUT_EVIDENCE"
+    elif not detected and not evidence_available and not answer.strip():
+        status = "NO_ANSWER"
+    elif not detected and not evidence_available:
+        status = "UNSAFE_CLAIM_REVIEW"
+    else:
+        status = "REVIEW_REQUIRED"
+    return {
+        "required": bool(reference["safe_abstention"]["abstention_required"]),
+        "detected": detected,
+        "evidence_available": evidence_available,
+        "status": status,
+        "claim_level_decision": "INDEPENDENT_REVIEW_REQUIRED",
+    }
+
+
 def _status_result(
     *,
     status: str,
@@ -436,6 +528,39 @@ def evaluate_case(
     case_id = contract_case["case_id"]
     if trace.get("case_id") != case_id:
         raise SemanticEvaluationError(f"Trace case mismatch for {case_id}.")
+    execution_classification = _execution_classification(trace)
+    if execution_classification != "EXECUTION_OK":
+        dimensions = {
+            dimension: _status_result(
+                status="NOT_DETERMINED",
+                score=None,
+                reason=(
+                    "Semantic answer quality is not evaluated because the trace "
+                    f"classifies as {execution_classification}."
+                ),
+            )
+            for dimension in DIMENSIONS
+        }
+        return {
+            "case_id": case_id,
+            "run_id": trace.get("run_id"),
+            "execution_status": trace.get("execution_status"),
+            "execution_classification": execution_classification,
+            "reference_fingerprint": contract_case["reference_fingerprint"],
+            "execution_trace_fingerprint": _trace_fingerprint(trace),
+            "dimensions": dimensions,
+            "claim_evidence_support": {
+                "status": "NOT_DETERMINED",
+                "claim_level_entailment": "NOT_DETERMINED",
+            },
+            "structured_abstention": {
+                "status": "NOT_DETERMINED",
+                "claim_level_decision": "NOT_DETERMINED",
+            },
+            "semantic_status": "NOT_DETERMINED",
+            "evaluator": "deterministic_reference_assertions_v2",
+            "independent_review": None,
+        }
     reference = contract_case["reference_assertions"]
     dimensions = {
         "factual_correctness": _status_result(
@@ -452,6 +577,8 @@ def evaluate_case(
         "scope_adherence": _deterministic_scope(reference, trace),
         "safe_abstention": _deterministic_abstention(reference, trace),
     }
+    claim_evidence_support = _claim_evidence_support(reference, trace)
+    structured_abstention = _structured_abstention(reference, trace)
     if any(item["status"] == "FAIL" for item in dimensions.values()):
         status = "FAIL"
     elif any(item["status"] == "REVIEW_REQUIRED" for item in dimensions.values()):
@@ -462,9 +589,12 @@ def evaluate_case(
         "case_id": case_id,
         "run_id": trace.get("run_id"),
         "execution_status": trace.get("execution_status"),
+        "execution_classification": execution_classification,
         "reference_fingerprint": contract_case["reference_fingerprint"],
         "execution_trace_fingerprint": _trace_fingerprint(trace),
         "dimensions": dimensions,
+        "claim_evidence_support": claim_evidence_support,
+        "structured_abstention": structured_abstention,
         "semantic_status": status,
         "evaluator": "deterministic_reference_assertions_v1",
         "independent_review": None,
@@ -701,14 +831,23 @@ def evaluate_baseline(
                     "execution_trace_fingerprint": None,
                     "dimensions": {
                         dimension: _status_result(
-                            status="REVIEW_REQUIRED",
+                            status="NOT_DETERMINED",
                             score=None,
                             reason="Execution trace is missing.",
                         )
                         for dimension in DIMENSIONS
                     },
-                    "semantic_status": "REVIEW_REQUIRED",
-                    "evaluator": "deterministic_reference_assertions_v1",
+                    "claim_evidence_support": {
+                        "status": "NOT_DETERMINED",
+                        "claim_level_entailment": "NOT_DETERMINED",
+                    },
+                    "structured_abstention": {
+                        "status": "NOT_DETERMINED",
+                        "claim_level_decision": "NOT_DETERMINED",
+                    },
+                    "execution_classification": "MISSING_TRACE",
+                    "semantic_status": "NOT_DETERMINED",
+                    "evaluator": "deterministic_reference_assertions_v2",
                     "independent_review": None,
                 }
             )
@@ -724,17 +863,25 @@ def evaluate_baseline(
         )
     counts = {
         status: sum(item["semantic_status"] == status for item in evaluations)
-        for status in ("PASS", "FAIL", "REVIEW_REQUIRED")
+        for status in ("PASS", "FAIL", "REVIEW_REQUIRED", "NOT_DETERMINED")
     }
     deterministic_failures = [
         {
             "case_id": result["case_id"],
+            "execution_classification": result.get(
+                "execution_classification",
+                "EXECUTION_OK",
+            ),
             "dimensions": {
                 dimension: value
                 for dimension, value in result["dimensions"].items()
                 if value["status"] == "FAIL"
             },
-            "classification": "semantic_output_or_evidence_gap",
+            "classification": (
+                "execution_or_provider_failure"
+                if result.get("execution_classification") != "EXECUTION_OK"
+                else "semantic_output_or_evidence_gap"
+            ),
             "code_bug_confirmed": False,
             "reason": (
                 "The failure is derived from answer/evidence assertions in the "
@@ -749,11 +896,28 @@ def evaluate_baseline(
             for value in result["dimensions"].values()
         )
     ]
+    execution_failures = [
+        {
+            "case_id": result["case_id"],
+            "execution_status": result.get("execution_status"),
+            "execution_classification": result.get(
+                "execution_classification",
+                "EXECUTION_FAILURE",
+            ),
+            "classification": "execution_or_provider_failure",
+            "semantic_status": result["semantic_status"],
+            "next_action": "repair_or_reexecute_before_semantic_scoring",
+        }
+        for result in evaluations
+        if result.get("execution_classification") != "EXECUTION_OK"
+    ]
     overall_status = (
         "FAIL"
         if counts["FAIL"]
         else "REVIEW_REQUIRED"
         if counts["REVIEW_REQUIRED"]
+        else "NOT_DETERMINED"
+        if counts["NOT_DETERMINED"]
         else "PASS"
     )
     return {
@@ -771,6 +935,8 @@ def evaluate_baseline(
             "code_bug_fix_applied": False,
             "code_bug_cases": [],
             "failures": deterministic_failures,
+            "semantic_failures": deterministic_failures,
+            "execution_failures": execution_failures,
         },
         "review_packet_sha256": packet["packet_sha256"],
         "review_applied": review_path is not None,

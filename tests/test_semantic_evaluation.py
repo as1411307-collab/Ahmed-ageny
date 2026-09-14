@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -84,6 +85,108 @@ class SemanticEvaluationTests(unittest.TestCase):
         result = evaluate_case(contract_case=contract_case, trace=trace)
         self.assertEqual(result["dimensions"]["groundedness"]["status"], "FAIL")
         self.assertIn("no citation", result["dimensions"]["groundedness"]["reason"])
+
+    def test_provider_failure_is_not_scored_as_semantic_answer_failure(self) -> None:
+        contract_case = self.contract["cases"][0]
+        result = evaluate_case(
+            contract_case=contract_case,
+            trace={
+                "case_id": contract_case["case_id"],
+                "run_id": "provider-failure-run",
+                "execution_status": "EXECUTION_FAILED",
+                "execution_error": "PROVIDER_RATE_LIMITED",
+                "tool_calls": [],
+                "citations": [],
+                "sources": [],
+                "output": {"answer": ""},
+            },
+        )
+        self.assertEqual(result["execution_classification"], "PROVIDER_FAILURE")
+        self.assertEqual(result["semantic_status"], "NOT_DETERMINED")
+        self.assertTrue(
+            all(
+                dimension["status"] == "NOT_DETERMINED"
+                for dimension in result["dimensions"].values()
+            )
+        )
+        self.assertEqual(
+            result["claim_evidence_support"]["status"],
+            "NOT_DETERMINED",
+        )
+        self.assertEqual(
+            result["structured_abstention"]["status"],
+            "NOT_DETERMINED",
+        )
+
+    def test_structured_abstention_requires_review_and_never_auto_passes(self) -> None:
+        contract_case = self.contract["cases"][0]
+        result = evaluate_case(
+            contract_case=contract_case,
+            trace={
+                "case_id": contract_case["case_id"],
+                "run_id": "abstention-run",
+                "execution_status": "EXECUTED",
+                "tool_calls": [],
+                "citations": [],
+                "sources": [],
+                "output": {"answer": "لا أستطيع التحقق من ذلك من الأدلة المتاحة."},
+            },
+        )
+        self.assertEqual(
+            result["structured_abstention"]["status"],
+            "ABSTAINED_WITHOUT_EVIDENCE",
+        )
+        self.assertEqual(result["semantic_status"], "REVIEW_REQUIRED")
+        self.assertNotEqual(result["semantic_status"], "PASS")
+
+    def test_claim_support_is_trace_level_only(self) -> None:
+        contract_case = self.contract["cases"][0]
+        source = contract_case["reference_assertions"]["groundedness"][
+            "expected_sources"
+        ][0]
+        result = evaluate_case(
+            contract_case=contract_case,
+            trace={
+                "case_id": contract_case["case_id"],
+                "run_id": "supported-trace-run",
+                "execution_status": "EXECUTED",
+                "tool_calls": [],
+                "citations": [source],
+                "sources": [source],
+                "evidence_provenance": [{"citation": source}],
+                "output": {"answer": "هذه إجابة مقيدة بالمصدر."},
+            },
+        )
+        self.assertEqual(
+            result["claim_evidence_support"]["status"],
+            "SUPPORTED_TRACE_LEVEL",
+        )
+        self.assertEqual(
+            result["claim_evidence_support"]["claim_level_entailment"],
+            "INDEPENDENT_REVIEW_REQUIRED",
+        )
+        self.assertNotEqual(result["semantic_status"], "PASS")
+
+    def test_baseline_report_separates_execution_failures_from_semantic_failures(self) -> None:
+        altered = copy.deepcopy(self.baseline)
+        altered["cases"][0]["execution_status"] = "EXECUTION_FAILED"
+        altered["cases"][0]["execution_error"] = "PROVIDER_RATE_LIMITED"
+        with tempfile.TemporaryDirectory() as directory:
+            baseline_path = Path(directory) / "baseline.json"
+            baseline_path.write_text(
+                json.dumps(altered, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            report = evaluate_baseline(
+                contract=self.contract,
+                baseline_path=baseline_path,
+            )
+        self.assertEqual(report["counts"]["NOT_DETERMINED"], 1)
+        self.assertTrue(report["deterministic_failure_analysis"]["execution_failures"])
+        self.assertEqual(
+            report["deterministic_failure_analysis"]["semantic_failures"],
+            report["deterministic_failure_analysis"]["failures"],
+        )
 
     def test_packet_redacts_sensitive_answer_material(self) -> None:
         serialized = json.dumps(self.packet, ensure_ascii=False)

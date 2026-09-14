@@ -17,7 +17,11 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from evidence_citations import parse_evidence_citation, verify_evidence_citation
+from evidence_citations import (
+    build_evidence_provenance,
+    parse_evidence_citation,
+    verify_evidence_citation,
+)
 
 from agent_core import MAX_MODEL_REQUESTS, MAX_TOOL_CALLS, provider_model_name
 from persistence import load_run_evaluation_data
@@ -495,6 +499,31 @@ def build_evaluation_trace(
         for item in safe_event_metadata(event).get("evidence_items", [])
         if isinstance(item, dict)
     ]
+    evidence_provenance = [
+        provenance
+        for event in tool_events
+        for provenance in safe_event_metadata(event).get(
+            "evidence_provenance",
+            [],
+        )
+        if isinstance(provenance, dict)
+    ]
+    if not evidence_provenance:
+        evidence_provenance = build_evidence_provenance(available_evidence_items)
+    evidence_provenance = list(
+        {
+            json.dumps(item, ensure_ascii=False, sort_keys=True): item
+            for item in evidence_provenance
+        }.values()
+    )[:24]
+    if not available_evidence_citations:
+        available_evidence_citations = sorted(
+            {
+                str(item["citation"])
+                for item in evidence_provenance
+                if isinstance(item.get("citation"), str)
+            }
+        )
     pending_events = [
         {
             "tool_name": event.get("tool_name"),
@@ -533,6 +562,7 @@ def build_evaluation_trace(
         "sources": _extract_trace_sources(final_output),
         "available_evidence_citations": available_evidence_citations,
         "available_evidence_items": available_evidence_items,
+        "evidence_provenance": evidence_provenance,
         "pending_action_events": pending_events,
         "approval_requested": bool(pending_events),
         "executed_without_approval": any(

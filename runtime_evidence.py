@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import shlex
 import tomllib
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -61,6 +62,36 @@ def _safe_snippet(line: str) -> str:
     if len(snippet) > MAX_EVIDENCE_SNIPPET_LENGTH:
         return f"{snippet[:MAX_EVIDENCE_SNIPPET_LENGTH - 1]}…"
     return snippet
+
+
+def _citation_ready_reference(
+    reference: dict[str, object],
+    *,
+    file_hashes: dict[str, str],
+    trust_by_file: dict[str, str],
+) -> dict[str, object]:
+    filename = reference.get("file")
+    line_start = reference.get("line_start")
+    line_end = reference.get("line_end")
+    if (
+        not isinstance(filename, str)
+        or not isinstance(line_start, int)
+        or not isinstance(line_end, int)
+        or filename not in file_hashes
+    ):
+        return reference
+    return {
+        **reference,
+        "relative_source_path": filename,
+        "file_sha256": file_hashes[filename],
+        "extracted_evidence": reference.get("evidence", ""),
+        "trust_classification": trust_by_file[filename],
+        "verification_status": "VERIFIED",
+        "locator": {
+            "line_start": line_start,
+            "line_end": line_end,
+        },
+    }
 
 
 def _evidence(
@@ -316,6 +347,31 @@ def inspect_runtime_evidence(
         ),
         "configured_port": _claim(configured_port, port_references),
     }
+    file_hashes: dict[str, str] = {}
+    for filename in RUNTIME_EVIDENCE_FILES:
+        try:
+            file_hashes[filename] = hashlib.sha256(
+                _safe_evidence_path(root, filename).read_bytes()
+            ).hexdigest()
+        except FileNotFoundError:
+            continue
+    trust_by_file = {
+        "server.py": "PROJECT_SOURCE",
+        ".replit": "PROJECT_CONFIGURATION",
+        "pyproject.toml": "PROJECT_DEPENDENCY_DECLARATION",
+    }
+    for claim in runtime_evidence.values():
+        if not isinstance(claim, dict) or not isinstance(claim.get("evidence"), list):
+            continue
+        claim["evidence"] = [
+            _citation_ready_reference(
+                reference,
+                file_hashes=file_hashes,
+                trust_by_file=trust_by_file,
+            )
+            for reference in claim["evidence"]
+            if isinstance(reference, dict)
+        ]
     statuses = [
         claim["status"]
         for claim in runtime_evidence.values()
