@@ -57,6 +57,18 @@ class EvidenceFirstRoutingTests(unittest.TestCase):
                 self.assertTrue(route.required_capabilities)
                 self.assertTrue(route.abstain_if_evidence_missing)
 
+    def test_english_terms_do_not_match_inside_larger_tokens(self) -> None:
+        route = classify_request("احتفظ باسم checkpoint كما هو")
+        self.assertEqual(route.capability, RequestCapability.GENERAL)
+        self.assertEqual(route.required_capabilities, ())
+
+    def test_template_ready_comparison_uses_web_search_before_source_status(self) -> None:
+        route = classify_request(
+            "قارن إذا أكمل بناء Ahmed Agent أو أستخدم حل/Template جاهز."
+        )
+        self.assertEqual(route.capability, RequestCapability.EXTERNAL_WEB_RESEARCH)
+        self.assertEqual(route.required_capabilities, ("web_search",))
+
     def test_project_state_questions_route_to_project_evidence(self) -> None:
         route = classify_request("راجع حالة مشروع Ahmed Agent وما تم إنجازه")
         self.assertEqual(route.capability, RequestCapability.PROJECT_STATE)

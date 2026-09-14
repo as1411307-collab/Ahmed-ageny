@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+import re
 
 
 class RequestCapability(StrEnum):
@@ -21,7 +22,16 @@ class RouteDecision:
 
 
 def _contains_any(value: str, terms: tuple[str, ...]) -> bool:
-    return any(term in value for term in terms)
+    """Match phrases while keeping ASCII terms from matching inside tokens."""
+
+    for term in terms:
+        if re.search(r"[A-Za-z0-9_]", term):
+            pattern = rf"(?<![A-Za-z0-9_]){re.escape(term)}(?![A-Za-z0-9_])"
+            if re.search(pattern, value):
+                return True
+        elif term in value:
+            return True
+    return False
 
 
 def classify_request(
@@ -41,6 +51,37 @@ def classify_request(
     if not normalized:
         return RouteDecision(RequestCapability.GENERAL, (), False)
 
+    external_web_terms = (
+        "web search",
+        "web research",
+        "search the web",
+        "ابحث على الويب",
+        "بحث على الويب",
+        "ابحث في الويب",
+        "بحث خارجي",
+        "مصادر خارجية",
+        "أحدث توثيق",
+        "latest documentation",
+        "official documentation",
+        "official updates",
+        "monitor updates",
+        "تحديثات",
+        "تحديثات رسمية",
+        "الرسمية",
+        "build vs buy",
+        "build-vs-buy",
+        "template",
+        "قالب",
+        "حل جاهز",
+        "حل/template جاهز",
+    )
+    if _contains_any(normalized, external_web_terms):
+        return RouteDecision(
+            RequestCapability.EXTERNAL_WEB_RESEARCH,
+            ("web_search",),
+            True,
+        )
+
     source_status_terms = (
         "source status",
         "حالة المصدر",
@@ -56,26 +97,6 @@ def classify_request(
         return RouteDecision(
             RequestCapability.SOURCE_STATUS,
             ("inspect_source_status",),
-            True,
-        )
-
-    external_web_terms = (
-        "web search",
-        "web research",
-        "search the web",
-        "ابحث على الويب",
-        "بحث على الويب",
-        "ابحث في الويب",
-        "بحث خارجي",
-        "مصادر خارجية",
-        "أحدث توثيق",
-        "latest documentation",
-        "official documentation",
-    )
-    if _contains_any(normalized, external_web_terms):
-        return RouteDecision(
-            RequestCapability.EXTERNAL_WEB_RESEARCH,
-            ("web_search",),
             True,
         )
 
@@ -117,6 +138,9 @@ def classify_request(
         "deploy",
         "publish",
         "النشر",
+        "langgraph",
+        "multi-agent",
+        "mcts",
     )
     if _contains_any(normalized, runtime_terms):
         return RouteDecision(
@@ -139,6 +163,32 @@ def classify_request(
         "sequence",
         "router",
         "الراوتر",
+        "المنظومة",
+        "الموحدة",
+        "المسارات",
+        "قيّم",
+        "اختار الأفضل",
+        "موافقة",
+        "موافقتي الصريحة",
+        "إجراء خارجي",
+        "توكن",
+        "token",
+        "الرابط",
+        "اللوجات",
+        "logs",
+        "تبويب",
+        "audit",
+        "alert",
+        "polling",
+        "contract_seed",
+        "quality score",
+        "أسئلة استخدام حقيقية",
+        "model_running",
+        "recovery",
+        "إعادة تشغيل",
+        "ماتت",
+        "crash",
+        "idempotency",
     )
     if _contains_any(normalized, project_terms):
         return RouteDecision(
