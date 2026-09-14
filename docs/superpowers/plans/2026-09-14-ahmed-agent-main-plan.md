@@ -51,13 +51,25 @@ SAST, and HoundDog scans reported no vulnerabilities. See
   retries, and fail-closed behavior.
 - Do not switch providers or weaken authentication.
 
-### 4. Evidence and answer-quality acceptance
+### 4. Evidence and answer-quality acceptance — semantic evaluation implemented; review required
 
 - Import the authorized AA-RC-002 documents when available.
 - Connect real cases to execution traces.
 - Add a reviewed semantic grading rubric and run semantic grading.
 - Measure grounded answers and semantic file search against the existing FTS
   baseline.
+
+**Current status:** deterministic contract and fail-closed review interface are
+implemented for all 26 real cases. Current result is
+`0 PASS / 21 FAIL / 5 REVIEW_REQUIRED`; semantic quality is not closed and no
+quality baseline was promoted. See
+`docs/superpowers/reports/2026-09-14-semantic-quality-evaluation.md`.
+
+- Runtime model self-grading is prohibited.
+- Results are bound to case ID, execution trace fingerprint, and reference
+  fingerprint.
+- No confirmed deterministic runtime code bug was found, so no provider-backed
+  case rerun was required.
 
 ### 5. Search and integration follow-through
 

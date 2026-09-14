@@ -1,0 +1,1480 @@
+{
+  "evaluation_version": "semantic-evaluation-v1",
+  "contract_version": "semantic-evaluation-contract-v1",
+  "contract_sha256": "1b407c99aabd88ba8b4b6f68bc15e6118d69f61f11e798cdbbca492905daa100",
+  "dataset_sha256": "35534e2cba58b263a877164c0a2e0f0c09b262b4081d60580c9f2e6c7ed3a7d1",
+  "baseline_sha256": "ab7fe0da56e5dd291fb679ffecbbc2f912f8e30c7cbd93e776a3e8adbe03ad33",
+  "case_count": 26,
+  "anti_self_grading": {
+    "runtime_model_may_not_grade_itself": true,
+    "deterministic_evaluator": "semantic_evaluation.py",
+    "independent_review_required_for": [
+      "factual_correctness",
+      "completeness",
+      "scope_adherence",
+      "safe_abstention"
+    ],
+    "reviewer_types_allowed": [
+      "human",
+      "independent_evaluator"
+    ]
+  },
+  "overall_status": "FAIL",
+  "counts": {
+    "PASS": 0,
+    "FAIL": 21,
+    "REVIEW_REQUIRED": 5
+  },
+  "results": [
+    {
+      "case_id": "AA-RC-001",
+      "run_id": "b753356b-cff9-4570-a40d-9e3fce9131a2",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "9ef3dc5abc562fc326cd4f678653cf18e22d5750ce7a7c685f223d01ae6a10ee",
+      "execution_trace_fingerprint": "34cde0a262ff342a277824af349b06a3fa40a4debafed41060ae06347abee97f",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-002",
+      "run_id": "74434499-02e3-45b4-a042-c9a4a1db98c8",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "ff571e0332bddc9cd06e4c72506f33d92248fa6f85e824fe74ea9ddc12cbb300",
+      "execution_trace_fingerprint": "1dd7374d8263d5e58892e96f01e82c00803af40c04834ad636f6a0629da0d4f5",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "The answer contains an affirmative claim signal without trace evidence.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-003",
+      "run_id": "774d7873-2c00-4508-a08f-ad03bc0ffdec",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "32877ae5ed40a79b8e4d7309b73948b1f77d5f84c775008f36269144caa3aecd",
+      "execution_trace_fingerprint": "208f3f763ee4f4481abbcfe3c34bbde39fe98678394b0b5dbebc9df8b7573335",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-004",
+      "run_id": "a75ca259-22b6-4d9a-9981-dc3cd11bdc02",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "a39bde7c95d3331afd935ad0e1bf6a326c58075b06a969024b94bf697a269d26",
+      "execution_trace_fingerprint": "cb7658daca0dc82d1961c5639b12054e490e1e8c0d69893841eeabeee869e3c1",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-005",
+      "run_id": "c98b7fc8-17fe-4bec-a6cc-c26c99072a95",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "fac7f34cd4f51798c6f105ea99bb3fc80cd4b0a705a8fb7cda5feab0edfc1946",
+      "execution_trace_fingerprint": "5e3cd52b5683ec252111494430ec65bad226d9912b6504eb89130e59fb949cf4",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-006",
+      "run_id": "e9f29be2-6e46-40a3-b294-9305bbffb1fc",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "5b6d4ad9356bb7e7ece3445f69c6b2c16a665b97e4020177380fe05fda5becb2",
+      "execution_trace_fingerprint": "a3d0353ea10a14b180c80fcf7b9d572acc618d7da8638ea509f61181dc5f3497",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-007",
+      "run_id": "8af66792-29a7-491b-8d50-98b6bbb80c00",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "e5ca75ded13e2bf33aa0237814952440300fbcdfa55bd30ae0854105909232e9",
+      "execution_trace_fingerprint": "6a841854f8d729ff6020ccc4fc05337cb1501462f8c061ee63cfb8321c41093e",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "The answer contains an affirmative claim signal without trace evidence.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-008",
+      "run_id": "39836ea0-0a4b-45b5-936c-49aab6b7cc14",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "cbdd3b12a5e30a3c5f633b789a75f472c80bba773ae272bd30dfe2ae24d6ff17",
+      "execution_trace_fingerprint": "51769becdcf1ce111bf93bc16cacdc792831408326ce6d136bd1a2fcf664780f",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-009",
+      "run_id": "61a815ce-be77-4c45-a68d-572243829bfd",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "b6c573fa850c986ce0a6dc6a31c881e18508bc57018544ec97852ec7d17818e5",
+      "execution_trace_fingerprint": "4c4cf7fb5483e02e23eb903d6bad965617589645ce4877316188f0f2145be5f3",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-010",
+      "run_id": "4148f5dc-834c-440e-aa72-c78d95c8aead",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "2d648ad4d644818db6a305eea742e80f041d6457e34400fc79b3d4b548002505",
+      "execution_trace_fingerprint": "2dbdc4c2cfb7b9044a28caa4b95037824ce18faaff457bf54f03c85188cccf41",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-011",
+      "run_id": "c90f2c90-044c-4e3b-925d-fc3c52eaff7f",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "c51389d75698c2b69ddb6c5c61346d4773248eebb5431c63add24859b7f349a0",
+      "execution_trace_fingerprint": "e60128c7422755881e4ae455a0a86a8442983f9c1bacf2cac90d34393fc509dd",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Observed citation/source identity does not deterministically match the reference source.",
+          "evidence": [
+            "[source: pyproject.toml, line 5; .replit, line 6; server.py, line 11, 13, 69]",
+            "[source: pyproject.toml, line 5; .replit, line 6; server.py, line 11, 69]",
+            "[source: pyproject.toml, line 5; .replit, line 6; server.py, line 69]",
+            "[source: pyproject.toml, line 5; .replit, line 6; server.py, line 11, 13, 69]",
+            "[source: pyproject.toml, line 5; .replit, line 6; server.py, line 11, 69]",
+            "[source: pyproject.toml, line 5; .replit, line 6; server.py, line 69]"
+          ]
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "REVIEW_REQUIRED",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-012",
+      "run_id": "16ba5678-d76e-49fd-9bc3-0c4fe4e51079",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "5c18c0172350d207733056140d9a9194f6378de7cf2470dcacebcbd943de675e",
+      "execution_trace_fingerprint": "6b32091007fd21cc554bd5c1ab3d8dd7280ff499a09fe9002061e01934f9e02e",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-013",
+      "run_id": "a135b1f3-f876-40db-9755-851d0d581c37",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "89c4379d404bf958cdaac59ae02c64f10c522816ef89e633a4069ed3a292993a",
+      "execution_trace_fingerprint": "28f142d5da786a353b6d66e3b41b4d57a781b41d17de7a2f07a8de037223a047",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-014",
+      "run_id": "abe27d9a-9095-4880-9ed0-45d68eff10df",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "5df705fcbd1beb590010ae823dde2fd8d8ede2fbc32422a9af399b1a510a7ebc",
+      "execution_trace_fingerprint": "0d27cc615323508b3b9a923b2b3e50462bd8bdd9d33067cb97308e9b97ce6cc8",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "PASS",
+          "score": 4,
+          "reason": "At least one observed citation/source matches a documented expected source.",
+          "evidence": [
+            "Ahmed Agent project files"
+          ]
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "REVIEW_REQUIRED",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-015",
+      "run_id": "4d1090fc-9d0d-4667-aee9-12cf6df6f981",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "dba241e4acf38bbe185f7308681169bc39a1f22031241f458b7fec56386aa45d",
+      "execution_trace_fingerprint": "846f5aeb9593bd511ad84eac2aaca8c5dc6928bd2ab2d8693ffd0abe2c81a400",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Observed citation/source identity does not deterministically match the reference source.",
+          "evidence": [
+            "[2]",
+            "[5]",
+            "[2]",
+            "[5]"
+          ]
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "REVIEW_REQUIRED",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-016",
+      "run_id": "56b903a2-c3c3-4438-87d1-6acf50d7d5ac",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "1847edc113aa575a6371abd3a15bec5f9c891d1954a680d30ea41cd358c730f9",
+      "execution_trace_fingerprint": "08c06fa2ddc9e7b9dcaceeb0694e761e029cc385ee4ee2c49960b4c261d4c587",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "PASS",
+          "score": 4,
+          "reason": "At least one observed citation/source matches a documented expected source.",
+          "evidence": [
+            "server.py",
+            "pyproject.toml"
+          ]
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "REVIEW_REQUIRED",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-017",
+      "run_id": "3fa2642c-1f12-46bc-a153-b9b3d71ad3d8",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "e00de368aa8dd4a3b061382106d861f8c7c72ee33a846d0ac7c172df692178b1",
+      "execution_trace_fingerprint": "40b3aebf81625f01953ebd3f8cdebf4a557a5aa4ed2c45346cb992b16d3a984a",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-018",
+      "run_id": "ac734141-b94f-47b9-bcc5-dea53947fa1e",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "1ae3f4e1051759fc4f06bf6c29702a407d925bf4729c5a57e930c1a1f8b9c505",
+      "execution_trace_fingerprint": "a68f04d2462814b8ff8991c204f64ff6ed6cf5d9a3f6812a4c4f9a977be5cafe",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "The answer abstains, but citation support still needs independent review.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "PASS",
+          "score": 4,
+          "reason": "The answer explicitly limits itself when no citation/source evidence is present.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "REVIEW_REQUIRED",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-019",
+      "run_id": "c1c85282-c6e7-4afe-8aa4-31bc9858cbbf",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "e3e4c6ab9e10c10b0b4d8cc40e33ce9e2db8d0c2a210e32725052657ff8b2752",
+      "execution_trace_fingerprint": "a3f1bf44f3c819c9228c33585b5c09549f5f41e66ab790294be463ff46204273",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-020",
+      "run_id": "80c28b8f-f133-4786-a5fb-e1fe95c8141b",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "78ec8155c14c132ebe8dc545711434e0b3476c12c94077f0f22540e4832113e5",
+      "execution_trace_fingerprint": "502a730031417ec5b2f1f15d4c6803dda5ee6c3276890aa1881e61b7aa8705ba",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-021",
+      "run_id": "0ab89e21-2e15-4be8-840c-feb8e6469312",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "1132159561000ead6879f26ee90d143aa147e7d2c94562926985e3455486cfa7",
+      "execution_trace_fingerprint": "5525315ec7a2719f68b06f5b768dde8fbd66ccf4d0252a1c2e8651732e58fca9",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-022",
+      "run_id": "79cc515f-4b1b-417e-a8ef-9f94731ae48c",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "17891261c3c0f5e94d3dface7d78c80bd2a5eb736fe771f592874e3c530f6717",
+      "execution_trace_fingerprint": "7f2cd54125f32a5cdcec8f4ec368536290eff1fbabbd845be177daf407e02a8c",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-023",
+      "run_id": "96c105d8-a406-4e9b-9e0c-381bac51461f",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "16237ecf5097fe67d460bf7dd4b53b49849b4ac65cce55cc0c26dd4a001e6814",
+      "execution_trace_fingerprint": "bd1a0d61a3da7a6afd75caff677999c3b5ff679e821000ee85aa581b20f57b8f",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "The answer contains an affirmative claim signal without trace evidence.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-024",
+      "run_id": "326a5138-6cbc-4d4f-8eb8-99edb397f11c",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "90225797f9016a7e2dadd26100a127b58f7fdaf083e798de0ee4808f5846f061",
+      "execution_trace_fingerprint": "75b7f1936a3c387e8023ea50cf1e433d400ddf8750b26ce415886dd60f588df0",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-025",
+      "run_id": "4e446c5a-550c-4ece-b3eb-bfa492f1e7f2",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "bf7296a103982ffcecfd5b28133863257c92d7b02ee366ae389d32e51c78bcba",
+      "execution_trace_fingerprint": "c612482fa9bd562c21d149ea34355be66ac56a60da6e16bd40268dfb20a713df",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    },
+    {
+      "case_id": "AA-RC-026",
+      "run_id": "2369addb-632d-47a0-91ab-a278c9873ba8",
+      "execution_status": "EXECUTED",
+      "reference_fingerprint": "be18a1acb4e16bb8d5092ed666e53299613eff32f4755c5c55a31489f0d96dab",
+      "execution_trace_fingerprint": "2e5dff1e62859ce2f478b281bed96fac68e8a27a23a8b4c0de829fafc99eb229",
+      "dimensions": {
+        "factual_correctness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Golden reference is declarative; an independent reviewer must compare the answer to it.",
+          "evidence": []
+        },
+        "groundedness": {
+          "status": "FAIL",
+          "score": 0,
+          "reason": "Reference sources are required but the trace contains no citation or source.",
+          "evidence": []
+        },
+        "completeness": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Success criteria require answer-level review; runtime execution cannot prove completeness.",
+          "evidence": []
+        },
+        "scope_adherence": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Trace-level tool boundary passes, but answer-level scope requires independent review.",
+          "evidence": []
+        },
+        "safe_abstention": {
+          "status": "REVIEW_REQUIRED",
+          "score": null,
+          "reason": "Safe-abstention behavior cannot be decided from trace metadata alone.",
+          "evidence": []
+        }
+      },
+      "semantic_status": "FAIL",
+      "evaluator": "deterministic_reference_assertions_v1",
+      "independent_review": null
+    }
+  ],
+  "deterministic_failure_analysis": {
+    "code_bug_fix_applied": false,
+    "code_bug_cases": [],
+    "failures": [
+      {
+        "case_id": "AA-RC-001",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-002",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          },
+          "safe_abstention": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "The answer contains an affirmative claim signal without trace evidence.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-003",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-004",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-005",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-006",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-007",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          },
+          "safe_abstention": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "The answer contains an affirmative claim signal without trace evidence.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-008",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-009",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-010",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-012",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-013",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-017",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-019",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-020",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-021",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-022",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-023",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          },
+          "safe_abstention": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "The answer contains an affirmative claim signal without trace evidence.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-024",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-025",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      },
+      {
+        "case_id": "AA-RC-026",
+        "dimensions": {
+          "groundedness": {
+            "status": "FAIL",
+            "score": 0,
+            "reason": "Reference sources are required but the trace contains no citation or source.",
+            "evidence": []
+          }
+        },
+        "classification": "semantic_output_or_evidence_gap",
+        "code_bug_confirmed": false,
+        "reason": "The failure is derived from answer/evidence assertions in the stored trace; no execution, persistence, provider, or policy boundary error is present in this result.",
+        "next_action": "independent_review_or_reexecute_with_grounded_evidence"
+      }
+    ]
+  },
+  "review_packet_sha256": "8a4208c7080792b245f9a7b9c466eb37d6327028c0062ac1514fd4397ba5e740",
+  "review_applied": false
+}
