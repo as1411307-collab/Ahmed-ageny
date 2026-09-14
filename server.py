@@ -99,7 +99,7 @@ class OwnerMCPAuthMiddleware:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope.get("type") == "lifespan":
-            await self._handle_lifespan(receive, send)
+            await self._handle_lifespan(scope, receive, send)
             return
         request_path = str(scope.get("path", ""))
         is_mcp_request = request_path == self.path or request_path.startswith(
@@ -127,23 +127,34 @@ class OwnerMCPAuthMiddleware:
             return
         await self.app(scope, receive, send)
 
-    async def _handle_lifespan(self, receive: Receive, send: Send) -> None:
-        while True:
-            message = await receive()
-            if message.get("type") == "lifespan.startup":
-                try:
-                    orphaned = await mark_orphaned_runs()
-                    if orphaned:
-                        logger.warning("Marked orphaned runs count=%d", len(orphaned))
-                except PersistenceError as error:
-                    logger.error(
-                        "Startup run recovery scan failed error_type=%s",
-                        type(error).__name__,
-                    )
-                await send({"type": "lifespan.startup.complete"})
-            elif message.get("type") == "lifespan.shutdown":
-                await send({"type": "lifespan.shutdown.complete"})
-                return
+    async def _handle_lifespan(
+        self,
+        scope: Scope,
+        receive: Receive,
+        send: Send,
+    ) -> None:
+        first_message = await receive()
+        if first_message.get("type") == "lifespan.startup":
+            try:
+                orphaned = await mark_orphaned_runs()
+                if orphaned:
+                    logger.warning("Marked orphaned runs count=%d", len(orphaned))
+            except PersistenceError as error:
+                logger.error(
+                    "Startup run recovery scan failed error_type=%s",
+                    type(error).__name__,
+                )
+
+        replay_first_message = True
+
+        async def replay_receive() -> dict[str, object]:
+            nonlocal replay_first_message
+            if replay_first_message:
+                replay_first_message = False
+                return first_message
+            return await receive()
+
+        await self.app(scope, replay_receive, send)
 
 
 def _structured_log(

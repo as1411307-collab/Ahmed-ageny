@@ -27,6 +27,19 @@ SAST, and HoundDog scans reported no vulnerabilities. See
 
 ### 2. Core operational acceptance
 
+**Status:** complete. See
+`docs/superpowers/reports/2026-09-14-core-operational-acceptance.md`.
+
+- Authenticated route success and expected authentication failures were
+  exercised.
+- Chat was accepted through a local provider stub to honor the no-external-send
+  boundary; its PostgreSQL persistence and checkpoints were verified.
+- Safe upload, unsupported extension, and invalid content rejection were
+  exercised.
+- MCP initialize, PostgreSQL persistence, leases, recovery, idempotency, audit,
+  and runtime alerts were verified.
+- A real MCP lifecycle regression was fixed with a test-first change.
+
 - Confirm the owner-authenticated chat and upload journeys with real requests.
 - Confirm authenticated MCP clients can complete a handshake.
 - Verify persistence, recovery, leases, runtime metrics, and alert evaluation.

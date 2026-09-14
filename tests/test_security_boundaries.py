@@ -5,8 +5,10 @@ import unittest
 from unittest.mock import AsyncMock, patch
 
 import auth
+import server as server_module
 from my_files import FileProcessingError, sanitize_filename, validate_file_content
 from server import OwnerMCPAuthMiddleware
+from starlette.testclient import TestClient
 
 
 async def _fake_app(scope, receive, send) -> None:
@@ -73,6 +75,48 @@ class SecurityBoundaryTests(unittest.TestCase):
                 authorization="Bearer owner-secret",
             )
         self.assertEqual(messages[0]["status"], 204)
+
+    def test_mcp_initialize_succeeds_after_lifespan_startup(self) -> None:
+        with patch.object(auth, "AHMED_OWNER_TOKEN", "owner-secret"), patch.object(
+            auth, "record_auth_event", new=AsyncMock()
+        ), patch.object(
+            server_module,
+            "mark_orphaned_runs",
+            new=AsyncMock(return_value=[]),
+        ):
+            app = OwnerMCPAuthMiddleware(
+                server_module.server.streamable_http_app(
+                    streamable_http_path="/mcp",
+                    host="127.0.0.1",
+                ),
+                path="/mcp",
+            )
+            with TestClient(app, base_url="http://127.0.0.1") as client:
+                response = client.post(
+                    "/mcp",
+                    headers={
+                        "Authorization": "Bearer owner-secret",
+                        "Host": "127.0.0.1:8000",
+                        "Accept": "application/json, text/event-stream",
+                        "Content-Type": "application/json",
+                        "MCP-Protocol-Version": "2025-03-26",
+                    },
+                    json={
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "initialize",
+                        "params": {
+                            "protocolVersion": "2025-03-26",
+                            "capabilities": {},
+                            "clientInfo": {
+                                "name": "security-boundary-test",
+                                "version": "1",
+                            },
+                        },
+                    },
+                )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("result", response.text)
 
     def test_filename_canonicalization_rejects_control_and_empty_names(self) -> None:
         self.assertEqual(sanitize_filename("../private.txt"), "private.txt")
