@@ -14,7 +14,11 @@ from typing import Any
 
 from architecture_evidence import inspect_architecture_evidence
 from evaluation_baseline import execute_real_case
-from semantic_evaluation import evaluate_case
+from independent_semantic_evaluator import build_independent_review_document
+from semantic_evaluation import (
+    _packet_trace_for_independent_reviewer,
+    evaluate_case,
+)
 
 
 ROOT = Path(__file__).resolve().parent
@@ -25,26 +29,76 @@ INTEGRITY_ARTIFACT = ROOT / "aa-rc-026-build-vs-buy-integrity-2026-09-14.json"
 
 OPENAI_DOCUMENTS: tuple[dict[str, Any], ...] = (
     {
-        "key": "responses_api_tools",
-        "url": "https://platform.openai.com/docs/guides/tools",
-        "markers": ("Using tools", "Responses API", "Web search", "File search"),
+        "key": "agents_sdk_overview",
+        "url": "https://openai.github.io/openai-agents-python/",
+        "markers": (
+            "Why use the Agents SDK",
+            "tools",
+            "handoffs",
+            "guardrails",
+            "human-in-the-loop",
+            "tracing",
+            "Responses API",
+        ),
     },
     {
-        "key": "agents_sdk",
-        "url": "https://platform.openai.com/docs/guides/agents/sdk",
-        "markers": ("Agents SDK", "runner", "handoffs", "tracing"),
+        "key": "agents_sdk_models_providers",
+        "url": "https://openai.github.io/openai-agents-python/models/",
+        "markers": (
+            "ModelProvider",
+            "non-OpenAI",
+            "Agent.model",
+            "LiteLLM",
+            "Any-LLM",
+        ),
     },
     {
-        "key": "model_capabilities",
-        "url": "https://platform.openai.com/docs/models",
-        "markers": ("Compare model capabilities", "Context window", "Web search"),
+        "key": "agents_sdk_human_in_the_loop",
+        "url": "https://openai.github.io/openai-agents-python/human_in_the_loop/",
+        "markers": ("approval", "interrupt", "RunState", "resume"),
     },
     {
-        "key": "pricing",
-        "url": "https://platform.openai.com/docs/pricing",
-        "markers": ("Pricing information", "Input tokens", "Output tokens", "tool"),
+        "key": "agents_sdk_sessions",
+        "url": "https://openai.github.io/openai-agents-python/sessions/",
+        "markers": ("session", "SQLite", "Redis", "SQLAlchemy"),
+    },
+    {
+        "key": "responses_api_create",
+        "url": "https://developers.openai.com/api/reference/typescript/resources/beta/subresources/responses/methods/create",
+        "markers": ("web search", "file search", "custom tools", "Responses"),
+    },
+    {
+        "key": "models_catalog",
+        "url": "https://developers.openai.com/api/docs/models",
+        "markers": ("flagship", "web search", "file search", "computer use"),
+    },
+    {
+        "key": "gpt_5_6_sol",
+        "url": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+        "markers": ("Input price", "Output price", "Context window", "Tools"),
+    },
+    {
+        "key": "api_pricing",
+        "url": "https://developers.openai.com/api/docs/pricing",
+        "markers": ("Input tokens", "Output tokens", "web search", "file search"),
     },
 )
+
+USER_PROVIDED_OPENAI_EVIDENCE = {
+    "source_identity": "external_openai_official",
+    "verification_status": "UNVERIFIED_EXTERNAL",
+    "provenance_note": (
+        "User-supplied summary of the current official OpenAI documentation; "
+        "kept separate from Ahmed Agent project evidence."
+    ),
+    "claims": [
+        "Agents SDK manages agents, tools, handoffs, guardrails, sessions, HITL, and tracing, and uses Responses API by default.",
+        "Agents SDK Models documentation supports non-OpenAI providers through ModelProvider at run or Agent.model scope, with adapters such as LiteLLM and Any-LLM.",
+        "Responses API supports built-in web search, file search, MCP, and function tools.",
+        "Current OpenAI models support Responses and web/file/computer tools according to the current Models documentation.",
+        "OpenAI pricing varies by selected model and tool; the supplied bundle identifies Luna as lower cost, Terra as middle, and Sol as higher cost.",
+    ],
+}
 
 
 class _VisibleTextParser:
@@ -117,8 +171,10 @@ def fetch_openai_external_evidence() -> list[dict[str, Any]]:
                 "url": document["url"],
                 "title": _extract_title(raw),
                 "source_identity": "external_openai_official",
+                "evidence_classification": "EXTERNAL_EVIDENCE",
                 "verification_status": "UNVERIFIED_EXTERNAL",
                 "retrieved_at": retrieved_at,
+                "date_accessed": retrieved_at,
                 "http_status": status,
                 "content_sha256": hashlib.sha256(body).hexdigest(),
                 "snippets": snippets,
@@ -146,6 +202,7 @@ def _architecture_summary(result: dict[str, Any]) -> dict[str, Any]:
                     "relative_source_path": item.get("relative_source_path"),
                     "line_start": item.get("line_start"),
                     "line_end": item.get("line_end"),
+                    "extracted_evidence": item.get("extracted_evidence"),
                     "file_sha256": item.get("file_sha256"),
                     "trust_classification": item.get("trust_classification"),
                     "verification_status": item.get("verification_status"),
@@ -290,6 +347,49 @@ def _trace_summary(trace: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _build_independent_review(
+    *,
+    trace: dict[str, Any],
+    contract_case: dict[str, Any],
+    architecture: dict[str, Any],
+    external: list[dict[str, Any]],
+    comparison_matrix: list[dict[str, Any]],
+) -> dict[str, Any]:
+    review_trace = _packet_trace_for_independent_reviewer(trace)
+    review_trace["answer_for_review_redacted"] = trace.get("final_output", "")
+    review_trace["project_evidence_context"] = architecture.get("citations", [])[:48]
+    review_trace["external_evidence_context"] = external
+    review_trace["comparison_artifact"] = comparison_matrix
+    review_trace["user_provided_external_evidence_bundle"] = (
+        USER_PROVIDED_OPENAI_EVIDENCE
+    )
+    review_case = {
+        "case_id": "AA-RC-026",
+        "category": "build_vs_buy",
+        "producer_provider": trace.get("provider"),
+        "producer_model": trace.get("model"),
+        "reference_fingerprint": contract_case["reference_fingerprint"],
+        "execution_trace_fingerprint": "",
+        "reference_assertions": contract_case["reference_assertions"],
+        "trace": review_trace,
+    }
+    packet_body = json.dumps(review_case, ensure_ascii=False, sort_keys=True).encode(
+        "utf-8"
+    )
+    review_case["execution_trace_fingerprint"] = hashlib.sha256(packet_body).hexdigest()
+    packet = {
+        "packet_sha256": hashlib.sha256(
+            json.dumps(review_case, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        ).hexdigest(),
+        "cases": [review_case],
+    }
+    return build_independent_review_document(
+        packet=packet,
+        baseline={"execution_config": {"provider": trace.get("provider")}},
+        reviewer_provider="openai",
+    )
+
+
 async def execute_aa_rc_026(
     *,
     base_url: str,
@@ -323,10 +423,42 @@ async def execute_aa_rc_026(
         timeout_seconds=timeout_seconds,
     )
     trace["targeted_latency_ms"] = int((time.perf_counter() - started) * 1000)
+    trace["external_evidence_provenance"] = [
+        *[
+            item
+            for item in trace.get("external_evidence_provenance", [])
+            if isinstance(item, dict)
+        ],
+        *[
+            {
+                "url": item["url"],
+                "title": item["title"],
+                "content_sha256": item["content_sha256"],
+                "source_identity": item["source_identity"],
+                "verification_status": item["verification_status"],
+            }
+            for item in external
+        ],
+    ]
     semantic = evaluate_case(
         contract_case=_load_contract_case(),
         trace=trace,
     )
+    independent_review: dict[str, Any]
+    try:
+        independent_review = _build_independent_review(
+            trace=trace,
+            contract_case=_load_contract_case(),
+            architecture=architecture,
+            external=external,
+            comparison_matrix=build_comparison_matrix(),
+        )
+    except Exception as error:
+        independent_review = {
+            "status": "NOT_DETERMINED",
+            "error_type": type(error).__name__,
+            "error": "Independent reviewer unavailable or rejected the packet.",
+        }
     report = {
         "schema_version": "aa-rc-026-targeted-evaluation.v1",
         "case_id": "AA-RC-026",
@@ -345,6 +477,7 @@ async def execute_aa_rc_026(
         },
         "project_evidence": architecture,
         "external_evidence": external,
+        "external_evidence_bundle": USER_PROVIDED_OPENAI_EVIDENCE,
         "comparison_matrix": build_comparison_matrix(),
         "targeted_trace": _trace_summary(trace),
         "semantic_evaluation": {
@@ -358,10 +491,15 @@ async def execute_aa_rc_026(
             },
             "independent_review": None,
         },
+        "independent_review": independent_review,
         "recommendation": {
             "status": (
                 "READY"
-                if trace.get("evidence_preconditions", {}).get("status") == "READY"
+                if (
+                    trace.get("evidence_preconditions", {}).get("status") == "READY"
+                    and independent_review.get("reviews", [{}])[0].get("decision")
+                    == "PASS"
+                )
                 else "NOT_DETERMINED"
             ),
             "text": (

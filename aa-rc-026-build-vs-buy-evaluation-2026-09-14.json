@@ -2,7 +2,7 @@
   "schema_version": "aa-rc-026-targeted-evaluation.v1",
   "case_id": "AA-RC-026",
   "evaluation_version": "2026-09-14.build-vs-buy.openai-only",
-  "generated_at": "2026-09-14T17:47:04.504790+00:00",
+  "generated_at": "2026-09-14T17:53:01.902595+00:00",
   "external_evidence_policy": {
     "allowed_source_identity": "external_openai_official",
     "allowed_domains": [
@@ -33,6 +33,7 @@
             "relative_source_path": "server.py",
             "line_start": 13,
             "line_end": 13,
+            "extracted_evidence": "from starlette.datastructures import UploadFile",
             "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -43,6 +44,7 @@
             "relative_source_path": "server.py",
             "line_start": 14,
             "line_end": 14,
+            "extracted_evidence": "from starlette.requests import Request",
             "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -53,6 +55,7 @@
             "relative_source_path": "server.py",
             "line_start": 15,
             "line_end": 15,
+            "extracted_evidence": "from starlette.responses import FileResponse, JSONResponse, Response",
             "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -63,6 +66,7 @@
             "relative_source_path": "server.py",
             "line_start": 16,
             "line_end": 16,
+            "extracted_evidence": "from starlette.types import ASGIApp, Receive, Scope, Send",
             "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -73,6 +77,7 @@
             "relative_source_path": "server.py",
             "line_start": 1133,
             "line_end": 1133,
+            "extracted_evidence": "import uvicorn",
             "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -83,6 +88,7 @@
             "relative_source_path": "server.py",
             "line_start": 1143,
             "line_end": 1143,
+            "extracted_evidence": "uvicorn.run(",
             "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -93,6 +99,7 @@
             "relative_source_path": "server.py",
             "line_start": 1146,
             "line_end": 1146,
+            "extracted_evidence": "port=int(os.environ.get(\"PORT\"), \"8000\")),",
             "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -103,6 +110,7 @@
             "relative_source_path": "runtime_evidence.py",
             "line_start": 227,
             "line_end": 227,
+            "extracted_evidence": "def inspect_runtime_evidence(",
             "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -113,6 +121,7 @@
             "relative_source_path": "runtime_evidence.py",
             "line_start": 299,
             "line_end": 299,
+            "extracted_evidence": "\"from starlette\" in line",
             "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -123,6 +132,7 @@
             "relative_source_path": "runtime_evidence.py",
             "line_start": 300,
             "line_end": 300,
+            "extracted_evidence": "or \"import starlette\" in line",
             "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -133,6 +143,7 @@
             "relative_source_path": "runtime_evidence.py",
             "line_start": 301,
             "line_end": 301,
+            "extracted_evidence": "or \"uvicorn.run\" in line",
             "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -143,6 +154,7 @@
             "relative_source_path": "runtime_evidence.py",
             "line_start": 304,
             "line_end": 304,
+            "extracted_evidence": "framework_value = \"Starlette + Uvicorn\" if framework_references else None",
             "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -166,6 +178,7 @@
             "relative_source_path": "persistence.py",
             "line_start": 12,
             "line_end": 12,
+            "extracted_evidence": "import asyncpg",
             "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -176,6 +189,7 @@
             "relative_source_path": "persistence.py",
             "line_start": 19,
             "line_end": 19,
+            "extracted_evidence": "_pool: asyncpg.Pool | None = None",
             "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -186,6 +200,7 @@
             "relative_source_path": "persistence.py",
             "line_start": 24,
             "line_end": 24,
+            "extracted_evidence": "\"completed_checkpoint_days\": 30,",
             "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -196,6 +211,7 @@
             "relative_source_path": "persistence.py",
             "line_start": 25,
             "line_end": 25,
+            "extracted_evidence": "\"failed_orphaned_checkpoint_days\": 90,",
             "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -206,6 +222,7 @@
             "relative_source_path": "persistence.py",
             "line_start": 26,
             "line_end": 26,
+            "extracted_evidence": "\"audit_events\": \"preserved\",",
             "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -216,6 +233,7 @@
             "relative_source_path": "persistence.py",
             "line_start": 35,
             "line_end": 35,
+            "extracted_evidence": "async def _ensure_policy_schema(pool: asyncpg.Pool) -> None:",
             "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -226,6 +244,7 @@
             "relative_source_path": "persistence.py",
             "line_start": 64,
             "line_end": 64,
+            "extracted_evidence": "CREATE TABLE IF NOT EXISTS audit_events (",
             "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -236,6 +255,7 @@
             "relative_source_path": "persistence.py",
             "line_start": 78,
             "line_end": 78,
+            "extracted_evidence": "CREATE INDEX IF NOT EXISTS audit_events_created_idx",
             "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -246,6 +266,7 @@
             "relative_source_path": "persistence.py",
             "line_start": 79,
             "line_end": 79,
+            "extracted_evidence": "ON audit_events (created_at, event_id);",
             "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -256,6 +277,7 @@
             "relative_source_path": "persistence.py",
             "line_start": 94,
             "line_end": 94,
+            "extracted_evidence": "CREATE TABLE IF NOT EXISTS agent_run_checkpoints (",
             "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -266,6 +288,7 @@
             "relative_source_path": "persistence.py",
             "line_start": 95,
             "line_end": 95,
+            "extracted_evidence": "checkpoint_id BIGSERIAL PRIMARY KEY,",
             "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -276,6 +299,7 @@
             "relative_source_path": "persistence.py",
             "line_start": 103,
             "line_end": 103,
+            "extracted_evidence": "CREATE INDEX IF NOT EXISTS agent_run_checkpoints_run_idx",
             "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -300,6 +324,7 @@
             "relative_source_path": "policy.py",
             "line_start": 8,
             "line_end": 8,
+            "extracted_evidence": "class RiskLevel(StrEnum):",
             "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -310,6 +335,7 @@
             "relative_source_path": "policy.py",
             "line_start": 19,
             "line_end": 19,
+            "extracted_evidence": "risk_level: RiskLevel",
             "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -320,6 +346,7 @@
             "relative_source_path": "policy.py",
             "line_start": 20,
             "line_end": 20,
+            "extracted_evidence": "requires_approval: bool",
             "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -330,6 +357,7 @@
             "relative_source_path": "policy.py",
             "line_start": 26,
             "line_end": 26,
+            "extracted_evidence": "TOOL_POLICIES: dict[str, ToolPolicy] = {",
             "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -340,6 +368,7 @@
             "relative_source_path": "policy.py",
             "line_start": 29,
             "line_end": 29,
+            "extracted_evidence": "risk_level=RiskLevel.READ_SAFE,",
             "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -350,6 +379,7 @@
             "relative_source_path": "policy.py",
             "line_start": 30,
             "line_end": 30,
+            "extracted_evidence": "requires_approval=False,",
             "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -360,6 +390,7 @@
             "relative_source_path": "policy.py",
             "line_start": 37,
             "line_end": 37,
+            "extracted_evidence": "risk_level=RiskLevel.READ_SAFE,",
             "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -370,6 +401,7 @@
             "relative_source_path": "policy.py",
             "line_start": 38,
             "line_end": 38,
+            "extracted_evidence": "requires_approval=False,",
             "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -380,6 +412,7 @@
             "relative_source_path": "policy.py",
             "line_start": 45,
             "line_end": 45,
+            "extracted_evidence": "risk_level=RiskLevel.READ_SAFE,",
             "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -390,6 +423,7 @@
             "relative_source_path": "policy.py",
             "line_start": 46,
             "line_end": 46,
+            "extracted_evidence": "requires_approval=False,",
             "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -400,6 +434,7 @@
             "relative_source_path": "policy.py",
             "line_start": 53,
             "line_end": 53,
+            "extracted_evidence": "risk_level=RiskLevel.READ_SAFE,",
             "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -410,6 +445,7 @@
             "relative_source_path": "policy.py",
             "line_start": 54,
             "line_end": 54,
+            "extracted_evidence": "requires_approval=False,",
             "file_sha256": "9a43af9af6b941f55ee00da7e20beb1e9e19f785e90fb7082d84c583b8750211",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -437,6 +473,7 @@
             "relative_source_path": "evidence_core.py",
             "line_start": 38,
             "line_end": 38,
+            "extracted_evidence": "sha256: str",
             "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -447,6 +484,7 @@
             "relative_source_path": "evidence_core.py",
             "line_start": 45,
             "line_end": 45,
+            "extracted_evidence": "file_sha256: str",
             "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -457,6 +495,7 @@
             "relative_source_path": "evidence_core.py",
             "line_start": 55,
             "line_end": 55,
+            "extracted_evidence": "\"file_sha256\": self.file_sha256,",
             "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -467,6 +506,7 @@
             "relative_source_path": "evidence_core.py",
             "line_start": 70,
             "line_end": 70,
+            "extracted_evidence": "evidence_status: EvidenceStatus",
             "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -477,6 +517,7 @@
             "relative_source_path": "evidence_core.py",
             "line_start": 72,
             "line_end": 72,
+            "extracted_evidence": "provenance_metadata: dict[str, object]",
             "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -487,6 +528,7 @@
             "relative_source_path": "evidence_core.py",
             "line_start": 82,
             "line_end": 82,
+            "extracted_evidence": "\"evidence_status\": self.evidence_status.value,",
             "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -497,6 +539,7 @@
             "relative_source_path": "evidence_core.py",
             "line_start": 84,
             "line_end": 84,
+            "extracted_evidence": "\"provenance_metadata\": self.provenance_metadata,",
             "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -507,6 +550,7 @@
             "relative_source_path": "evidence_core.py",
             "line_start": 185,
             "line_end": 185,
+            "extracted_evidence": "class ProjectEvidenceCore:",
             "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -517,6 +561,7 @@
             "relative_source_path": "evidence_core.py",
             "line_start": 255,
             "line_end": 255,
+            "extracted_evidence": "sha256=hashlib.sha256(content).hexdigest(),",
             "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -527,6 +572,7 @@
             "relative_source_path": "evidence_core.py",
             "line_start": 279,
             "line_end": 279,
+            "extracted_evidence": "file_sha256=source_file.sha256,",
             "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -537,6 +583,7 @@
             "relative_source_path": "evidence_core.py",
             "line_start": 291,
             "line_end": 291,
+            "extracted_evidence": "evidence_status: EvidenceStatus,",
             "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -547,6 +594,7 @@
             "relative_source_path": "evidence_core.py",
             "line_start": 302,
             "line_end": 302,
+            "extracted_evidence": "evidence_status=evidence_status,",
             "file_sha256": "978da820fda3f5463d7410127621ae88603d3d679a486254c719d25207817170",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -570,6 +618,7 @@
             "relative_source_path": "evaluation_baseline.py",
             "line_start": 40,
             "line_end": 40,
+            "extracted_evidence": "/ \"evaluation_baseline\"",
             "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -580,6 +629,7 @@
             "relative_source_path": "evaluation_baseline.py",
             "line_start": 169,
             "line_end": 169,
+            "extracted_evidence": "require_baseline_size: bool = False,",
             "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -590,6 +640,7 @@
             "relative_source_path": "evaluation_baseline.py",
             "line_start": 171,
             "line_end": 171,
+            "extracted_evidence": "if require_baseline_size and not 20 <= len(raw_cases) <= 30:",
             "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -600,6 +651,7 @@
             "relative_source_path": "evaluation_baseline.py",
             "line_start": 172,
             "line_end": 172,
+            "extracted_evidence": "raise ValueError(\"Evaluation baseline must contain 20-30 cases.\")",
             "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -610,6 +662,7 @@
             "relative_source_path": "evaluation_baseline.py",
             "line_start": 216,
             "line_end": 216,
+            "extracted_evidence": "def load_evaluation_cases(path: Path = DATASET_PATH) -> list[dict[str, Any]]:",
             "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -620,6 +673,7 @@
             "relative_source_path": "evaluation_baseline.py",
             "line_start": 218,
             "line_end": 218,
+            "extracted_evidence": "return validate_evaluation_cases(raw_cases, require_baseline_size=True)",
             "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -630,6 +684,7 @@
             "relative_source_path": "evaluation_baseline.py",
             "line_start": 224,
             "line_end": 224,
+            "extracted_evidence": "require_baseline_size: bool = False,",
             "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -640,6 +695,7 @@
             "relative_source_path": "evaluation_baseline.py",
             "line_start": 236,
             "line_end": 236,
+            "extracted_evidence": "require_baseline_size=require_baseline_size,",
             "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -650,6 +706,7 @@
             "relative_source_path": "evaluation_baseline.py",
             "line_start": 1294,
             "line_end": 1294,
+            "extracted_evidence": "baseline_run_id = str(uuid4())",
             "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -660,6 +717,7 @@
             "relative_source_path": "evaluation_baseline.py",
             "line_start": 1326,
             "line_end": 1326,
+            "extracted_evidence": "\"baseline_run_id\": baseline_run_id,",
             "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -670,6 +728,7 @@
             "relative_source_path": "evaluation_baseline.py",
             "line_start": 1351,
             "line_end": 1351,
+            "extracted_evidence": "for filename in (\"evaluation_baseline.py\", \"agent_core.py\", \"server.py\", \"persistence.py\"):",
             "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -680,6 +739,7 @@
             "relative_source_path": "evaluation_baseline.py",
             "line_start": 1572,
             "line_end": 1572,
+            "extracted_evidence": "async def resume_rate_limited_baseline(",
             "file_sha256": "d7183571c62b32cc8f1ff1fee1698b27837256d5ab5090be17767b3a6034bd4f",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -703,6 +763,7 @@
             "relative_source_path": "search_fabric.py",
             "line_start": 20,
             "line_end": 20,
+            "extracted_evidence": "BRAVE_SEARCH_ENABLED,",
             "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -713,6 +774,7 @@
             "relative_source_path": "search_fabric.py",
             "line_start": 21,
             "line_end": 21,
+            "extracted_evidence": "SEARCH_MAX_CONCURRENCY,",
             "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -723,6 +785,7 @@
             "relative_source_path": "search_fabric.py",
             "line_start": 22,
             "line_end": 22,
+            "extracted_evidence": "SEARCH_MAX_PROVIDER_CALLS,",
             "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -733,6 +796,7 @@
             "relative_source_path": "search_fabric.py",
             "line_start": 23,
             "line_end": 23,
+            "extracted_evidence": "SEARCH_MAX_RESULTS_PER_PROVIDER,",
             "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -743,6 +807,7 @@
             "relative_source_path": "search_fabric.py",
             "line_start": 24,
             "line_end": 24,
+            "extracted_evidence": "SEARCH_PROVIDER_TIMEOUT_SECONDS,",
             "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -753,6 +818,7 @@
             "relative_source_path": "search_fabric.py",
             "line_start": 25,
             "line_end": 25,
+            "extracted_evidence": "SEARCH_RRF_K,",
             "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -763,6 +829,7 @@
             "relative_source_path": "search_fabric.py",
             "line_start": 29,
             "line_end": 29,
+            "extracted_evidence": "logger = logging.getLogger(\"ahmed_agent.search_fabric\")",
             "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -773,6 +840,7 @@
             "relative_source_path": "search_fabric.py",
             "line_start": 30,
             "line_end": 30,
+            "extracted_evidence": "BRAVE_SEARCH_URL = \"https://api.search.brave.com/res/v1/web/search\"",
             "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -783,6 +851,7 @@
             "relative_source_path": "search_fabric.py",
             "line_start": 71,
             "line_end": 71,
+            "extracted_evidence": "if not re.search(r\"\\b(?:19|20)\\d{2}\\b\", value):",
             "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -793,6 +862,7 @@
             "relative_source_path": "search_fabric.py",
             "line_start": 151,
             "line_end": 151,
+            "extracted_evidence": "class SearchOptions:",
             "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -803,6 +873,7 @@
             "relative_source_path": "search_fabric.py",
             "line_start": 153,
             "line_end": 153,
+            "extracted_evidence": "max_results: int = SEARCH_MAX_RESULTS_PER_PROVIDER",
             "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -813,6 +884,7 @@
             "relative_source_path": "search_fabric.py",
             "line_start": 155,
             "line_end": 155,
+            "extracted_evidence": "timeout_seconds: float = SEARCH_PROVIDER_TIMEOUT_SECONDS",
             "file_sha256": "fce55de264891d9a41a14d83f6c68f15bba7ad53fe2c2785757f60a48b603459",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -836,6 +908,7 @@
             "relative_source_path": "tests/test_evidence_core.py",
             "line_start": 1,
             "line_end": 1,
+            "extracted_evidence": "from __future__ import annotations",
             "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -846,6 +919,7 @@
             "relative_source_path": "tests/test_evidence_core.py",
             "line_start": 2,
             "line_end": 2,
+            "extracted_evidence": "",
             "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -856,6 +930,7 @@
             "relative_source_path": "tests/test_evidence_core.py",
             "line_start": 3,
             "line_end": 3,
+            "extracted_evidence": "import hashlib",
             "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -866,6 +941,7 @@
             "relative_source_path": "tests/test_evidence_core.py",
             "line_start": 4,
             "line_end": 4,
+            "extracted_evidence": "import tempfile",
             "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -876,6 +952,7 @@
             "relative_source_path": "tests/test_evidence_core.py",
             "line_start": 5,
             "line_end": 5,
+            "extracted_evidence": "import unittest",
             "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -886,6 +963,7 @@
             "relative_source_path": "tests/test_evidence_core.py",
             "line_start": 6,
             "line_end": 6,
+            "extracted_evidence": "from pathlib import Path",
             "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -896,6 +974,7 @@
             "relative_source_path": "tests/test_evidence_core.py",
             "line_start": 7,
             "line_end": 7,
+            "extracted_evidence": "",
             "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -906,6 +985,7 @@
             "relative_source_path": "tests/test_evidence_core.py",
             "line_start": 8,
             "line_end": 8,
+            "extracted_evidence": "from evidence_core import (",
             "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -916,6 +996,7 @@
             "relative_source_path": "tests/test_evidence_core.py",
             "line_start": 9,
             "line_end": 9,
+            "extracted_evidence": "EvidenceCoreError,",
             "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -926,6 +1007,7 @@
             "relative_source_path": "tests/test_evidence_core.py",
             "line_start": 10,
             "line_end": 10,
+            "extracted_evidence": "EvidenceStatus,",
             "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -936,6 +1018,7 @@
             "relative_source_path": "tests/test_evidence_core.py",
             "line_start": 11,
             "line_end": 11,
+            "extracted_evidence": "EvidenceTrust,",
             "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -946,6 +1029,7 @@
             "relative_source_path": "tests/test_evidence_core.py",
             "line_start": 12,
             "line_end": 12,
+            "extracted_evidence": "ProjectEvidenceCore,",
             "file_sha256": "fe6676445e1268e3ef425da780495eb7607d522782d31d2bdb68f79fc41a1469",
             "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
             "verification_status": "VERIFIED"
@@ -965,6 +1049,7 @@
         "relative_source_path": "server.py",
         "line_start": 13,
         "line_end": 13,
+        "extracted_evidence": "from starlette.datastructures import UploadFile",
         "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -975,6 +1060,7 @@
         "relative_source_path": "server.py",
         "line_start": 14,
         "line_end": 14,
+        "extracted_evidence": "from starlette.requests import Request",
         "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -985,6 +1071,7 @@
         "relative_source_path": "server.py",
         "line_start": 15,
         "line_end": 15,
+        "extracted_evidence": "from starlette.responses import FileResponse, JSONResponse, Response",
         "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -995,6 +1082,7 @@
         "relative_source_path": "server.py",
         "line_start": 16,
         "line_end": 16,
+        "extracted_evidence": "from starlette.types import ASGIApp, Receive, Scope, Send",
         "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1005,6 +1093,7 @@
         "relative_source_path": "server.py",
         "line_start": 1133,
         "line_end": 1133,
+        "extracted_evidence": "import uvicorn",
         "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1015,6 +1104,7 @@
         "relative_source_path": "server.py",
         "line_start": 1143,
         "line_end": 1143,
+        "extracted_evidence": "uvicorn.run(",
         "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1025,6 +1115,7 @@
         "relative_source_path": "server.py",
         "line_start": 1146,
         "line_end": 1146,
+        "extracted_evidence": "port=int(os.environ.get(\"PORT\"), \"8000\")),",
         "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1035,6 +1126,7 @@
         "relative_source_path": "runtime_evidence.py",
         "line_start": 227,
         "line_end": 227,
+        "extracted_evidence": "def inspect_runtime_evidence(",
         "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1045,6 +1137,7 @@
         "relative_source_path": "runtime_evidence.py",
         "line_start": 299,
         "line_end": 299,
+        "extracted_evidence": "\"from starlette\" in line",
         "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1055,6 +1148,7 @@
         "relative_source_path": "runtime_evidence.py",
         "line_start": 300,
         "line_end": 300,
+        "extracted_evidence": "or \"import starlette\" in line",
         "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1065,6 +1159,7 @@
         "relative_source_path": "runtime_evidence.py",
         "line_start": 301,
         "line_end": 301,
+        "extracted_evidence": "or \"uvicorn.run\" in line",
         "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1075,6 +1170,7 @@
         "relative_source_path": "runtime_evidence.py",
         "line_start": 304,
         "line_end": 304,
+        "extracted_evidence": "framework_value = \"Starlette + Uvicorn\" if framework_references else None",
         "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1085,6 +1181,7 @@
         "relative_source_path": "server.py",
         "line_start": 97,
         "line_end": 97,
+        "extracted_evidence": "self.app = app",
         "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
         "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
         "verification_status": "VERIFIED"
@@ -1095,6 +1192,7 @@
         "relative_source_path": "server.py",
         "line_start": 1136,
         "line_end": 1136,
+        "extracted_evidence": "app = OwnerMCPAuthMiddleware(",
         "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
         "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
         "verification_status": "VERIFIED"
@@ -1105,6 +1203,7 @@
         "relative_source_path": "server.py",
         "line_start": 1143,
         "line_end": 1143,
+        "extracted_evidence": "uvicorn.run(",
         "file_sha256": "b6ff28e9c49614c9f71f73be106b778340dab2e3f9213513d024877ef8590a3a",
         "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
         "verification_status": "VERIFIED"
@@ -1115,6 +1214,7 @@
         "relative_source_path": "runtime_evidence.py",
         "line_start": 301,
         "line_end": 301,
+        "extracted_evidence": "or \"uvicorn.run\" in line",
         "file_sha256": "7c6aea10e49a8019246abbc25b22d1121079f83cd2d44d959dd64d14a9b919fc",
         "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
         "verification_status": "VERIFIED"
@@ -1125,6 +1225,7 @@
         "relative_source_path": "tests/test_runtime_evidence.py",
         "line_start": 1,
         "line_end": 1,
+        "extracted_evidence": "from __future__ import annotations",
         "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
         "trust_classification": "PROJECT_TEST_EVIDENCE",
         "verification_status": "VERIFIED"
@@ -1135,6 +1236,7 @@
         "relative_source_path": "tests/test_runtime_evidence.py",
         "line_start": 2,
         "line_end": 2,
+        "extracted_evidence": "",
         "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
         "trust_classification": "PROJECT_TEST_EVIDENCE",
         "verification_status": "VERIFIED"
@@ -1145,6 +1247,7 @@
         "relative_source_path": "tests/test_runtime_evidence.py",
         "line_start": 3,
         "line_end": 3,
+        "extracted_evidence": "import tempfile",
         "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
         "trust_classification": "PROJECT_TEST_EVIDENCE",
         "verification_status": "VERIFIED"
@@ -1155,6 +1258,7 @@
         "relative_source_path": "tests/test_runtime_evidence.py",
         "line_start": 4,
         "line_end": 4,
+        "extracted_evidence": "import unittest",
         "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
         "trust_classification": "PROJECT_TEST_EVIDENCE",
         "verification_status": "VERIFIED"
@@ -1165,6 +1269,7 @@
         "relative_source_path": "tests/test_runtime_evidence.py",
         "line_start": 5,
         "line_end": 5,
+        "extracted_evidence": "from pathlib import Path",
         "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
         "trust_classification": "PROJECT_TEST_EVIDENCE",
         "verification_status": "VERIFIED"
@@ -1175,6 +1280,7 @@
         "relative_source_path": "tests/test_runtime_evidence.py",
         "line_start": 6,
         "line_end": 6,
+        "extracted_evidence": "",
         "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
         "trust_classification": "PROJECT_TEST_EVIDENCE",
         "verification_status": "VERIFIED"
@@ -1185,6 +1291,7 @@
         "relative_source_path": "tests/test_runtime_evidence.py",
         "line_start": 7,
         "line_end": 7,
+        "extracted_evidence": "from runtime_evidence import (",
         "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
         "trust_classification": "PROJECT_TEST_EVIDENCE",
         "verification_status": "VERIFIED"
@@ -1195,6 +1302,7 @@
         "relative_source_path": "tests/test_runtime_evidence.py",
         "line_start": 8,
         "line_end": 8,
+        "extracted_evidence": "RUNTIME_EVIDENCE_FILES,",
         "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
         "trust_classification": "PROJECT_TEST_EVIDENCE",
         "verification_status": "VERIFIED"
@@ -1205,6 +1313,7 @@
         "relative_source_path": "tests/test_runtime_evidence.py",
         "line_start": 9,
         "line_end": 9,
+        "extracted_evidence": "RuntimeEvidenceError,",
         "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
         "trust_classification": "PROJECT_TEST_EVIDENCE",
         "verification_status": "VERIFIED"
@@ -1215,6 +1324,7 @@
         "relative_source_path": "tests/test_runtime_evidence.py",
         "line_start": 10,
         "line_end": 10,
+        "extracted_evidence": "inspect_runtime_evidence,",
         "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
         "trust_classification": "PROJECT_TEST_EVIDENCE",
         "verification_status": "VERIFIED"
@@ -1225,6 +1335,7 @@
         "relative_source_path": "tests/test_runtime_evidence.py",
         "line_start": 11,
         "line_end": 11,
+        "extracted_evidence": ")",
         "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
         "trust_classification": "PROJECT_TEST_EVIDENCE",
         "verification_status": "VERIFIED"
@@ -1235,6 +1346,7 @@
         "relative_source_path": "tests/test_runtime_evidence.py",
         "line_start": 12,
         "line_end": 12,
+        "extracted_evidence": "",
         "file_sha256": "5f8233f0aa6098ed9775f3804c195acf1b7b591f5b1dfefdde0eab8a4faf22dc",
         "trust_classification": "PROJECT_TEST_EVIDENCE",
         "verification_status": "VERIFIED"
@@ -1245,6 +1357,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 12,
         "line_end": 12,
+        "extracted_evidence": "import asyncpg",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1255,6 +1368,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 19,
         "line_end": 19,
+        "extracted_evidence": "_pool: asyncpg.Pool | None = None",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1265,6 +1379,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 24,
         "line_end": 24,
+        "extracted_evidence": "\"completed_checkpoint_days\": 30,",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1275,6 +1390,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 25,
         "line_end": 25,
+        "extracted_evidence": "\"failed_orphaned_checkpoint_days\": 90,",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1285,6 +1401,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 26,
         "line_end": 26,
+        "extracted_evidence": "\"audit_events\": \"preserved\",",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1295,6 +1412,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 35,
         "line_end": 35,
+        "extracted_evidence": "async def _ensure_policy_schema(pool: asyncpg.Pool) -> None:",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1305,6 +1423,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 64,
         "line_end": 64,
+        "extracted_evidence": "CREATE TABLE IF NOT EXISTS audit_events (",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1315,6 +1434,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 78,
         "line_end": 78,
+        "extracted_evidence": "CREATE INDEX IF NOT EXISTS audit_events_created_idx",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1325,6 +1445,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 79,
         "line_end": 79,
+        "extracted_evidence": "ON audit_events (created_at, event_id);",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1335,6 +1456,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 94,
         "line_end": 94,
+        "extracted_evidence": "CREATE TABLE IF NOT EXISTS agent_run_checkpoints (",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1345,6 +1467,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 95,
         "line_end": 95,
+        "extracted_evidence": "checkpoint_id BIGSERIAL PRIMARY KEY,",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1355,6 +1478,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 103,
         "line_end": 103,
+        "extracted_evidence": "CREATE INDEX IF NOT EXISTS agent_run_checkpoints_run_idx",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_IMPLEMENTATION",
         "verification_status": "VERIFIED"
@@ -1365,6 +1489,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 15,
         "line_end": 15,
+        "extracted_evidence": "class PersistenceError(RuntimeError):",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
         "verification_status": "VERIFIED"
@@ -1375,6 +1500,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 24,
         "line_end": 24,
+        "extracted_evidence": "\"completed_checkpoint_days\": 30,",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
         "verification_status": "VERIFIED"
@@ -1385,6 +1511,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 25,
         "line_end": 25,
+        "extracted_evidence": "\"failed_orphaned_checkpoint_days\": 90,",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
         "verification_status": "VERIFIED"
@@ -1395,6 +1522,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 94,
         "line_end": 94,
+        "extracted_evidence": "CREATE TABLE IF NOT EXISTS agent_run_checkpoints (",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
         "verification_status": "VERIFIED"
@@ -1405,6 +1533,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 95,
         "line_end": 95,
+        "extracted_evidence": "checkpoint_id BIGSERIAL PRIMARY KEY,",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
         "verification_status": "VERIFIED"
@@ -1415,6 +1544,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 103,
         "line_end": 103,
+        "extracted_evidence": "CREATE INDEX IF NOT EXISTS agent_run_checkpoints_run_idx",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
         "verification_status": "VERIFIED"
@@ -1425,6 +1555,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 104,
         "line_end": 104,
+        "extracted_evidence": "ON agent_run_checkpoints (run_id, checkpoint_id);",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
         "verification_status": "VERIFIED"
@@ -1435,6 +1566,7 @@
         "relative_source_path": "persistence.py",
         "line_start": 163,
         "line_end": 163,
+        "extracted_evidence": "ADD COLUMN IF NOT EXISTS last_checkpoint_at TIMESTAMPTZ;",
         "file_sha256": "aa4955f2ad786aed88688311c76c3009b1bf81576a75db970e9cef7a3307e2ab",
         "trust_classification": "PROJECT_ARCHITECTURE_WIRING",
         "verification_status": "VERIFIED"
@@ -1454,7 +1586,7 @@
       "title": "Using tools | OpenAI API",
       "source_identity": "external_openai_official",
       "verification_status": "UNVERIFIED_EXTERNAL",
-      "retrieved_at": "2026-09-14T17:46:33.674974+00:00",
+      "retrieved_at": "2026-09-14T17:52:24.353575+00:00",
       "http_status": 200,
       "content_sha256": "85e7160156f4fa71ce1f3a30c2aa4449e37827c29f230432c96f5a1e44828e54",
       "snippets": [
@@ -1470,7 +1602,7 @@
       "title": "Agents SDK | OpenAI API",
       "source_identity": "external_openai_official",
       "verification_status": "UNVERIFIED_EXTERNAL",
-      "retrieved_at": "2026-09-14T17:46:33.674974+00:00",
+      "retrieved_at": "2026-09-14T17:52:24.353575+00:00",
       "http_status": 200,
       "content_sha256": "067510db0f68c1257322cddb4ca0576c27b65b7cd2aad0dc21f3681dde71d1fd",
       "snippets": [
@@ -1485,7 +1617,7 @@
       "title": "Models | OpenAI API",
       "source_identity": "external_openai_official",
       "verification_status": "UNVERIFIED_EXTERNAL",
-      "retrieved_at": "2026-09-14T17:46:33.674974+00:00",
+      "retrieved_at": "2026-09-14T17:52:24.353575+00:00",
       "http_status": 200,
       "content_sha256": "be4fafee97f862dbbf23fc8f649cd9bb6e2e1061b9755376ce25a89cd02da849",
       "snippets": [
@@ -1500,7 +1632,7 @@
       "title": "Pricing | OpenAI API",
       "source_identity": "external_openai_official",
       "verification_status": "UNVERIFIED_EXTERNAL",
-      "retrieved_at": "2026-09-14T17:46:33.674974+00:00",
+      "retrieved_at": "2026-09-14T17:52:24.353575+00:00",
       "http_status": 200,
       "content_sha256": "e39924dca3598eed0acffd03b08f2f1ce2c7d26befa3c1ba86ae8c66c42aff3a",
       "snippets": [
@@ -1509,6 +1641,18 @@
       ]
     }
   ],
+  "external_evidence_bundle": {
+    "source_identity": "external_openai_official",
+    "verification_status": "UNVERIFIED_EXTERNAL",
+    "provenance_note": "User-supplied summary of the current official OpenAI documentation; kept separate from Ahmed Agent project evidence.",
+    "claims": [
+      "Agents SDK manages agents, tools, handoffs, guardrails, sessions, HITL, and tracing, and uses Responses API by default.",
+      "Agents SDK Models documentation supports non-OpenAI providers through ModelProvider at run or Agent.model scope, with adapters such as LiteLLM and Any-LLM.",
+      "Responses API supports built-in web search, file search, MCP, and function tools.",
+      "Current OpenAI models support Responses and web/file/computer tools according to the current Models documentation.",
+      "OpenAI pricing varies by selected model and tool; the supplied bundle identifies Luna as lower cost, Terra as middle, and Sol as higher cost."
+    ]
+  },
   "comparison_matrix": [
     {
       "criterion": "current_project_state",
@@ -1612,7 +1756,7 @@
     }
   ],
   "targeted_trace": {
-    "run_id": "fa41301b-2076-4502-94cc-9592c008aa93",
+    "run_id": "223e7924-c2cf-480c-a375-182bd16643cf",
     "execution_status": "EXECUTED",
     "execution_classification": null,
     "tool_names": [
@@ -1621,7 +1765,7 @@
     ],
     "citation_count": 24,
     "project_evidence_citation_count": 24,
-    "external_evidence_count": 6,
+    "external_evidence_count": 10,
     "evidence_preconditions": {
       "status": "READY",
       "missing": [],
@@ -1656,15 +1800,53 @@
     "execution_classification": "EXECUTION_OK",
     "dimensions": {
       "factual_correctness": "REVIEW_REQUIRED",
-      "groundedness": "REVIEW_REQUIRED",
+      "groundedness": "PASS",
       "completeness": "REVIEW_REQUIRED",
       "scope_adherence": "REVIEW_REQUIRED",
       "safe_abstention": "REVIEW_REQUIRED"
     },
     "independent_review": null
   },
+  "independent_review": {
+    "packet_sha256": "27a4fe29e07cbb64b5f512c1bf40dcb77896c215ce2b62b624b64be637757155",
+    "reviewer_type": "independent_evaluator",
+    "reviewer_provider": "openai",
+    "reviewer_model": "gpt-5.6-terra",
+    "rubric_version": "semantic-review-rubric-v1",
+    "independence_declaration": true,
+    "runtime_model_self_grading": false,
+    "reviews": [
+      {
+        "scores": {
+          "factual_correctness": 2,
+          "groundedness": 2,
+          "completeness": 2,
+          "scope_adherence": 4,
+          "safe_abstention": 1
+        },
+        "dimension_notes": {
+          "factual_correctness": "تتناول الإجابة حالة المشروع، تكلفة الهجرة، الصيانة، الجودة، التكلفة، والميزات، ولا توصي بالتحول لمجرد أن البديل أحدث. لكن عدة استنتاجات حاسمة تتجاوز الدليل المعروض، مثل أن النظام «محلي بالكامل»، وأنه قابل للتوجيه لأي مزود «بسهولة»، وأنه يدعم بديل نماذج مفتوحة المصدر، وأن تكلفة الهجرة «عالية». الدليل الظاهر يثبت أساساً استخدام Starlette وUvicorn وبعض بنية الاختبارات، لا هذه النتائج الأوسع.",
+          "groundedness": "توجد إحالات حتمية ذات هوية مصدر ومواقع أسطر وSHA-256 لملفات مشروع Ahmed Agent، وهي تدعم جزئياً وجود مكونات Starlette/Uvicorn وفحص أدلة التشغيل. لكن الإحالات لا تسند معظم مزاعم التحكم الكامل، الاستقلالية، السجلّات، الذاكرة، قابلية الاستبدال، أو الدعم المحلي. كما أن المقارنة مع OpenAI لا تتضمن إحالات مباشرة في النص إلى وثائق أو مقتطفات خارجية بعينها.",
+          "completeness": "توجد توصية صريحة وأسباب، وتمت مناقشة الحالة الحالية وتكلفة الهجرة. ومع ذلك، شرط استخدام المعلومات الخارجية الحالية غير مكتمل بصورة قابلة للمراجعة: الأدلة الخارجية موجودة في الحزمة، لكن النص لا يطبق حقائق محددة منها، ولا يقدم مقارنة موثقة للقدرات أو التسعير أو نطاق خدمات OpenAI مقابل الاحتياجات الفعلية للمشروع. كما لا يقدم تقديراً أو افتراضات قابلة للتحقق لتكلفة الهجرة أو التشغيل.",
+          "scope_adherence": "التقييم ضمن نطاق build-versus-buy، ويظهر في الأثر استخدام الأداة المطلوبة web_search، ولا يظهر سلوك محظور مثل تجاهل القدرات القائمة أو تفضيل إعادة البناء لمجرد حداثة البديل.",
+          "safe_abstention": "مع أن الامتناع الكامل لم يكن مطلوباً ابتداءً، فإن عدم قابلية التحقق من الحقائق الخارجية والقصور في أدلة خصائص المشروع كانا يستدعيان توصية مشروطة أو طلب معلومات إضافية. بدلاً من ذلك، تقدم الإجابة قراراً جازماً بالاستمرار في البناء اعتماداً على مزاعم غير مسندة بالكامل."
+        },
+        "decision": "FAIL",
+        "reason": "لا يمكن للحزمة إثبات صحة أو اكتمال التوصية الجازمة. توجد أدلة مشروع حتمية، لكنها ضيقة النطاق، بينما الحقائق الخارجية المقدمة غير متحققة وتبقى غير مربوطة مباشرة باستدلال الإجابة. لذلك لا تتوافر دعامة كافية لكل الأبعاد المطلوبة لإصدار PASS. Deterministic guard normalized the decision to match the dimension scores.",
+        "evidence_notes": "The packet did not contain sufficiently detailed reviewer evidence notes; deterministic groundedness status was PASS.",
+        "case_id": "AA-RC-026",
+        "reviewer_type": "independent_evaluator",
+        "reviewer_provider": "openai",
+        "reviewer_model": "gpt-5.6-terra",
+        "rubric_version": "semantic-review-rubric-v1",
+        "reference_fingerprint": "be18a1acb4e16bb8d5092ed666e53299613eff32f4755c5c55a31489f0d96dab",
+        "execution_trace_fingerprint": "b829ad6c7643014c9808246984ea6efef04042473d10b5d9a1de0efac65c6036",
+        "decision_guard_applied": true
+      }
+    ]
+  },
   "recommendation": {
-    "status": "READY",
+    "status": "NOT_DETERMINED",
     "text": "Continue Ahmed Agent incrementally; do not rebuild solely because OpenAI offers newer hosted agent capabilities."
   }
 }
