@@ -57,7 +57,11 @@ ProviderName = Literal["gemini", "openai"]
 SUPPORTED_PROVIDER_NAMES = frozenset({"gemini", "openai"})
 MAX_MESSAGE_HISTORY_ITEMS = 50
 MAX_MESSAGE_HISTORY_BYTES = 1_000_000
-MAX_TOOL_CALLS = 3
+# Source-of-truth comparisons need one search plus one inspection for each
+# uploaded original (the AA-RC-002 fixture contains four originals). Keep one
+# bounded call in reserve for a search refinement without allowing open-ended
+# tool use.
+MAX_TOOL_CALLS = 6
 MAX_MODEL_REQUESTS = 6
 
 COMMON_INSTRUCTIONS = """

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 
+from agent_core import MAX_TOOL_CALLS
 from evaluation_aa_rc_002 import _compare_inspected_sources
 
 
@@ -17,6 +18,9 @@ def _verified(filename: str, content: str, source_id: str) -> dict[str, object]:
 
 
 class AaRc002EvaluationTests(unittest.TestCase):
+    def test_tool_budget_covers_all_source_inspections(self) -> None:
+        self.assertGreaterEqual(MAX_TOOL_CALLS, 5)
+
     def test_missing_incident_evidence_fails_closed(self) -> None:
         result = _compare_inspected_sources(
             {
