@@ -638,8 +638,12 @@ def _load_contract_case() -> dict[str, Any]:
     )
 
 
-def _trace_summary(trace: dict[str, Any]) -> dict[str, Any]:
-    return {
+def _trace_summary(
+    trace: dict[str, Any],
+    *,
+    audit_trace: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    summary = {
         "run_id": trace.get("run_id"),
         "execution_status": trace.get("execution_status"),
         "execution_classification": trace.get("execution_classification"),
@@ -658,6 +662,14 @@ def _trace_summary(trace: dict[str, Any]) -> dict[str, Any]:
         "raw_trace_saved": False,
         "answer_saved": False,
     }
+    if audit_trace is not None:
+        summary.update(
+            {
+                "raw_trace_saved": audit_trace["raw_trace_saved"],
+                "answer_saved": audit_trace["answer_saved"],
+            }
+        )
+    return summary
 
 
 def _build_independent_review(
@@ -667,11 +679,12 @@ def _build_independent_review(
     architecture: dict[str, Any],
     external: list[dict[str, Any]],
     comparison_matrix: list[dict[str, Any]],
+    audit_trace: dict[str, Any],
+    dimension_notes: dict[str, str],
 ) -> dict[str, Any]:
     review_trace = _packet_trace_for_independent_reviewer(trace)
-    review_trace["answer_for_review_redacted"] = trace.get("final_output", "")
-    review_trace["project_evidence_context"] = architecture.get("citations", [])[:48]
-    review_trace["external_evidence_context"] = external
+    review_trace.update(audit_trace)
+    review_trace["answer_for_review_redacted"] = audit_trace["answer"]
     review_trace["comparison_artifact"] = comparison_matrix
     review_trace["user_provided_external_evidence_bundle"] = (
         USER_PROVIDED_OPENAI_EVIDENCE
@@ -685,6 +698,7 @@ def _build_independent_review(
         "execution_trace_fingerprint": "",
         "reference_assertions": contract_case["reference_assertions"],
         "trace": review_trace,
+        "auditability_dimension_notes": dimension_notes,
     }
     packet_body = json.dumps(review_case, ensure_ascii=False, sort_keys=True).encode(
         "utf-8"
@@ -736,11 +750,14 @@ async def execute_aa_rc_026(
         timeout_seconds=timeout_seconds,
     )
     trace["targeted_latency_ms"] = int((time.perf_counter() - started) * 1000)
+    retrieved_external_results = [
+        item
+        for item in trace.get("external_evidence_provenance", [])
+        if isinstance(item, dict)
+    ]
     trace["external_evidence_provenance"] = [
         *[
-            item
-            for item in trace.get("external_evidence_provenance", [])
-            if isinstance(item, dict)
+            *retrieved_external_results,
         ],
         *[
             {
@@ -753,6 +770,29 @@ async def execute_aa_rc_026(
             for item in external
         ],
     ]
+    comparison_matrix = build_comparison_matrix()
+    claims = build_claim_level_evidence_map(
+        architecture=architecture,
+        external=external,
+        comparison_matrix=comparison_matrix,
+    )
+    reconciliation = build_external_evidence_reconciliation(
+        retrieved_results=retrieved_external_results,
+        approved_sources=external,
+    )
+    audit_answer = build_audit_ready_answer(
+        original_answer=str(trace.get("final_output") or ""),
+        claims=claims,
+    )
+    audit_trace = build_review_audit_trace(
+        answer=audit_answer,
+        raw_trace=trace,
+        architecture=architecture,
+        external=external,
+        claims=claims,
+        reconciliation=reconciliation,
+    )
+    dimension_notes = build_review_dimension_notes(claims=claims)
     semantic = evaluate_case(
         contract_case=_load_contract_case(),
         trace=trace,
@@ -764,7 +804,9 @@ async def execute_aa_rc_026(
             contract_case=_load_contract_case(),
             architecture=architecture,
             external=external,
-            comparison_matrix=build_comparison_matrix(),
+            comparison_matrix=comparison_matrix,
+            audit_trace=audit_trace,
+            dimension_notes=dimension_notes,
         )
     except Exception as error:
         independent_review = {
@@ -791,8 +833,12 @@ async def execute_aa_rc_026(
         "project_evidence": architecture,
         "external_evidence": external,
         "external_evidence_bundle": USER_PROVIDED_OPENAI_EVIDENCE,
-        "comparison_matrix": build_comparison_matrix(),
-        "targeted_trace": _trace_summary(trace),
+        "comparison_matrix": comparison_matrix,
+        "auditability": {
+            **audit_trace,
+            "dimension_notes": dimension_notes,
+        },
+        "targeted_trace": _trace_summary(trace, audit_trace=audit_trace),
         "semantic_evaluation": {
             "semantic_status": semantic.get("semantic_status"),
             "execution_status": semantic.get("execution_status"),
@@ -865,7 +911,7 @@ def _integrity_record(report: dict[str, Any]) -> dict[str, Any]:
         "independent_review_decision": independent_review_decision,
         "recommendation_status": report["recommendation"]["status"],
         "semantic_status": report["semantic_evaluation"]["semantic_status"],
-        "raw_trace_saved": False,
+        "raw_trace_saved": report["targeted_trace"]["raw_trace_saved"],
     }
 
 
