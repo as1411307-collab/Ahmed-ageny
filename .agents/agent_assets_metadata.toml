@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "v8ZA-PNdCc5aOh8bwXWZz"
+uri = "file://quality-aa-rc-014-complete.json"
+type = "unspecified"
+title = "AA-RC-014 quality acceptance"
+description = "Independent deterministic quality artifact for AA-RC-014. Evidence citations passed identity verification; semantic grading is explicitly deferred because no semantic grader is configured."
+logical_id = "cf9cf452-ff74-4e6f-9f2a-06f40d7ddc94"
+content_hash = "sha256:d84ee651d1ca743c0529e35be3f12e848c0e7fa6429f5746ac15ad5e08e465ca"
+size = 70407
+mtime_ms = 1789347716320
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:fbbd58b4-2b68-43f5-b0ed-dca0cf463891/cf9cf452-ff74-4e6f-9f2a-06f40d7ddc94/6c0253b5-e21e-46dd-94f5-999998b156d0"
+storage_version_token = "1789347749158735"
+content_type = "application/octet-stream"

@@ -101,6 +101,62 @@ class EvaluationBaselineTests(unittest.TestCase):
         result = deterministic_grade(case, trace)
         self.assertTrue(result["check_results"]["required_tools"])
 
+    def test_aa_rc_014_citation_contract_checks_tool_evidence_identity(self) -> None:
+        case = next(
+            case
+            for case in load_case_document(
+                Path("tests/fixtures/evaluation_baseline/real_cases.json"),
+                require_baseline_size=True,
+            )[1]
+            if case["id"] == "AA-RC-014"
+        )
+        item = {
+            "relative_source_path": "search_fabric.py",
+            "file_sha256": "a" * 64,
+            "line_start": 10,
+            "line_end": 12,
+            "verification_status": "VERIFIED",
+            "trust_classification": "PROJECT_SOURCE",
+        }
+        citation = (
+            "[source: Ahmed Agent project files; file: search_fabric.py; "
+            "lines: 10-12; sha256: " + "a" * 64
+            + "; status: VERIFIED; trust: PROJECT_SOURCE]"
+        )
+        passing = deterministic_grade(
+            case,
+            {
+                "case_id": "AA-RC-014",
+                "tool_calls": [{"name": "inspect_source_status"}],
+                "sources": [citation],
+                "citations": [citation],
+                "available_evidence_citations": [citation],
+                "available_evidence_items": [item],
+                "output": {"answer": "Inspected project evidence."},
+                "approval_requested": False,
+                "executed_without_approval": False,
+                "abstained": False,
+            },
+        )
+        self.assertTrue(passing["check_results"]["evidence_citation_contract"])
+        tampered = dict(item, file_sha256="b" * 64)
+        failing = deterministic_grade(
+            case,
+            {
+                "case_id": "AA-RC-014",
+                "tool_calls": [{"name": "inspect_source_status"}],
+                "sources": [citation],
+                "citations": [citation],
+                "available_evidence_citations": [citation],
+                "available_evidence_items": [tampered],
+                "output": {"answer": "Inspected project evidence."},
+                "approval_requested": False,
+                "executed_without_approval": False,
+                "abstained": False,
+            },
+        )
+        self.assertFalse(failing["check_results"]["evidence_citation_contract"])
+
     def test_trace_redacts_credentials_and_captures_hitl_boundary(self) -> None:
         case = next(case for case in load_evaluation_cases() if case["id"] == "web-current-official")
         self.assertNotIn("secret-value", redact_evaluation_text("Bearer secret-value"))

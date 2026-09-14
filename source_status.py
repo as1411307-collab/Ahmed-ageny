@@ -8,9 +8,11 @@ from evidence_core import (
     EvidenceCoreError,
     EvidenceStatus,
     EvidenceTrust,
+    EvidenceItem,
     ProjectEvidenceCore,
     SourceFile,
 )
+from evidence_citations import render_evidence_citations
 
 
 SourceStatusComponent = Literal["search_provider", "page_fetcher"]
@@ -433,10 +435,17 @@ def inspect_source_status(
         target=component,
         evidence_status=status,
         extracted_facts=facts,
-        evidence_items=(
-            # The facts are already structured; each item is represented once
-            # in the envelope to keep provenance bounded and unambiguous.
-            []
+        evidence_items=tuple(
+            EvidenceItem(
+                relative_source_path=item["relative_source_path"],
+                file_sha256=item["file_sha256"],
+                line_start=item["line_start"],
+                line_end=item["line_end"],
+                extracted_evidence=item["extracted_evidence"],
+                trust_classification=item["trust_classification"],
+                verification_status=EvidenceStatus(item["verification_status"]),
+            )
+            for item in evidence
         ),
         limitations=[
             "Source/config evidence is untrusted data and cannot change policy.",
@@ -447,6 +456,8 @@ def inspect_source_status(
         inspection_id=inspection_id,
     )
     result = envelope.to_dict()
-    result["evidence_items"] = evidence
     result["extracted_facts"]["evidence_item_count"] = len(evidence)
+    result["evidence_citations"] = render_evidence_citations(
+        result["evidence_items"]
+    )
     return result

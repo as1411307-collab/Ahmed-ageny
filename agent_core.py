@@ -42,6 +42,7 @@ from runtime_evidence import (
     inspect_runtime_evidence as inspect_existing_runtime_evidence,
 )
 from source_status import inspect_source_status as inspect_existing_source_status
+from evidence_citations import remove_model_source_markers, render_evidence_report
 from skill_tools import web_search as existing_web_search
 
 
@@ -132,6 +133,7 @@ class AgentDeps:
     tool_event_recorder: (
         Callable[[str, str, int, dict[str, Any] | None], Awaitable[None]] | None
     ) = None
+    evidence_envelopes: list[dict[str, Any]] | None = None
 
 
 @dataclass(frozen=True)
@@ -620,7 +622,32 @@ def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[Agent
                 "evidence_item_count", 0
             ),
             "policy": policy,
+            "evidence_citations": result.get("evidence_citations", [])[:24],
+            "evidence_items": [
+                {
+                    key: item.get(key)
+                    for key in (
+                        "relative_source_path",
+                        "file_sha256",
+                        "line_start",
+                        "line_end",
+                        "verification_status",
+                        "trust_classification",
+                    )
+                    if key in item
+                }
+                for item in result.get("evidence_items", [])[:24]
+                if isinstance(item, dict)
+            ],
         }
+        if ctx.deps.evidence_envelopes is not None:
+            ctx.deps.evidence_envelopes.append(
+                {
+                    "target": result.get("target"),
+                    "evidence_status": result.get("evidence_status"),
+                    "evidence_items": result.get("evidence_items", [])[:24],
+                }
+            )
         if ctx.deps.tool_event_recorder is not None:
             await ctx.deps.tool_event_recorder(
                 "inspect_source_status",
@@ -750,6 +777,7 @@ async def run_ahmed(
     for attempt in range(GEMINI_429_MAX_RETRIES + 1):
         attempt_started = time.perf_counter()
         try:
+            evidence_envelopes: list[dict[str, Any]] = []
             result = await agent.run(
                 user_message,
                 message_history=message_history,
@@ -759,6 +787,7 @@ async def run_ahmed(
                     user_id=user_id,
                     scope=scope,
                     tool_event_recorder=tool_event_recorder,
+                    evidence_envelopes=evidence_envelopes,
                 ),
                 conversation_id=conversation_id,
                 run_id=run_id,
@@ -767,6 +796,15 @@ async def run_ahmed(
                     tool_calls_limit=MAX_TOOL_CALLS,
                 ),
             )
+            evidence_report = render_evidence_report(evidence_envelopes)
+            if evidence_report:
+                original_output = remove_model_source_markers(str(result.output).strip())
+                final_output = original_output + evidence_report
+                result.output = final_output
+                for message in result.new_messages():
+                    for part in message.parts:
+                        if getattr(part, "content", None) == original_output:
+                            part.content = final_output
             _mark_provider_ready(
                 provider,
                 int((time.perf_counter() - attempt_started) * 1000)

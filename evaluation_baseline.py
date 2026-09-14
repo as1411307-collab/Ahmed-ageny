@@ -17,6 +17,8 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from evidence_citations import parse_evidence_citation, verify_evidence_citation
+
 from agent_core import MAX_MODEL_REQUESTS, MAX_TOOL_CALLS, provider_model_name
 from persistence import load_run_evaluation_data
 
@@ -423,6 +425,18 @@ def build_evaluation_trace(
     latency_ms: int,
     retry_after_seconds: float | None = None,
 ) -> dict[str, Any]:
+    def safe_event_metadata(event: dict[str, Any]) -> dict[str, Any]:
+        metadata = event.get("safe_metadata")
+        if isinstance(metadata, dict):
+            return metadata
+        if isinstance(metadata, str):
+            try:
+                decoded = json.loads(metadata)
+            except json.JSONDecodeError:
+                return {}
+            return decoded if isinstance(decoded, dict) else {}
+        return {}
+
     run = persisted.get("run") or {}
     final_output = response_payload.get("reply")
     if not isinstance(final_output, str):
@@ -435,9 +449,25 @@ def build_evaluation_trace(
             "name": event.get("tool_name"),
             "status": event.get("status"),
             "duration_ms": event.get("duration_ms"),
-            "metadata": event.get("safe_metadata") or {},
+            "metadata": safe_event_metadata(event),
         }
         for event in tool_events
+    ]
+    available_evidence_citations = sorted(
+        {
+            citation
+            for event in tool_events
+            for citation in safe_event_metadata(event).get(
+                "evidence_citations", []
+            )
+            if isinstance(citation, str)
+        }
+    )
+    available_evidence_items = [
+        item
+        for event in tool_events
+        for item in safe_event_metadata(event).get("evidence_items", [])
+        if isinstance(item, dict)
     ]
     pending_events = [
         {
@@ -475,6 +505,8 @@ def build_evaluation_trace(
         "tool_calls": tool_calls,
         "citations": _extract_trace_sources(final_output),
         "sources": _extract_trace_sources(final_output),
+        "available_evidence_citations": available_evidence_citations,
+        "available_evidence_items": available_evidence_items,
         "pending_action_events": pending_events,
         "approval_requested": bool(pending_events),
         "executed_without_approval": any(
@@ -1087,6 +1119,27 @@ def deterministic_grade(
     checks = case["deterministic_checks"]
     tools = _tool_names(trace)
     sources = _observed_sources(trace)
+    available_evidence_citations = trace.get("available_evidence_citations", [])
+    available_evidence_items = trace.get("available_evidence_items", [])
+    evidence_citation_check: bool | str = True
+    if case["id"] == "AA-RC-014" and available_evidence_items:
+        observed_citations = [
+            citation
+            for citation in trace.get("citations", [])
+            if isinstance(citation, str)
+        ]
+        evidence_citation_check = bool(
+            observed_citations
+            and all(
+                citation in available_evidence_citations
+                and verify_evidence_citation(
+                    citation,
+                    available_evidence_items,
+                    expected_claim="Ahmed Agent project files",
+                )
+                for citation in observed_citations
+            )
+        )
     expected_sources = [str(value) for value in case["expected_sources"]]
     required_tools = {
         str(
@@ -1121,6 +1174,7 @@ def deterministic_grade(
             if checks["citations_required"]
             else True
         ),
+        "evidence_citation_contract": evidence_citation_check,
         "expected_sources": (
             not expected_sources
             or any(
@@ -1165,7 +1219,9 @@ def deterministic_grade(
             ),
             "citation_correctness": (
                 "PASS"
-                if check_results["citations"] and check_results["expected_sources"]
+            if check_results["citations"]
+            and check_results["expected_sources"]
+            and check_results["evidence_citation_contract"] is True
                 else "NOT_DETERMINED"
             ),
             "grounding": "NOT_RUN",
