@@ -18,6 +18,7 @@ _ALLOWED_STATUSES = {"VERIFIED", "DISCREPANCY", "NOT_FOUND", "DENIED"}
 _MAX_ITEMS = 24
 _MAX_CITATION_BYTES = 600
 _MODEL_SOURCE_MARKER_RE = re.compile(r"\s*\[source:[^\]]+\]")
+_MODEL_NUMERIC_MARKER_RE = re.compile(r"\s*\[\d+\]")
 
 
 def _item_value(item: object, key: str) -> object:
@@ -197,4 +198,5 @@ def render_evidence_report(envelopes: Iterable[dict[str, Any]]) -> str:
 def remove_model_source_markers(value: str) -> str:
     """Remove model-authored source markers before canonical citations are added."""
 
-    return _MODEL_SOURCE_MARKER_RE.sub("", value).strip()
+    without_source_markers = _MODEL_SOURCE_MARKER_RE.sub("", value)
+    return _MODEL_NUMERIC_MARKER_RE.sub("", without_source_markers).strip()

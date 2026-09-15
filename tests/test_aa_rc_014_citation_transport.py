@@ -11,7 +11,12 @@ from evaluation_baseline import (
     deterministic_grade,
     load_case_document,
 )
-from evidence_citations import render_evidence_report, verify_evidence_citation
+from evidence_citations import (
+    render_evidence_citation,
+    render_evidence_report,
+    remove_model_source_markers,
+    verify_evidence_citation,
+)
 
 
 def _evidence_items(
@@ -34,6 +39,36 @@ def _evidence_items(
 
 
 class AARC014CitationTransportTests(unittest.IsolatedAsyncioTestCase):
+    def test_model_output_removes_numeric_markers_but_preserves_canonical_citations(
+        self,
+    ) -> None:
+        evidence_item = {
+            "relative_source_path": "agent_core.py",
+            "file_sha256": "c" * 64,
+            "line_start": 1571,
+            "line_end": 1571,
+            "verification_status": "VERIFIED",
+            "trust_classification": "PROJECT_SOURCE",
+        }
+        canonical_citation = render_evidence_citation(evidence_item)
+        self.assertIsNotNone(canonical_citation)
+
+        cleaned_output = remove_model_source_markers("Model answer with [1]")
+        evidence_report = render_evidence_report(
+            [
+                {
+                    "target": "source_status",
+                    "evidence_status": "VERIFIED",
+                    "evidence_items": [evidence_item],
+                }
+            ]
+        )
+        final_output = cleaned_output + evidence_report
+
+        self.assertNotIn("[1]", cleaned_output)
+        self.assertNotIn("[1]", final_output)
+        self.assertIn(canonical_citation, final_output)
+
     async def test_live_citation_transport_separates_model_and_audit_lists(self) -> None:
         search_items = _evidence_items(
             relative_source_path="search_fabric.py",
