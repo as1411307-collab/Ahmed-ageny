@@ -72,6 +72,14 @@ TOOL_POLICIES: dict[str, ToolPolicy] = {
         external_side_effect=False,
         data_scope="AUTHORIZED_MY_FILES_SOURCE",
     ),
+    "n8n_automation": ToolPolicy(
+        tool_name="n8n_automation",
+        risk_level=RiskLevel.SENSITIVE_SIDE_EFFECT,
+        requires_approval=True,
+        reversible=False,
+        external_side_effect=True,
+        data_scope="AUTHORIZED_N8N_AUTOMATION",
+    ),
     "test_sensitive_action": ToolPolicy(
         tool_name="test_sensitive_action",
         risk_level=RiskLevel.SENSITIVE_SIDE_EFFECT,
