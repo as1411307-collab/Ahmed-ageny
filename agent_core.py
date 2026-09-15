@@ -313,11 +313,7 @@ def _evidence_payload(
         "source_label": source_label,
     }
     model_items = items[:8]
-    model_citations = [
-        citation.get("citation")
-        for citation in rendered_citations[:8]
-        if isinstance(citation, dict) and isinstance(citation.get("citation"), str)
-    ]
+    model_citations = rendered_citations[:8]
     model_provenance = [
         {
             key: item.get(key)
@@ -483,7 +479,12 @@ async def prepare_evidence_first_context(
             metadata={
                 "scope": route.capability.value,
                 "evidence_status": envelope["evidence_status"],
-                "evidence_citations": payload["citations"],
+                "evidence_citations": [
+                    provenance["citation"]
+                    for provenance in envelope["evidence_provenance"]
+                    if isinstance(provenance, dict)
+                    and isinstance(provenance.get("citation"), str)
+                ],
                 "evidence_items": envelope["evidence_items"][:24],
                 "evidence_provenance": envelope["evidence_provenance"][:24],
                 "source_label": source_label,
