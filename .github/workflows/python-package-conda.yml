@@ -12,7 +12,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Acceleration contract test
-        run: python tests/test_acceleration_integrations.py
+        run: PYTHONPATH=. python tests/test_acceleration_integrations.py
       - name: Install dependencies and test runner
         run: |
           python -m pip install --upgrade pip
