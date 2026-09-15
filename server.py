@@ -59,6 +59,7 @@ from config import MAX_UPLOAD_BYTES
 from my_files import SUPPORTED_EXTENSIONS, extension_for, ingest_document, sanitize_filename
 from run_state import RecoveryAction, RunStage, RunState, recovery_action
 from skill_tools import register_skill_tools
+from n8n_adapter import n8n_adapter_from_env
 
 
 class PingResult(TypedDict):
@@ -70,6 +71,10 @@ server = MCPServer("Ahmed Agent")
 WEB_DIR = Path(__file__).parent / "web"
 logger = logging.getLogger("ahmed_agent")
 WORKER_ID = default_worker_id()
+
+
+def get_n8n_adapter():
+    return n8n_adapter_from_env()
 
 
 async def _run_lease_heartbeat(run_id: str) -> None:
@@ -633,9 +638,48 @@ async def _execute_approved_action(
         return {"status": status, "executed": False}
     if not claim.get("should_execute"):
         return {"status": status, "executed": status == "executed"}
-    if claim.get("tool_name") != "test_sensitive_action":
+    tool_name = claim.get("tool_name")
+    if tool_name == "test_sensitive_action":
+        # This internal test action intentionally has no external side effect.
+        completed = await complete_pending_action(
+            action_id=action_id,
+            user_id=user_id,
+        )
+        return {
+            "status": completed.get("status", "ERROR"),
+            "executed": completed.get("status") == "executed",
+            "side_effect": "none",
+        }
+    if tool_name != "n8n_automation":
         return {"status": "unsupported_action", "executed": False}
-    # This internal test action intentionally has no external side effect.
+
+    adapter = get_n8n_adapter()
+    if adapter is None:
+        return {"status": "automation_not_configured", "executed": False}
+    arguments = claim.get("arguments")
+    if not isinstance(arguments, dict):
+        return {"status": "invalid_action", "executed": False}
+    workflow = arguments.get("workflow")
+    payload = arguments.get("payload")
+    if not isinstance(workflow, str) or not isinstance(payload, dict):
+        return {"status": "invalid_action", "executed": False}
+    try:
+        dispatch = await adapter.dispatch(
+            workflow,
+            payload,
+            action_id=action_id,
+            approved=True,
+        )
+    except Exception as error:
+        logger.warning(
+            "n8n automation failed action_id=%s error_type=%s",
+            action_id,
+            type(error).__name__,
+        )
+        return {"status": "automation_failed", "executed": False}
+    dispatch_status = dispatch.get("status") if isinstance(dispatch, dict) else None
+    if not isinstance(dispatch_status, int) or not 200 <= dispatch_status < 300:
+        return {"status": "automation_failed", "executed": False}
     completed = await complete_pending_action(
         action_id=action_id,
         user_id=user_id,
@@ -643,7 +687,7 @@ async def _execute_approved_action(
     return {
         "status": completed.get("status", "ERROR"),
         "executed": completed.get("status") == "executed",
-        "side_effect": "none",
+        "side_effect": "n8n",
     }
 
 

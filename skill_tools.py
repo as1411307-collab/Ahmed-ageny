@@ -1127,6 +1127,7 @@ def tavily_health() -> dict[str, object]:
 
 
 _search_fabric_instance: object | None = None
+_search_cache_instance: object | None = None
 
 
 def _get_search_fabric() -> object:
@@ -1141,18 +1142,94 @@ def _get_search_fabric() -> object:
     return _search_fabric_instance
 
 
+def _get_search_cache() -> object:
+    global _search_cache_instance
+    if _search_cache_instance is None:
+        from acceleration_cache import search_cache_from_env
+
+        _search_cache_instance = search_cache_from_env()
+    return _search_cache_instance
+
+
+def _cache_bypass_required(query: str, query_type: str) -> bool:
+    if query_type in {
+        "current_news",
+        "finance",
+        "legal_government",
+        "social_community",
+    }:
+        return True
+    lowered = query.casefold()
+    return any(
+        marker in lowered
+        for marker in (
+            "latest",
+            "current",
+            "today",
+            "recent",
+            "breaking",
+            "this week",
+            "اليوم",
+            "أحدث",
+            "آخر",
+            "الحالي",
+            "هذا الأسبوع",
+        )
+    )
+
+
 async def web_search(
     query: str,
     max_results: int = 5,
     mode: str = "FAST",
 ) -> dict[str, object]:
+    from acceleration_cache import build_search_cache_key, should_cache_search
+
+    query_type = _classify_query(query)
+    bypass = _cache_bypass_required(query, query_type)
+    eligible = should_cache_search(
+        query_type=query_type,
+        sensitive=bypass,
+    )
+    cache = _get_search_cache()
+    cache_key: str | None = None
+    if eligible:
+        cache_key = build_search_cache_key(
+            query,
+            mode,
+            max_results,
+            query_type,
+        )
+        cached = await cache.get(cache_key)  # type: ignore[union-attr]
+        if cached is not None:
+            return {
+                **cached,
+                "cache": {
+                    "eligible": True,
+                    "hit": True,
+                    "status": "hit",
+                    "query_type": query_type,
+                },
+            }
+
     fabric = _get_search_fabric()
-    return await fabric.search(  # type: ignore[union-attr]
+    result = await fabric.search(  # type: ignore[union-attr]
         query=query,
         mode=mode,
         max_results=max_results,
         tavily_legacy_search=_tavily_web_search,
     )
+    if eligible and cache_key is not None and result.get("ok") is True:
+        await cache.set(cache_key, result)  # type: ignore[union-attr]
+    return {
+        **result,
+        "cache": {
+            "eligible": eligible,
+            "hit": False,
+            "status": "miss" if eligible else "bypass",
+            "query_type": query_type,
+        },
+    }
 
 
 def search_fabric_health() -> dict[str, object]:

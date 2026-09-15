@@ -34,6 +34,7 @@ from config import (
     MAX_TOP_K,
 )
 from my_files import search_my_files as existing_my_files_search
+from n8n_adapter import n8n_adapter_from_env
 from persistence import create_pending_action
 from policy import data_only_boundary, get_tool_policy, tool_metadata
 from academic_search import academic_search as existing_academic_search
@@ -99,6 +100,10 @@ Use inspect_source_of_truth for authorized uploaded-source questions. First use
 search_my_files to find the requested filename and its source_id, then inspect
 each returned source_id. Never pass a filesystem path, filename, storage key,
 or guessed identifier to inspect_source_of_truth.
+
+Use n8n_automation only when the user explicitly requests a configured external
+automation. It can queue only allowlisted workflows and always returns a pending
+action that requires the existing owner approval gate before any side effect.
 """.strip()
 
 MY_FILES_INSTRUCTIONS = f"""
@@ -306,6 +311,67 @@ def configured_provider_names() -> list[str]:
     return [candidate.name for candidate in _configured_providers()]
 
 
+async def queue_n8n_automation_action(
+    *,
+    conversation_id: str,
+    run_id: str,
+    user_id: str,
+    workflow: str,
+    instruction: str,
+) -> dict[str, object]:
+    adapter = n8n_adapter_from_env()
+    if adapter is None:
+        return {
+            "ok": False,
+            "requires_approval": False,
+            "status": "automation_not_configured",
+        }
+    workflow = workflow.strip()
+    instruction = instruction.strip()
+    if not workflow or workflow not in adapter.allowed_workflows:
+        return {
+            "ok": False,
+            "requires_approval": False,
+            "status": "workflow_not_allowed",
+        }
+    if not instruction:
+        return {
+            "ok": False,
+            "requires_approval": False,
+            "status": "invalid_instruction",
+        }
+    policy = get_tool_policy("n8n_automation")
+    action_id = str(uuid4())
+    payload = {"instruction": instruction}
+    canonical_payload = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+    idempotency_key = hashlib.sha256(
+        f"{run_id}:n8n_automation:{workflow}:{canonical_payload}".encode("utf-8")
+    ).hexdigest()
+    pending_action = await create_pending_action(
+        action_id=action_id,
+        session_id=conversation_id,
+        run_id=run_id,
+        user_id=user_id,
+        tool_name=policy.tool_name,
+        risk_level=policy.risk_level.value,
+        arguments={"workflow": workflow, "payload": payload},
+        idempotency_key=idempotency_key,
+    )
+    return {
+        "ok": False,
+        "requires_approval": True,
+        "status": "pending_approval",
+        "action_id": str(pending_action["action_id"]),
+        "risk_level": policy.risk_level.value,
+        "workflow": workflow,
+    }
+
+
 def _provider_error_code(error: Exception) -> str | None:
     body = getattr(error, "body", None)
     if isinstance(body, dict):
@@ -511,6 +577,36 @@ def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[Agent
             **result,
             "data_boundary": data_only_boundary("uploaded_files"),
         }
+
+    async def n8n_automation(
+        ctx: RunContext[AgentDeps],
+        workflow: Annotated[str, Field(min_length=1, max_length=100)],
+        instruction: Annotated[str, Field(min_length=1, max_length=1000)],
+    ) -> dict[str, object]:
+        """Queue one allowlisted n8n automation behind the existing approval gate."""
+
+        if not ctx.deps.conversation_id or not ctx.deps.run_id:
+            raise RuntimeError("Automation actions require a persisted session and run.")
+        result = await queue_n8n_automation_action(
+            conversation_id=ctx.deps.conversation_id,
+            run_id=ctx.deps.run_id,
+            user_id=ctx.deps.user_id or "unauthenticated",
+            workflow=workflow,
+            instruction=instruction,
+        )
+        if ctx.deps.tool_event_recorder is not None:
+            await ctx.deps.tool_event_recorder(
+                "n8n_automation",
+                "success" if result.get("requires_approval") else "failed",
+                0,
+                {
+                    "policy": tool_metadata("n8n_automation"),
+                    "action_id": result.get("action_id"),
+                    "status": result.get("status"),
+                    "workflow": result.get("workflow"),
+                },
+            )
+        return result
 
     async def test_sensitive_action(
         ctx: RunContext[AgentDeps],
@@ -762,6 +858,7 @@ def _build_agent(model: Model, scope: Literal["WEB", "MY_FILES"]) -> Agent[Agent
             inspect_runtime_evidence,
             inspect_source_status,
             inspect_source_of_truth,
+            n8n_automation,
             test_sensitive_action,
         ]
         instructions = WEB_INSTRUCTIONS
