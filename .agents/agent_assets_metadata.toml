@@ -14,3 +14,10 @@ mtime_ms = 1789347716320
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:fbbd58b4-2b68-43f5-b0ed-dca0cf463891/cf9cf452-ff74-4e6f-9f2a-06f40d7ddc94/6c0253b5-e21e-46dd-94f5-999998b156d0"
 storage_version_token = "1789347749158735"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "HJzLYss1_u3bNpQd0uix-"
+uri = "file://exports/ahmed-agent-project-2026-09-15.zip"
+type = "unspecified"
+title = "Ahmed Agent — full project ZIP"
+description = "Complete shareable project archive including source code, tests, documentation, artifacts, evaluation files, attached assets, and lockfiles. Excludes Git history, caches, generated dependencies, local skills, and the previous 1.3GB ZIP."
