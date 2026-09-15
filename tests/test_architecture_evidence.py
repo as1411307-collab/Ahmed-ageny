@@ -45,6 +45,24 @@ class ArchitectureEvidenceTests(unittest.TestCase):
             )
         )
 
+    def test_fixed_decision_records_return_bounded_status_and_evidence(self) -> None:
+        result = inspect_architecture_evidence()
+
+        decisions = result["decision_records"]
+        self.assertEqual(decisions["status"], "VERIFIED")
+        self.assertEqual(decisions["missing_records"], [])
+        self.assertEqual(decisions["conflicting_records"], [])
+        self.assertEqual(len(decisions["record_statuses"]), 3)
+        self.assertTrue(decisions["evidence_items"])
+        self.assertTrue(
+            all(
+                item["relative_source_path"].startswith("docs/ADR-")
+                and item["trust_classification"] == "PROJECT_DECISION_RECORD"
+                and len(item["file_sha256"]) == 64
+                for item in decisions["evidence_items"]
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

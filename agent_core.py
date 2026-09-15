@@ -123,6 +123,13 @@ claim that architecture is unchanged without a prior snapshot, and never claim
 that tests passed from test-file presence alone. This tool is read-only and is
 not a generic repository browser.
 
+For questions about project sources or an approved project decision, use the
+same fixed architecture evidence adapter. Treat decision_records separately
+from implementation groups: report its status, accepted record statuses,
+missing_records, conflicting_records, and limitations. Cite the returned ADR
+path, lines, and hash. An accepted decision record documents the decision but
+does not prove that its operational acceptance boundary has been closed.
+
 Use inspect_source_of_truth for authorized uploaded-source questions. First use
 search_my_files to find the requested filename and its source_id, then inspect
 each returned source_id. Never pass a filesystem path, filename, storage key,
@@ -198,7 +205,7 @@ def _evidence_items_from_result(result: object) -> list[dict[str, Any]]:
                     for item in nested:
                         if isinstance(item, dict):
                             items.append(item)
-            for key in ("runtime_evidence", "groups"):
+            for key in ("runtime_evidence", "groups", "decision_records"):
                 nested = value.get(key)
                 if isinstance(nested, dict):
                     visit(nested)
@@ -240,6 +247,42 @@ def _compact_json(value: object, *, limit: int = 12_000) -> str:
     return serialized if len(serialized) <= limit else serialized[:limit] + "…"
 
 
+def _bounded_structured_facts(value: object, *, depth: int = 0) -> object:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value if not isinstance(value, str) else value[:300]
+    if depth >= 3:
+        return "[bounded]"
+    if isinstance(value, list):
+        return {
+            "count": len(value),
+            "items": [
+                _bounded_structured_facts(item, depth=depth + 1)
+                for item in value[:8]
+            ],
+        }
+    if isinstance(value, dict):
+        summary: dict[str, object] = {}
+        for key, nested in list(value.items())[:24]:
+            if key in {
+                "evidence",
+                "evidence_items",
+                "evidence_references",
+                "implementation_evidence",
+                "wiring_evidence",
+                "test_evidence",
+            }:
+                summary[key] = {
+                    "count": len(nested) if isinstance(nested, list) else 0,
+                }
+                continue
+            summary[str(key)] = _bounded_structured_facts(
+                nested,
+                depth=depth + 1,
+            )
+        return summary
+    return str(value)[:300]
+
+
 async def _record_preflight_event(
     recorder: Callable[[str, str, int, dict[str, Any] | None], Awaitable[None]] | None,
     *,
@@ -258,7 +301,7 @@ def _evidence_payload(
     source_label: str = "Ahmed Agent project files",
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     items = _evidence_items_from_result(result)
-    citations = render_evidence_citations(items, source_label=source_label)
+    rendered_citations = render_evidence_citations(items, source_label=source_label)
     envelope = {
         "target": target,
         "evidence_status": _evidence_status(result),
@@ -269,14 +312,101 @@ def _evidence_payload(
         ),
         "source_label": source_label,
     }
+    model_items = items[:8]
+    model_citations = [
+        citation.get("citation")
+        for citation in rendered_citations[:8]
+        if isinstance(citation, dict) and isinstance(citation.get("citation"), str)
+    ]
+    model_provenance = [
+        {
+            key: item.get(key)
+            for key in (
+                "relative_source_path",
+                "file_sha256",
+                "line_start",
+                "line_end",
+                "verification_status",
+                "trust_classification",
+            )
+            if key in item
+        }
+        for item in model_items
+    ]
     payload = {
         "target": target,
         "status": _evidence_status(result),
-        "citations": citations,
-        "evidence_provenance": envelope["evidence_provenance"],
-        "facts": result,
+        "citations": model_citations,
+        "evidence_provenance": model_provenance,
+        "facts": {
+            "status": _evidence_status(result),
+            "evidence_count": len(items),
+            "evidence_items": model_items,
+            "structured_facts": _bounded_structured_facts(result),
+        },
     }
     return envelope, payload
+
+
+def _decision_records_payload(result: object) -> dict[str, Any] | None:
+    if not isinstance(result, dict):
+        return None
+    decision_records = result.get("decision_records")
+    if not isinstance(decision_records, dict):
+        return None
+
+    evidence_items = decision_records.get("evidence_items")
+    compact_evidence: list[dict[str, Any]] = []
+    citations: list[str] = []
+    per_path_counts: dict[str, int] = {}
+    if isinstance(evidence_items, list):
+        for item in evidence_items:
+            if not isinstance(item, dict):
+                continue
+            relative_path = item.get("relative_source_path")
+            line_start = item.get("line_start")
+            line_end = item.get("line_end", line_start)
+            file_sha256 = item.get("file_sha256")
+            if (
+                not isinstance(relative_path, str)
+                or not isinstance(line_start, int)
+                or not isinstance(line_end, int)
+                or not isinstance(file_sha256, str)
+            ):
+                continue
+            if per_path_counts.get(relative_path, 0) >= 5:
+                continue
+            per_path_counts[relative_path] = per_path_counts.get(relative_path, 0) + 1
+            citation = (
+                f"[source: {relative_path}, "
+                f"lines {line_start}-{line_end}]"
+            )
+            citations.append(citation)
+            compact_evidence.append(
+                {
+                    "citation": citation,
+                    "relative_source_path": relative_path,
+                    "line_start": line_start,
+                    "line_end": line_end,
+                    "file_sha256": file_sha256,
+                    "verification_status": item.get("verification_status"),
+                    "trust_classification": item.get("trust_classification"),
+                }
+            )
+
+    return {
+        "target": "project_decision_records",
+        "status": decision_records.get("status", "UNAVAILABLE"),
+        "citations": citations,
+        "facts": {
+            "status": decision_records.get("status", "UNAVAILABLE"),
+            "record_statuses": decision_records.get("record_statuses", {}),
+            "missing_records": decision_records.get("missing_records", []),
+            "conflicting_records": decision_records.get("conflicting_records", []),
+            "limitations": decision_records.get("limitations", []),
+            "evidence": compact_evidence,
+        },
+    }
 
 
 def _render_external_sources(sources: tuple[str, ...]) -> str:
@@ -326,6 +456,9 @@ async def prepare_evidence_first_context(
             source_label=source_label,
         )
         envelopes.append(envelope)
+        decision_payload = _decision_records_payload(result)
+        if decision_payload is not None:
+            payloads.append(decision_payload)
         payloads.append(payload)
         extracted_facts = (
             result.get("extracted_facts")

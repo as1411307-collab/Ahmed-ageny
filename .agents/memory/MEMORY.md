@@ -21,3 +21,4 @@
 - [MCP Streamable HTTP lifecycle](mcp-lifespan-lifecycle.md) — auth middleware must forward lifespan events or initialize fails before a session task group exists.
 - [External evidence provenance](external-provenance.md) — web results stay bounded and explicitly unverified through traces and independent review.
 - [AA-RC-026 review boundary](aa-rc-026-review-boundary.md) — execution-ready build-vs-buy evidence can still require independent claim-level review.
+- [Evidence context budgets](evidence-context-budgets.md) — keep model payload summaries separate from full audit envelopes so citations cannot be truncated before the model.

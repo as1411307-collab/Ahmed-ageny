@@ -237,6 +237,57 @@ class EvidenceFirstChatIntegrationTests(unittest.TestCase):
         self.assertTrue(architecture_envelope["evidence_provenance"])
         self.assertIn("server.py", context.model_context)
 
+    def test_project_decision_question_includes_allowlisted_decision_evidence(self) -> None:
+        architecture_result = {
+            "status": "VERIFIED",
+            "groups": {},
+            "decision_records": {
+                "status": "VERIFIED",
+                "evidence_items": [
+                    {
+                        "relative_source_path": "docs/ADR-019-source-of-truth-hierarchy.md",
+                        "file_sha256": "a" * 64,
+                        "line_start": 1,
+                        "line_end": 1,
+                        "verification_status": "VERIFIED",
+                        "trust_classification": "PROJECT_DECISION_RECORD",
+                    }
+                ],
+                "record_statuses": {
+                    "docs/ADR-019-source-of-truth-hierarchy.md": "ACCEPTED"
+                },
+                "missing_records": [],
+                "conflicting_records": [],
+            },
+        }
+        runtime_result = {
+            "status": "VERIFIED",
+            "runtime_evidence": {},
+        }
+        with (
+            patch(
+                "agent_core.inspect_existing_runtime_evidence",
+                return_value=runtime_result,
+            ),
+            patch(
+                "agent_core.inspect_existing_architecture_evidence",
+                return_value=architecture_result,
+            ),
+        ):
+            context = asyncio.run(
+                prepare_evidence_first_context(
+                    "ما هي مصادر المشروع والقرار المعتمد؟",
+                    scope="WEB",
+                )
+            )
+
+        self.assertIn(
+            "inspect_architecture_evidence",
+            context.route.required_capabilities,
+        )
+        self.assertIn("ADR-019-source-of-truth-hierarchy.md", context.model_context)
+        self.assertIn("PROJECT_DECISION_RECORD", context.model_context)
+
     def test_general_chat_does_not_receive_unnecessary_evidence_preflight(self) -> None:
         context = asyncio.run(
             prepare_evidence_first_context(

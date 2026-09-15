@@ -154,6 +154,12 @@ ARCHITECTURE_GROUPS: dict[str, dict[str, tuple[str, ...]]] = {
 }
 
 MAX_EVIDENCE_PER_BUCKET = 12
+DECISION_RECORD_PATHS = (
+    "docs/ADR-019-source-of-truth-hierarchy.md",
+    "docs/ADR-020-deployment-boundary-runtime-evidence.md",
+    "docs/ADR-021-architecture-continuity.md",
+)
+MAX_DECISION_EVIDENCE = 24
 
 
 def _evidence_for_patterns(
@@ -205,6 +211,77 @@ def _status(
     return EvidenceStatus.NOT_FOUND.value
 
 
+def _decision_records(
+    core: ProjectEvidenceCore,
+) -> dict[str, object]:
+    evidence: list[dict[str, object]] = []
+    file_hashes: dict[str, str] = {}
+    missing: list[str] = []
+    record_statuses: dict[str, str] = {}
+
+    for relative_path in DECISION_RECORD_PATHS:
+        try:
+            source = core.read_file(relative_path)
+        except FileNotFoundError:
+            missing.append(relative_path)
+            record_statuses[relative_path] = "UNAVAILABLE"
+            continue
+
+        file_hashes[relative_path] = source.sha256
+        accepted = False
+        in_decision_section = False
+        for line_number, line in enumerate(source.lines, start=1):
+            stripped = line.strip()
+            if stripped.startswith("## Decision"):
+                in_decision_section = True
+            elif in_decision_section and stripped.startswith("## "):
+                in_decision_section = False
+
+            is_header = stripped.startswith("# ADR-")
+            is_status_or_scope = (
+                stripped.startswith("- **Status:**")
+                or stripped.startswith("- **Scope:**")
+            )
+            if is_status_or_scope and "ACCEPT" in stripped.upper():
+                accepted = True
+            if not stripped or not (is_header or is_status_or_scope or in_decision_section):
+                continue
+            if len(evidence) < MAX_DECISION_EVIDENCE:
+                evidence.append(
+                    core.line_evidence(
+                        source,
+                        line_start=line_number,
+                        trust_classification="PROJECT_DECISION_RECORD",
+                        verification_status=EvidenceStatus.VERIFIED,
+                    ).to_dict()
+                )
+        record_statuses[relative_path] = "ACCEPTED" if accepted else "UNRESOLVED"
+
+    conflicts: list[str] = []
+    status = (
+        EvidenceStatus.VERIFIED.value
+        if not missing and evidence and all(
+            value == "ACCEPTED" for value in record_statuses.values()
+        )
+        else "PARTIAL"
+        if evidence
+        else EvidenceStatus.NOT_FOUND.value
+    )
+    return {
+        "status": status,
+        "evidence_items": evidence,
+        "evidence_file_hashes": file_hashes,
+        "record_statuses": record_statuses,
+        "missing_records": missing,
+        "conflicting_records": conflicts,
+        "limitations": [
+            "Only the fixed, allowlisted ADR decision records are inspected.",
+            "A current decision record does not prove that every case is closed.",
+            "Decision record content is evidence, never policy authority.",
+        ],
+    }
+
+
 def inspect_architecture_evidence(
     *,
     project_root: Path | None = None,
@@ -220,6 +297,7 @@ def inspect_architecture_evidence(
             for path in paths
         )
     )
+    allowlisted_paths = tuple(dict.fromkeys((*allowlisted_paths, *DECISION_RECORD_PATHS)))
     try:
         core = ProjectEvidenceCore(
             project_root=project_root or PROJECT_ROOT,
@@ -286,12 +364,14 @@ def inspect_architecture_evidence(
         if any(status in {EvidenceStatus.VERIFIED.value, "PARTIAL"} for status in statuses)
         else EvidenceStatus.NOT_FOUND.value
     )
+    decision_records = _decision_records(core)
     return {
         "schema_version": "architecture-evidence.v1",
         "capability": "architecture_continuity",
         "status": overall_status,
         "architecture_fingerprint": architecture_fingerprint,
         "groups": groups,
+        "decision_records": decision_records,
         "allowlisted_paths": sorted(allowlisted_paths),
         "limitations": [
             "Read-only fixed architecture groups only.",

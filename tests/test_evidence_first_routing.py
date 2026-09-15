@@ -83,6 +83,16 @@ class EvidenceFirstRoutingTests(unittest.TestCase):
         self.assertIn("inspect_runtime_evidence", route.required_capabilities)
         self.assertIn("inspect_architecture_evidence", route.required_capabilities)
 
+    def test_project_sources_and_approved_decisions_use_fixed_evidence(self) -> None:
+        route = classify_request("ما هي مصادر المشروع والقرار المعتمد؟")
+
+        self.assertEqual(route.capability, RequestCapability.PROJECT_STATE)
+        self.assertEqual(
+            route.required_capabilities,
+            ("inspect_runtime_evidence", "inspect_architecture_evidence"),
+        )
+        self.assertTrue(route.abstain_if_evidence_missing)
+
     def test_source_status_questions_use_bounded_source_status(self) -> None:
         route = classify_request("افحص حالة search provider وpage fetcher والجاهز منهما")
         self.assertEqual(route.capability, RequestCapability.SOURCE_STATUS)

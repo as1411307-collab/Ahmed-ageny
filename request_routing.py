@@ -97,6 +97,28 @@ def classify_request(
             True,
         )
 
+    project_decision_terms = (
+        "project sources",
+        "project evidence",
+        "evidence sources",
+        "مصادر المشروع",
+        "أدلة المشروع",
+        "المصادر المسموحة",
+        "approved decision",
+        "accepted decision",
+        "project decision",
+        "القرار المعتمد",
+        "القرار المقبول",
+        "قرار المشروع",
+        "قرارات المشروع",
+    )
+    if _contains_any(normalized, project_decision_terms):
+        return RouteDecision(
+            RequestCapability.PROJECT_STATE,
+            ("inspect_runtime_evidence", "inspect_architecture_evidence"),
+            True,
+        )
+
     source_status_terms = (
         "source status",
         "حالة المصدر",
