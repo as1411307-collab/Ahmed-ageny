@@ -143,6 +143,20 @@ class SourceStatusTests(unittest.TestCase):
         serialized = str(search) + str(page)
         self.assertNotIn("do-not-return", serialized)
 
+    def test_active_content_extractor_uses_tavily_path_not_local_helper(self) -> None:
+        page = inspect_source_status("page_fetcher", inspection_id="active-extractor-test")
+        wiring = page["extracted_facts"]["registration_wiring"]
+
+        self.assertEqual(page["evidence_status"], "VERIFIED")
+        self.assertEqual(wiring["status"], "VERIFIED")
+        self.assertEqual(wiring["facts"]["active_call_sites"], [])
+        self.assertEqual(wiring["facts"]["active_extraction_alternative"], "Tavily extract")
+        self.assertTrue(page["extracted_facts"]["contradictions"])
+        self.assertIn(
+            "local _fetch_page implementation exists",
+            page["extracted_facts"]["contradictions"][0],
+        )
+
     def test_only_fixed_component_identifiers_are_accepted(self) -> None:
         with self.assertRaises(ValueError):
             inspect_source_status("../search_fabric.py")
