@@ -62,6 +62,7 @@ _EXTERNAL_REFERENCE_KEYS = {
         "gpt_5_6_luna",
     },
     "external:agentkit": {"agentkit"},
+    "external:workspace_agents": {"workspace_agents"},
 }
 
 
