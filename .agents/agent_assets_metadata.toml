@@ -36,3 +36,17 @@ mtime_ms = 1789511724739
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:fbbd58b4-2b68-43f5-b0ed-dca0cf463891/756e71d2-5fe5-49a0-9f8a-63250969c192/25faca3f-d7af-4f97-8a07-958e77a394c0"
 storage_version_token = "1789511731112601"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "JAYpwCB4hR-i4kJtRhkjC"
+uri = "file://exports/ahmed-agent-source-only-2026-09-15.zip"
+type = "unspecified"
+title = "Ahmed Agent — source only"
+description = "Small source-only ZIP with application code, tests, configuration, workflows, artifacts, and documentation. Excludes PDFs, attached assets, evaluation reports, screenshots, caches, generated dependencies, and old archives."
+logical_id = "56adcda2-d89b-4631-9b7f-413c02a63ea6"
+content_hash = "sha256:1e8cad9c5c6e0273cda11f9dbd07f627f20d56a54257d9ee717c612866d58ed8"
+size = 1607356
+mtime_ms = 1789512558122
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:fbbd58b4-2b68-43f5-b0ed-dca0cf463891/56adcda2-d89b-4631-9b7f-413c02a63ea6/64bd19f8-03b0-4535-b118-864c4e4bc593"
+storage_version_token = "1789512565287665"
+content_type = "application/octet-stream"
