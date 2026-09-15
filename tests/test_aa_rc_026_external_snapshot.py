@@ -37,6 +37,11 @@ class AaRc026ExternalSnapshotTests(unittest.TestCase):
         )
         self.assertTrue(all(item["verification_status"] == "UNVERIFIED_EXTERNAL" for item in evidence))
         self.assertTrue(all(item["url"] and item["title"] for item in evidence))
-        self.assertTrue(all(item["accessed_at"].startswith("2026-09-14") for item in evidence))
+        self.assertTrue(
+            all(
+                item["accessed_at"] == aa_rc_026.SNAPSHOT_ACCESSED_AT
+                for item in evidence
+            )
+        )
         self.assertTrue(all(len(item["content_sha256"]) == 64 for item in evidence))
         self.assertTrue(all(item["content_claims"] for item in evidence))

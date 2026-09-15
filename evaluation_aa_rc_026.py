@@ -278,6 +278,32 @@ def _bounded_snippets(text: str, markers: tuple[str, ...]) -> list[str]:
     return snippets[:4]
 
 
+def _snapshot_external_evidence(*, fallback_reason: str) -> list[dict[str, Any]]:
+    return [
+        {
+            "key": source["key"],
+            "url": source["url"],
+            "title": source["title"],
+            "source_identity": "external_openai_official",
+            "evidence_classification": "EXTERNAL_EVIDENCE",
+            "verification_status": "UNVERIFIED_EXTERNAL",
+            "evidence_origin": "ORCHESTRATOR_SUPPLIED_EXTERNAL_SNAPSHOT",
+            "fallback_reason": fallback_reason,
+            "retrieved_at": SNAPSHOT_ACCESSED_AT,
+            "accessed_at": SNAPSHOT_ACCESSED_AT,
+            "content_sha256": hashlib.sha256(
+                json.dumps(
+                    source,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                ).encode("utf-8")
+            ).hexdigest(),
+            "content_claims": list(source["content_claims"]),
+        }
+        for source in OPENAI_EXTERNAL_EVIDENCE_SNAPSHOT
+    ]
+
+
 def fetch_openai_external_evidence() -> list[dict[str, Any]]:
     evidence: list[dict[str, Any]] = []
     retrieved_at = datetime.now(timezone.utc).isoformat()
@@ -286,10 +312,15 @@ def fetch_openai_external_evidence() -> list[dict[str, Any]]:
             document["url"],
             headers={"User-Agent": "Ahmed-Agent-AA-RC-026-Evaluator/1.0"},
         )
-        with urllib.request.urlopen(request, timeout=30) as response:
-            body = response.read()
-            status = int(response.status)
-            content_type = response.headers.get("Content-Type", "")
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                body = response.read()
+                status = int(response.status)
+                content_type = response.headers.get("Content-Type", "")
+        except urllib.error.HTTPError as error:
+            if error.code == 403:
+                return _snapshot_external_evidence(fallback_reason="HTTP_403")
+            raise
         if status != 200 or "text/html" not in content_type.casefold():
             raise RuntimeError(
                 f"Official OpenAI documentation unavailable: {document['url']}"
