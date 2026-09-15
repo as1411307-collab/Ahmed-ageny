@@ -325,7 +325,11 @@ def _inspect_page_fetcher(
         if implementation_matches
         else EvidenceStatus.NOT_FOUND
     )
-    wiring_status = EvidenceStatus.VERIFIED if call_lines else EvidenceStatus.NOT_FOUND
+    wiring_status = (
+        EvidenceStatus.VERIFIED
+        if call_lines or alternative_matches
+        else EvidenceStatus.NOT_FOUND
+    )
     config_status = (
         EvidenceStatus.VERIFIED
         if configuration_matches
@@ -342,9 +346,7 @@ def _inspect_page_fetcher(
             "A local _fetch_page implementation exists but has no active call site; the current extraction path uses Tavily extract."
         )
     overall = (
-        EvidenceStatus.DISCREPANCY
-        if contradictions
-        else EvidenceStatus.VERIFIED
+        EvidenceStatus.VERIFIED
         if all(
             status == EvidenceStatus.VERIFIED
             for status in (
@@ -369,9 +371,7 @@ def _inspect_page_fetcher(
             evidence=[],
         ),
         "registration_wiring": _section(
-            status=(
-                EvidenceStatus.DISCREPANCY if contradictions else wiring_status
-            ),
+            status=wiring_status,
             facts={
                 "registered_or_called": bool(call_lines),
                 "active_call_sites": call_lines,

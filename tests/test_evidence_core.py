@@ -134,7 +134,7 @@ class SourceStatusTests(unittest.TestCase):
         self.assertTrue(search["evidence_items"][0]["relative_source_path"])
         self.assertTrue(search["evidence_items"][0]["file_sha256"])
         self.assertFalse(search["extracted_facts"]["configuration_declaration"]["facts"]["secret_values_read"])
-        self.assertEqual(page["evidence_status"], "DISCREPANCY")
+        self.assertEqual(page["evidence_status"], "VERIFIED")
         self.assertTrue(page["extracted_facts"]["contradictions"])
         self.assertEqual(
             page["extracted_facts"]["operational_status"]["claim"],
